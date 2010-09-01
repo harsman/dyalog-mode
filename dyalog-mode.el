@@ -6,10 +6,62 @@
 
 ;; Set up mode specific keys below
 (defvar dyalog-mode-map
-  (let ((dyalog-mode-map(make-keymap)))
-    (define-key dyalog-mode-map (kbd"M-RET") 'comment-indent-new-line)
-    (define-key dyalog-mode-map (kbd"M-f") 'dyalog-ediff-forward-word)
-    dyalog-mode-map)
+  (let ((map(make-keymap)))
+    (define-key map (kbd"M-RET") 'comment-indent-new-line)
+    (define-key map (kbd"M-f") 'dyalog-ediff-forward-word)
+    (define-key map [?\C-¯] "¯")
+    (define-key map [?\C-≤] "≤")
+    (define-key map [?\C-≥] "≥")
+    (define-key map [?\C-≠] "≠")
+    (define-key map [?\C-∨] "∨")
+    (define-key map [?\C-∧] "∧")
+    (define-key map [?\C-÷] "÷")
+    (define-key map [?\C-⍵] "⍵")
+    (define-key map [?\C-∊] "∊")
+    (define-key map [?\C-⍴] "⍴")
+    (define-key map [?\C-~] "~")
+    (define-key map [?\C-↑] "↑")
+    (define-key map [?\C-↓] "↓")
+    (define-key map [?\C-⍳] "⍳")
+    (define-key map [?\C-○] "○")
+    (define-key map [?\C-*] "*")
+    (define-key map [?\C-←] "←")
+    (define-key map [?\C-→] "→")
+    (define-key map [?\C-⍺] "⍺")
+    (define-key map [?\C-⌈] "⌈")
+    (define-key map [?\C-⌊] "⌊")
+    (define-key map [?\C-∇] "∇")
+    (define-key map [?\C-∆] "∆")
+    (define-key map [?\C-∘] "∘")
+    (define-key map [?\C-⎕] "⎕")
+    (define-key map [?\C-⍎] "⍎")
+    (define-key map [?\C-⍕] "⍕")
+    (define-key map [?\C-⊂] "⊂")
+    (define-key map [?\C-⊃] "⊃")
+    (define-key map [?\C-∩] "∩")
+    (define-key map [?\C-∪] "∪")
+    (define-key map [?\C-⊥] "⊥")
+    (define-key map [?\C-⊤] "⊤")
+    (define-key map [?\C-⍝] "⍝")
+    (define-key map [?\C-⍷] "⍷")
+    (define-key map [?\C-⍨] "⍨")
+    (define-key map [?\C-⍒] "⍒")
+    (define-key map [?\C-⍋] "⍋")
+    (define-key map [?\C-⌽] "⌽")
+    (define-key map [?\C-⍉] "⍉")
+    (define-key map [?\C-⊖] "⊖")
+    (define-key map [?\C-⍟] "⍟")
+    (define-key map [?\C-⍱] "⍱")
+    (define-key map [?\C-⍲] "⍲") 
+    (define-key map [?\C-⍬] "⍬")
+    (define-key map [?\C-⌹] "⌹")
+    (define-key map [?\C-≡] "≡")
+    (define-key map [?\C-≢] "≢")
+    (define-key map [?\C-⌶] "⌶")
+    (define-key map [?\C-⍪] "⍪")
+    (define-key map [?\C-⌿] "⌿")
+    (define-key map [?\C-⍀] "⍀")
+    map)
   "Keymap for Dyalog APL mode")
 
 ;; This should probably be split into several layers of highlighting
@@ -75,9 +127,9 @@
   "Move point forward one word."
   (interactive)
   (or 	(> (skip-chars-forward "A-Za-z_∆0-9") 0)  ; name
-	(> (skip-chars-forward "⎕:A-Za-z") 0)     ; sys name/keyword
-	(> (skip-chars-forward "0-9E¯.") 0)       ; numbers
-	(> (skip-chars-forward "⍺⍵∇") 0)          ; meta chars
+        (> (skip-chars-forward "⎕:A-Za-z") 0)     ; sys name/keyword
+        (> (skip-chars-forward "0-9E¯.") 0)       ; numbers
+        (> (skip-chars-forward "⍺⍵∇") 0)          ; meta chars
         (> (skip-chars-forward " ") 0)            ; white space
         (forward-char)))                          ; fallback
 
@@ -95,19 +147,19 @@
 (defun dyalog-dedent (line)
   (save-excursion
     (forward-line line)
-    (- (current-indentation) default-tab-width)))
+    (- (current-indentation) tab-width)))
 
 (defun dyalog-indent (line)
   (save-excursion
     (forward-line line)
-    (+ (current-indentation) default-tab-width)))
+    (+ (current-indentation) tab-width)))
 
 (defun dyalog-get-indent ()
   (interactive)
   (save-excursion
     (move-beginning-of-line nil)
     (cond
-     ((bobp) dyalog-indent-spaces)
+     ((bobp) dyalog-leading-spaces)
      ((looking-at dyalog-indent-stop)
       (dyalog-dedent -1))
      ((looking-at dyalog-indent-pause)
@@ -147,7 +199,8 @@
   (set (make-local-variable 'comment-start-skip) "⍝\\s-+")
   ;; Make comment processing use the syntax table
   (set (make-local-variable 'comment-use-global-state) t)
-  (set (make-local-variable 'comment-use-syntax) t)  (set (make-local-variable 'font-lock-defaults) '(dyalog-font-lock-keywords))
+  (set (make-local-variable 'comment-use-syntax) t)
+  (set (make-local-variable 'font-lock-defaults) '(dyalog-font-lock-keywords))
   ;; below line doesn't seem to help, same results as with standard
   ;; ediff-forward-word. If same line is in .emacs it works, so setting
   ;; here is probably too late (or early?).
