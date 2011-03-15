@@ -134,7 +134,7 @@
         (forward-char)))                          ; fallback
 
 (defvar dyalog-indent-start
-  "^\\s-*:\\(If\\|While\\|Repeat\\|Trap\\|Select\\|For\\)")
+  "^\\s-*:\\(If\\|While\\|Repeat\\|Trap\\|Select\\|For\\|Class\\)")
 
 (defvar dyalog-indent-pause
   "^\\s-*:\\(Else\\|AndIf\\|OrIf\\|Case\\)")
