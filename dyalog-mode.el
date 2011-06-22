@@ -103,6 +103,7 @@
     ;; below values work
     '("⎕[A-Za-z]*" . font-lock-builtin-face)
     '("\\s-+\\(:[A-Za-z_∆]+\\)" (1 font-lock-keyword-face nil))
+    '("^\\s-*\\([A-Za-z_][A-Za-z0-9_]*:\\)" . (1 font-lock-keyword-face nil))
     '(":" . font-lock-keyword-face)
     '("[^A-Za-z_∆0-9]\\(¯?[0-9]+\\.?[0-9]*\\(E¯?[0-9]+\\.?[0-9]*\\)?\\)" (1 font-lock-constant-face nil))
     '("[][<>+---=/¨~\\\\?*(){}&|]" . font-lock-keyword-face)
