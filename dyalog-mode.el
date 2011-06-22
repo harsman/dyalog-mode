@@ -134,10 +134,13 @@
         (forward-char)))                          ; fallback
 
 (defvar dyalog-indent-start
-  "^\\s-*:\\(If\\|While\\|Repeat\\|Trap\\|Select\\|For\\|Class\\)")
+  "^\\s-*:\\(If\\|While\\|Repeat\\|Trap\\|Case\\|For\\|Class\\)")
 
 (defvar dyalog-indent-pause
-  "^\\s-*:\\(Else\\|AndIf\\|OrIf\\|Case\\)")
+  "^\\s-*:\\(Else\\|AndIf\\|OrIf\\)")
+
+(defvar dyalog-indent-case
+  "^\\s-*:Case")
 
 (defvar dyalog-indent-stop
   "^\\s-*:End[A-Za-z]+")
@@ -162,27 +165,42 @@
      ((bobp) dyalog-leading-spaces)
      ((looking-at dyalog-indent-stop)
       (dyalog-dedent -1))
+     ((looking-at dyalog-indent-case)
+      (dyalog-search-indent nil 'dyalog-indent-cond-case))
      ((looking-at dyalog-indent-pause)
-      (dyalog-search-indent t))
+      (dyalog-search-indent t 'dyalog-indent-cond-generic))
      (t
-      (dyalog-search-indent nil)))))
+      (dyalog-search-indent nil 'dyalog-indent-cond-generic)))))
 
-(defun dyalog-search-indent (at-pause)
+(defun dyalog-indent-cond-generic (at-pause indented)
+  (progn
+    (cond ((looking-at dyalog-indent-stop)
+           (set 'indented (current-indentation)))
+          ((looking-at  dyalog-indent-start)
+           (set 'indented (if at-pause
+                              (current-indentation)
+                            (dyalog-indent 0))))
+          ((bobp)
+           (set 'indented dyalog-leading-spaces)))
+    indented))
+
+(defun dyalog-indent-cond-case (at-pause indented)
+  (progn
+    (cond ((looking-at "^\\s-*:Select")
+           (set 'indented (current-indentation)))
+           ((bobp)
+            (set 'indented dyalog-leading-spaces)))
+    indented))
+
+(defun dyalog-search-indent (at-pause cond-fun)
   (interactive)
   (let ((indented nil))
     (progn
       (save-excursion
         (while (not indented)
           (forward-line -1)
-          (cond ((looking-at dyalog-indent-stop)
-                 (set 'indented (current-indentation)))
-                ((looking-at  dyalog-indent-start)
-                 (set 'indented (if at-pause
-                                    (current-indentation)
-                                  (dyalog-indent 0))))
-                ((bobp)
-                 (set 'indented dyalog-leading-spaces)))))
-      indented)))
+          (set 'indented (funcall cond-fun at-pause indented)))
+        indented))))
 
 (defun dyalog-indent-line ()
   (interactive)
