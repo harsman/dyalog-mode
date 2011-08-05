@@ -167,7 +167,9 @@
         (forward-char)))                          ; fallback
 
 (defvar dyalog-indent-start
-  "^\\s-*:\\(If\\|While\\|Repeat\\|Trap\\|Case\\|For\\|Class\\|Hold\\|With\\|Namespace\\)")
+  (concat
+   "\\(.*{\\s-*$\\)\\|"
+   "\\(^\\s-*:\\(If\\|While\\|Repeat\\|Trap\\|Case\\|For\\|Class\\|Hold\\|With\\|Namespace\\)\\)"))
 
 (defvar dyalog-indent-pause
   "^\\s-*:\\(Else\\|AndIf\\|OrIf\\)")
@@ -176,7 +178,7 @@
   "^\\s-*:Case")
 
 (defvar dyalog-indent-stop
-  "^\\s-*:End[A-Za-z]+")
+  "\\([^{\n\r]*}\\s-*$\\)\\|\\(^\\s-*:End[A-Za-z]+\\)")
 
 (defvar dyalog-leading-spaces 1)
 
@@ -198,8 +200,8 @@
       (set 'indent
            (cond
             ((bobp) dyalog-leading-spaces)
-            ((looking-at dyalog-indent-stop)
-             (dyalog-dedent -1))
+             ((looking-at dyalog-indent-stop)
+              (dyalog-search-indent t 'dyalog-indent-cond-generic 0))
             ((looking-at dyalog-indent-case)
              (dyalog-search-indent nil 'dyalog-indent-cond-case 0))
             ((looking-at dyalog-indent-pause)
@@ -246,7 +248,7 @@
 
 (defun dyalog-indent-line ()
   (interactive)
-  (indent-line-to (dyalog-get-indent)))
+  (indent-line-to (max 0 (dyalog-get-indent))))
 
 (defun dyalog-mode ()
   (interactive)
