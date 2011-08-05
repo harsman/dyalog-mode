@@ -192,18 +192,23 @@
 
 (defun dyalog-get-indent ()
   (interactive)
-  (save-excursion
-    (move-beginning-of-line nil)
-    (cond
-     ((bobp) dyalog-leading-spaces)
-     ((looking-at dyalog-indent-stop)
-      (dyalog-dedent -1))
-     ((looking-at dyalog-indent-case)
-      (dyalog-search-indent nil 'dyalog-indent-cond-case 0))
-     ((looking-at dyalog-indent-pause)
-      (dyalog-search-indent t 'dyalog-indent-cond-generic 0))
-     (t
-      (dyalog-search-indent nil 'dyalog-indent-cond-generic 0)))))
+  (let ((indent 0))
+    (save-excursion
+      (move-beginning-of-line nil)
+      (set 'indent
+           (cond
+            ((bobp) dyalog-leading-spaces)
+            ((looking-at dyalog-indent-stop)
+             (dyalog-dedent -1))
+            ((looking-at dyalog-indent-case)
+             (dyalog-search-indent nil 'dyalog-indent-cond-case 0))
+            ((looking-at dyalog-indent-pause)
+             (dyalog-search-indent t 'dyalog-indent-cond-generic 0))
+            (t
+             (dyalog-search-indent nil 'dyalog-indent-cond-generic 0))))
+      (if (and (eq indent 1) (looking-at "\\s-*$"))
+          0
+        indent))))
 
 (defun dyalog-indent-cond-generic (at-pause indented count)
   (cond ((looking-at dyalog-indent-stop)
@@ -241,7 +246,7 @@
 
 (defun dyalog-indent-line ()
   (interactive)
-  (indent-line-to (max dyalog-leading-spaces (dyalog-get-indent))))
+  (indent-line-to (dyalog-get-indent)))
 
 (defun dyalog-mode ()
   (interactive)
