@@ -183,7 +183,7 @@
   "^\\s-*:Case")
 
 (defvar dyalog-indent-stop
-  "\\([^{\n\r]*}\\s-*$\\)\\|\\(^\\s-*:End[A-Za-z]+\\)")
+  "\\([^{\n\r]*}[^{}\r\n]*$\\)\\|\\(^\\s-*:End[A-Za-z]+\\)")
 
 (defvar dyalog-leading-spaces 1)
 
