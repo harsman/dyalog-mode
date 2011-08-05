@@ -171,6 +171,11 @@
    "\\(.*{\\s-*$\\)\\|"
    "\\(^\\s-*:\\(If\\|While\\|Repeat\\|Trap\\|Case\\|For\\|Class\\|Hold\\|With\\|Namespace\\)\\)"))
 
+(defvar dyalog-block-start
+  (concat
+   "\\(.*{\\s-*$\\)\\|"
+   "\\(^\\s-*:\\(If\\|While\\|Repeat\\|Trap\\|For\\|Class\\|Hold\\|With\\|Namespace\\)\\)"))
+
 (defvar dyalog-indent-pause
   "^\\s-*:\\(Else\\|AndIf\\|OrIf\\)")
 
@@ -222,7 +227,7 @@
              (set 'indented (if at-pause
                                 (current-indentation)
                               (dyalog-indent 0)))
-           (set 'count (- count 1))))
+           (set 'count (- count (if (looking-at dyalog-block-start) 1 0)))))
         ((bobp)
          (set 'indented dyalog-leading-spaces)))
   (list indented count))
