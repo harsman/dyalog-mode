@@ -206,24 +206,22 @@
       (dyalog-search-indent nil 'dyalog-indent-cond-generic)))))
 
 (defun dyalog-indent-cond-generic (at-pause indented)
-  (progn
-    (cond ((looking-at dyalog-indent-stop)
-           (set 'indented (current-indentation)))
-          ((looking-at  dyalog-indent-start)
-           (set 'indented (if at-pause
-                              (current-indentation)
-                            (dyalog-indent 0))))
-          ((bobp)
-           (set 'indented dyalog-leading-spaces)))
-    indented))
+  (cond ((looking-at dyalog-indent-stop)
+         (set 'indented (current-indentation)))
+        ((looking-at  dyalog-indent-start)
+         (set 'indented (if at-pause
+                            (current-indentation)
+                          (dyalog-indent 0))))
+        ((bobp)
+         (set 'indented dyalog-leading-spaces)))
+  indented)
 
 (defun dyalog-indent-cond-case (at-pause indented)
-  (progn
-    (cond ((looking-at "^\\s-*:Select")
-           (set 'indented (current-indentation)))
-           ((bobp)
-            (set 'indented dyalog-leading-spaces)))
-    indented))
+  (cond ((looking-at "^\\s-*:Select")
+         (set 'indented (current-indentation)))
+        ((bobp)
+         (set 'indented dyalog-leading-spaces)))
+  indented)
 
 (defun dyalog-search-indent (at-pause cond-fun)
   (interactive)
