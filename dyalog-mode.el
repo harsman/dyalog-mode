@@ -168,22 +168,24 @@
 
 (defvar dyalog-indent-start
   (concat
-   "\\(.*{\\s-*$\\)\\|"
-   "\\(^\\s-*:\\(If\\|While\\|Repeat\\|Trap\\|Case\\|For\\|Class\\|Hold\\|With\\|Namespace\\)\\)"))
+   "\\(.*{[^{}\r\n]*$\\)" "\\|"
+   "\\(^\\s-*:\\(If\\|While\\|Repeat\\|Trap\\|Case"
+   "\\|For\\|Class\\|Hold\\|With\\|Namespace\\)[^⋄\r\n]*$\\)"))
 
 (defvar dyalog-block-start
   (concat
-   "\\(.*{\\s-*$\\)\\|"
-   "\\(^\\s-*:\\(If\\|While\\|Repeat\\|Trap\\|For\\|Class\\|Hold\\|With\\|Namespace\\)\\)"))
+   "\\(.*{[^{}\r\n]*$\\)" "\\|"
+   "\\(^\\s-*:\\(If\\|While\\|Repeat\\|Trap\\|"
+   "For\\|Class\\|Hold\\|With\\|Namespace\\)[^⋄\r\n]*$\\)"))
 
 (defvar dyalog-indent-pause
-  "^\\s-*:\\(Else\\|AndIf\\|OrIf\\)")
+  "^\\s-*:\\(Else\\|AndIf\\|OrIf\\)[^⋄\r\n]*$")
 
 (defvar dyalog-indent-case
   "^\\s-*:Case")
 
 (defvar dyalog-indent-stop
-  "\\([^{\n\r]*}[^{}\r\n]*$\\)\\|\\(^\\s-*:End[A-Za-z]+\\)")
+  "\\([^{\n\r]*}[^{}\r\n]*$\\)\\|\\(^\\s-*:End[A-Za-z]+[^⋄\r\n]*$\\)")
 
 (defvar dyalog-leading-spaces 1)
 
