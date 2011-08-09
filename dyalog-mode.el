@@ -1,10 +1,12 @@
-;;; -*- coding: utf-8 -*-
-;;; dyalog-mode.el --- Major mode for editing Dyalog APL source code
+;;; dyalog-mode.el --- Major mode for editing Dyalog APL source code -*- coding: utf-8 -*-
 
 ;; Copyright (C) 2008, 2009, 2010, 2011 Joakim Hårsman
 
-;; Version: 0.2
 ;; Author: Joakim Hårsman <joakim.harsman@gmail.com>
+;; Version: 0.3
+;; Keywords: languages
+;; X-URL: http://bitbucket.org/harsman/dyalog-mode
+;; URL: https://bitbucket.org/harsman/dyalog-mode/raw/tip/dyalog-mode.el
 
 ;; This file is not part of GNU Emacs.
 
@@ -25,8 +27,15 @@
 ;;
 ;; Dyalog-mode is a major mode for editing Dyalog APL source code.
 ;;
-;; It supports basic syntax highlighting and indentation. Support for
-;; dynamic functions and operators is currently poor.
+;; It supports basic syntax highlighting and indentation. It relies on regex
+;; hacks for both indentation and syntax highlighting, so it sometimes gets
+;; confused.
+;;
+;; If you use ediff to diff Dyalog APL source code, you can set
+;; ediff-forward-word-function to dyalog-ediff-forward-word to get better
+;; diffs.
+;;
+;; Get the latest version at http://bitbucket.org/harsman/dyalog-mode
 
 ;;; Code:
 
