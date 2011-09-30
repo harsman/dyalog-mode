@@ -3,7 +3,7 @@
 ;; Copyright (C) 2008, 2009, 2010, 2011 Joakim Hårsman
 
 ;; Author: Joakim Hårsman <joakim.harsman@gmail.com>
-;; Version: 0.3
+;; Version: 0.31
 ;; Keywords: languages
 ;; X-URL: http://bitbucket.org/harsman/dyalog-mode
 ;; URL: https://bitbucket.org/harsman/dyalog-mode/raw/tip/dyalog-mode.el
@@ -196,7 +196,15 @@
 (defvar dyalog-indent-stop
   "\\([^{\n\r]*}[^{}\r\n]*$\\)\\|\\(^\\s-*:End[A-Za-z]+[^⋄\r\n]*$\\)")
 
-(defvar dyalog-leading-spaces 1)
+(defvar dyalog-leading-spaces 1
+  "The number of leading spaces to use in the left margin")
+
+(defvar dyalog-indent-comments t
+  "True if comments should be indented according to the surrounding scope.")
+
+(defvar dyalog-fix-whitespace nil
+  "True if buffers should be re-indented and have trailing
+  whitespace removed before they are saved")
 
 (defun dyalog-dedent (line)
   (save-excursion
@@ -215,13 +223,18 @@
       (move-beginning-of-line nil)
       (set 'indent
            (cond
-            ((bobp) dyalog-leading-spaces)
-             ((looking-at dyalog-indent-stop)
-              (dyalog-search-indent t 'dyalog-indent-cond-generic 0))
+            ((bobp)
+             dyalog-leading-spaces)
+            ((looking-at dyalog-indent-stop)
+             (dyalog-search-indent t 'dyalog-indent-cond-generic 0))
             ((looking-at dyalog-indent-case)
              (dyalog-search-indent nil 'dyalog-indent-cond-case 0))
             ((looking-at dyalog-indent-pause)
              (dyalog-search-indent t 'dyalog-indent-cond-generic 0))
+            ((looking-at "^\\s-*⍝")
+             (if dyalog-indent-comments
+                 (dyalog-search-indent nil 'dyalog-indent-cond-generic 0)
+               (skip-syntax-forward "-")))
             (t
              (dyalog-search-indent nil 'dyalog-indent-cond-generic 0))))
       (if (and (eq indent 1) (looking-at "\\s-*$"))
@@ -266,6 +279,22 @@
   (interactive)
   (indent-line-to (max 0 (dyalog-get-indent))))
 
+(defun dyalog-fix-whitespace ()
+  (interactive)
+  (let ((dyalog-indent-comments nil))
+    (if (and (eq major-mode 'dyalog-mode)
+             dyalog-fix-whitespace)
+        (progn
+          (save-excursion
+            (delete-trailing-whitespace)
+            (indent-buffer))))))
+
+(defun dyalog-indent-buffer ()
+  (interactive)
+  (save-excursion
+    (mark-whole-buffer)
+    (indent-region (region-beginning) (region-end))))
+
 (defun dyalog-mode ()
   (interactive)
   (kill-all-local-variables)
@@ -286,6 +315,7 @@
   (set (make-local-variable 'indent-line-function ) 'dyalog-indent-line)
   (setq major-mode 'dyalog-mode)
   (setq mode-name "Dyalog")
+  (add-hook 'before-save-hook 'dyalog-fix-whitespace)
   (run-hooks 'dyalog-mode-hook))
 
 (provide 'dyalog-mode)
