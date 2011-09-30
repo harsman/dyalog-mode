@@ -3,7 +3,7 @@
 ;; Copyright (C) 2008, 2009, 2010, 2011 Joakim Hårsman
 
 ;; Author: Joakim Hårsman <joakim.harsman@gmail.com>
-;; Version: 0.31
+;; Version: 0.32
 ;; Keywords: languages
 ;; X-URL: http://bitbucket.org/harsman/dyalog-mode
 ;; URL: https://bitbucket.org/harsman/dyalog-mode/raw/tip/dyalog-mode.el
@@ -42,8 +42,6 @@
 
 
 (require 'cl)
-
-(defvar dyalog-mode-hook nil)
 
 ;; Set up mode specific keys below
 (defvar dyalog-mode-map
@@ -93,7 +91,7 @@
     (define-key map [?\C-⊖] "⊖")
     (define-key map [?\C-⍟] "⍟")
     (define-key map [?\C-⍱] "⍱")
-    (define-key map [?\C-⍲] "⍲") 
+    (define-key map [?\C-⍲] "⍲")
     (define-key map [?\C-⍬] "⍬")
     (define-key map [?\C-⌹] "⌹")
     (define-key map [?\C-≡] "≡")
@@ -103,7 +101,7 @@
     (define-key map [?\C-⌿] "⌿")
     (define-key map [?\C-⍀] "⍀")
     map)
-  "Keymap for Dyalog APL mode")
+  "Keymap for Dyalog APL mode.")
 
 ;; This should probably be split into several layers of highlighting
 (defconst dyalog-font-lock-keywords1
@@ -116,7 +114,7 @@
     '(":" . font-lock-keyword-face)
     '("[^A-Za-z_∆0-9]\\(¯?[0-9]+\\.?[0-9]*\\(E¯?[0-9]+\\.?[0-9]*\\)?\\)" (1 font-lock-constant-face nil))
     '("[][<>+---=/¨~\\\\?*(){}&|]" . font-lock-keyword-face)
-    '("[*×≤≥>≠∨∧÷∊⍴↑↓⍳○←→⌈⌊∘⎕⍎⍕⊂⊃∩∪⊥⊤⍨⍒⍋⌽⍉⊖⍟⍱⍲⍬⌹≡≢⍪⌿⍀⍺⍵⎕⍞⋄⍷]" 
+    '("[*×≤≥>≠∨∧÷∊⍴↑↓⍳○←→⌈⌊∘⎕⍎⍕⊂⊃∩∪⊥⊤⍨⍒⍋⌽⍉⊖⍟⍱⍲⍬⌹≡≢⍪⌿⍀⍺⍵⎕⍞⋄⍷]"
       . font-lock-keyword-face)
     ;; Below line is broken for dfuns and very broken for
     ;; nested dfuns
@@ -124,13 +122,13 @@
     ;; localizations
     '(";\\([A-Za-z0-9_∆]+\\)" (1 font-lock-constant-face nil))
     '("[∇$@]+" . font-lock-warning-face))
-   "Minimal highlighting for Dyalog APL")
+   "Minimal highlighting for Dyalog APL.")
 
 (defvar dyalog-font-lock-keywords dyalog-font-lock-keywords1
-  "Default highlighting mode for Dyalog mode")
+  "Default highlighting mode for Dyalog mode.")
 
 (defvar dyalog-ascii-chars "[]<>+---=/¨~\\?*(){}¨&|"
-  "APL symbols also present in ASCII")
+  "APL symbols also present in ASCII.")
 
 (defvar dyalog-keyword-chars
   "*×≤≥>≠∨∧÷∊⍴↑↓⍳○←→⌈⌊∘⍎⍕⊂⊃∩∪⊥⊤⍨⍒⍋⌽⍉⊖⍟⍱⍲⍬⌹≡≢⍪⌿⍀⍺⍵⎕⍞⋄⍷")
@@ -196,28 +194,44 @@
 (defvar dyalog-indent-stop
   "\\([^{\n\r]*}[^{}\r\n]*$\\)\\|\\(^\\s-*:End[A-Za-z]+[^⋄\r\n]*$\\)")
 
-(defvar dyalog-leading-spaces 1
-  "The number of leading spaces to use in the left margin")
+(defgroup dyalog nil
+  "Major mode `dyalog-mode' for editing Dyalog APL code."
+  :group 'languages
+  :prefix "dyalog-")
 
-(defvar dyalog-indent-comments t
-  "True if comments should be indented according to the surrounding scope.")
+(defcustom dyalog-mode-hook nil
+  "List of functions to be executed on entry to `dyalog-mode'."
+  :type 'hook
+  :group 'dyalog)
 
-(defvar dyalog-fix-whitespace nil
-  "True if buffers should be re-indented and have trailing
-  whitespace removed before they are saved")
+(defcustom dyalog-leading-spaces 1
+  "The number of leading spaces to use in the left margin."
+  :type 'integer
+  :group 'dyalog)
+
+(defcustom dyalog-indent-comments t
+  "True if comments should be indented according to the surrounding scope."
+  :type 'boolean
+  :group 'dyalog)
+
+(defcustom dyalog-fix-whitespace nil
+  "True if buffers should be re-indented and have trailing whitespace removed before they are saved."
+  :type 'boolean
+  :group 'dyalog)
 
 (defun dyalog-dedent (line)
+  "Dedent current line one level relative to LINE lines before."
   (save-excursion
     (forward-line line)
     (- (current-indentation) tab-width)))
 
 (defun dyalog-indent (line)
+  "Indent current line one level relative to LINE lines before."
   (save-excursion
     (forward-line line)
     (+ (current-indentation) tab-width)))
 
 (defun dyalog-get-indent ()
-  (interactive)
   (let ((indent 0))
     (save-excursion
       (move-beginning-of-line nil)
@@ -264,7 +278,6 @@
   (list indented count))
 
 (defun dyalog-search-indent (at-pause cond-fun count)
-  (interactive)
   (let ((ret nil)(indented nil)(count 0))
     (progn
       (save-excursion
@@ -276,11 +289,9 @@
         indented))))
 
 (defun dyalog-indent-line ()
-  (interactive)
   (indent-line-to (max 0 (dyalog-get-indent))))
 
 (defun dyalog-fix-whitespace ()
-  (interactive)
   (let ((dyalog-indent-comments nil))
     (if (and (eq major-mode 'dyalog-mode)
              dyalog-fix-whitespace)
@@ -290,12 +301,12 @@
             (indent-buffer))))))
 
 (defun dyalog-indent-buffer ()
-  (interactive)
   (save-excursion
     (mark-whole-buffer)
     (indent-region (region-beginning) (region-end))))
 
 (defun dyalog-mode ()
+  "Major mode for editing Dyalog APL code."
   (interactive)
   (kill-all-local-variables)
   (use-local-map dyalog-mode-map)
