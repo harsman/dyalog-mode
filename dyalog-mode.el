@@ -105,24 +105,24 @@
 
 ;; This should probably be split into several layers of highlighting
 (defconst dyalog-font-lock-keywords1
-   (list
-    ;; See emacs help for `font-lock-keywords' for a description of how the
-    ;; below values work
-    '("⎕[A-Za-z]*" . font-lock-builtin-face)
-    '("\\s-+\\(:[A-Za-z_∆]+\\)" (1 font-lock-keyword-face nil))
-    '("^\\s-*\\([A-Za-z_][A-Za-z0-9_]*:\\)" . (1 font-lock-keyword-face nil))
-    '(":" . font-lock-keyword-face)
-    '("[^A-Za-z_∆0-9]\\(¯?[0-9]+\\.?[0-9]*\\(E¯?[0-9]+\\.?[0-9]*\\)?\\)" (1 font-lock-constant-face nil))
-    '("[][<>+---=/¨~\\\\?*(){}&|]" . font-lock-keyword-face)
-    '("[*×≤≥>≠∨∧÷∊⍴↑↓⍳○←→⌈⌊∘⎕⍎⍕⊂⊃∩∪⊥⊤⍨⍒⍋⌽⍉⊖⍟⍱⍲⍬⌹≡≢⍪⌿⍀⍺⍵⎕⍞⋄⍷]"
-      . font-lock-keyword-face)
-    ;; Below line is broken for dfuns and very broken for
-    ;; nested dfuns
-    ;;'("{\\([^}]*\\)}" (1 font-lock-constant-face t))
-    ;; localizations
-    '(";\\([A-Za-z0-9_∆]+\\)" (1 font-lock-constant-face nil))
-    '("[∇$@]+" . font-lock-warning-face))
-   "Minimal highlighting for Dyalog APL.")
+  (list
+   ;; See emacs help for `font-lock-keywords' for a description of how the
+   ;; below values work
+   '("⎕[A-Za-z]*" . font-lock-builtin-face)
+   '("\\s-+\\(:[A-Za-z_∆]+\\)" (1 font-lock-keyword-face nil))
+   '("^\\s-*\\([A-Za-z_][A-Za-z0-9_]*:\\)" . (1 font-lock-keyword-face nil))
+   '(":" . font-lock-keyword-face)
+   '("[^A-Za-z_∆0-9]\\(¯?[0-9]+\\.?[0-9]*\\(E¯?[0-9]+\\.?[0-9]*\\)?\\)" (1 font-lock-constant-face nil))
+   '("[][<>+---=/¨~\\\\?*(){}&|]" . font-lock-keyword-face)
+   '("[*×≤≥>≠∨∧÷∊⍴↑↓⍳○←→⌈⌊∘⎕⍎⍕⊂⊃∩∪⊥⊤⍨⍒⍋⌽⍉⊖⍟⍱⍲⍬⌹≡≢⍪⌿⍀⍺⍵⎕⍞⋄⍷]"
+     . font-lock-keyword-face)
+   ;; Below line is broken for dfuns and very broken for
+   ;; nested dfuns
+   ;;'("{\\([^}]*\\)}" (1 font-lock-constant-face t))
+   ;; localizations
+   '(";\\([A-Za-z0-9_∆]+\\)" (1 font-lock-constant-face nil))
+   '("[∇$@]+" . font-lock-warning-face))
+  "Minimal highlighting for Dyalog APL.")
 
 (defvar dyalog-font-lock-keywords dyalog-font-lock-keywords1
   "Default highlighting mode for Dyalog mode.")
@@ -137,8 +137,8 @@
   (let ((st (make-syntax-table)))
     ;; Make various APL chars punctuation
     (loop for char in
-	  (string-to-list (concat dyalog-keyword-chars dyalog-ascii-chars))
-	  do (modify-syntax-entry char "." st))
+          (string-to-list (concat dyalog-keyword-chars dyalog-ascii-chars))
+          do (modify-syntax-entry char "." st))
     ;; Make sure delta, quad and underscore are part of symbol names
     ;; This doesn't seem to work for delta and quad?
     (modify-syntax-entry ?_ "_" st)
@@ -156,7 +156,7 @@
     (modify-syntax-entry ?\) ")(" st)
     (modify-syntax-entry ?{ "(}" st)
     (modify-syntax-entry ?\} "){" st)
-     st)
+    st)
   "Syntax table for `dyalog-mode'.")
 
 (defvar dyalog-name  "[A-Za-z∆_]+[A-Za-z∆_0-9]*")
@@ -298,7 +298,7 @@
         (progn
           (save-excursion
             (delete-trailing-whitespace)
-            (indent-buffer))))))
+            (dyalog-indent-buffer))))))
 
 (defun dyalog-indent-buffer ()
   (save-excursion
