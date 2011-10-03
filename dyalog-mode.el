@@ -319,6 +319,8 @@
   (set (make-local-variable 'comment-use-global-state) t)
   (set (make-local-variable 'comment-use-syntax) t)
   (set (make-local-variable 'font-lock-defaults) '(dyalog-font-lock-keywords))
+  ;; Dyalog always indents with spaces
+  (set (make-local-variable 'indent-tabs-mode) nil)
   ;; below line doesn't seem to help, same results as with standard
   ;; ediff-forward-word. If same line is in .emacs it works, so setting
   ;; here is probably too late (or early?).
