@@ -242,13 +242,15 @@
             ((looking-at dyalog-indent-stop)
              (dyalog-search-indent t 'dyalog-indent-cond-generic 0))
             ((looking-at dyalog-indent-case)
-             (dyalog-search-indent nil 'dyalog-indent-cond-case 0))
+             (dyalog-search-indent t 'dyalog-indent-cond-case 0))
             ((looking-at dyalog-indent-pause)
              (dyalog-search-indent t 'dyalog-indent-cond-generic 0))
             ((looking-at "^\\s-*⍝")
              (if dyalog-indent-comments
                  (dyalog-search-indent nil 'dyalog-indent-cond-generic 0)
                (skip-syntax-forward "-")))
+            ((looking-at "^[A-Za-z_]+[A-Za-z0-9_]*:")
+             0)
             (t
              (dyalog-search-indent nil 'dyalog-indent-cond-generic 0))))
       (if (and (eq indent 1) (looking-at "\\s-*$"))
@@ -271,14 +273,12 @@
   (list indented count))
 
 (defun dyalog-indent-cond-case (at-pause indented count)
-  (cond ((looking-at "^\\s-*:Select")
-         (set 'indented (current-indentation)))
-        ((bobp)
-         (set 'indented dyalog-leading-spaces)))
-  (list indented count))
+  (let ((dyalog-indent-start "^\\s-*:\\(Select\\|Trap\\)")
+        (dyalog-indent-stop "^\\s-*:End\\(Select\\|Trap\\)"))
+    (dyalog-indent-cond-generic at-pause indented count)))
 
 (defun dyalog-search-indent (at-pause cond-fun count)
-  (let ((ret nil)(indented nil)(count 0))
+  (let ((ret nil)(indented nil))
     (progn
       (save-excursion
         (while (not indented)
