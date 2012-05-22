@@ -108,19 +108,26 @@
   (list
    ;; See emacs help for `font-lock-keywords' for a description of how the
    ;; below values work
+   ;; System functions
    '("⎕[A-Za-z]*" . font-lock-builtin-face)
-   '("\\s-+\\(:[A-Za-z_∆]+\\)" (1 font-lock-keyword-face nil))
-   '("^\\s-*\\([A-Za-z_][A-Za-z0-9_]*:\\)" . (1 font-lock-keyword-face nil))
+   ;; Guards
    '(":" . font-lock-keyword-face)
+   ;; Keywords
+   '("^\\s-*\\(:[A-Za-z]+\\)" . (1 font-lock-keyword-face t))
+   ;; Labels
+   '("^\\s-*\\([A-Za-z_][A-Za-z0-9_]*:\\)" . (1 font-lock-keyword-face t))
+   ;; Numerical constans
    '("[^A-Za-z_∆0-9]\\(¯?[0-9]+\\.?[0-9]*\\(E¯?[0-9]+\\.?[0-9]*\\)?\\)" (1 font-lock-constant-face nil))
+   ;; APL chars
    '("[][<>+---=/¨~\\\\?*(){}&|]" . font-lock-keyword-face)
    '("[*×≤≥>≠∨∧÷∊⍴↑↓⍳○←→⌈⌊∘⎕⍎⍕⊂⊃∩∪⊥⊤⍨⍒⍋⌽⍉⊖⍟⍱⍲⍬⌹≡≢⍪⌿⍀⍺⍵⎕⍞⋄⍷]"
      . font-lock-keyword-face)
    ;; Below line is broken for dfuns and very broken for
    ;; nested dfuns
    ;;'("{\\([^}]*\\)}" (1 font-lock-constant-face t))
-   ;; localizations
+   ;; Localizations
    '(";\\([A-Za-z0-9_∆]+\\)" (1 font-lock-constant-face nil))
+   ;; Illegal chars (and del/nabla)
    '("[∇$@]+" . font-lock-warning-face))
   "Minimal highlighting for Dyalog APL.")
 
