@@ -312,6 +312,25 @@
     (mark-whole-buffer)
     (indent-region (region-beginning) (region-end))))
 
+(defconst dyalog-func-start "\\(\\`\\|∇[\r\n]*\\)\\s-*")
+
+(defconst dyalog-func-retval "\\([A-Za-z]+←\\|{[a-zA-Z]}←\\)?")
+
+(defconst dyalog-func-larg "\\([A-Za-z_]+ *\\|{[A-Za-z_]+} *\\)?")
+
+(defconst dyalog-func-name "\\([A-Za-z_]+[A-Za-z_0-9]*\\)")
+
+(defconst dyalog-func-rarg "\\( +[A-Za-z_]+\\)?")
+
+(defconst dyalog-tradfn-header (concat dyalog-func-start dyalog-func-retval
+                                       dyalog-func-larg dyalog-func-name
+                                       dyalog-func-rarg))
+
+(defvar dyalog-imenu-generic-expression
+  `(("Functions"  ,dyalog-tradfn-header 4)
+    ("Namespaces" "^\\s-*:Namespace *\\([A-Za-z_]+[A-Za-z_0-9]*\\)" 1)
+    ("Classes"    "^\\s-*:Class *\\([A-Za-z_]+[A-Za-z_0-9]*\\)" 1)))
+
 (defun dyalog-mode ()
   "Major mode for editing Dyalog APL code."
   (interactive)
@@ -335,6 +354,11 @@
   (set (make-local-variable 'indent-line-function ) 'dyalog-indent-line)
   (setq major-mode 'dyalog-mode)
   (setq mode-name "Dyalog")
+  ;; Imenu and which-func-mode
+  (setq imenu-generic-expression dyalog-imenu-generic-expression)
+  (eval-after-load "which-func"
+    '(add-to-list 'which-func-modes 'dyalog-mode))
+  ;; Hooks
   (add-hook 'before-save-hook 'dyalog-fix-whitespace)
   (run-hooks 'dyalog-mode-hook))
 
