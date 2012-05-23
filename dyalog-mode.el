@@ -312,22 +312,38 @@
     (mark-whole-buffer)
     (indent-region (region-beginning) (region-end))))
 
-(defconst dyalog-func-start "\\(\\`\\|∇[\r\n]*\\)\\s-*")
+(defconst dyalog-func-start "\\(?:\\`\\|∇[\r\n]*\\)\\s-*")
 
-(defconst dyalog-func-retval "\\([A-Za-z]+←\\|{[a-zA-Z]}←\\)?")
+(defconst dyalog-func-retval "\\(?:[A-Za-z]+←\\|{[a-zA-Z]}←\\)?")
 
-(defconst dyalog-func-larg "\\([A-Za-z_]+ *\\|{[A-Za-z_]+} *\\)?")
+(defconst dyalog-func-larg "\\(?:[A-Za-z_]+ +\\|{[A-Za-z_]+} *\\)")
 
-(defconst dyalog-func-name "\\([A-Za-z_]+[A-Za-z_0-9]*\\)")
+(defconst dyalog-func-name "\\(?1:[A-Za-z_]+[A-Za-z_0-9]*\\)")
 
-(defconst dyalog-func-rarg "\\( +[A-Za-z_]+\\)?")
+(defconst dyalog-func-rarg "\\(?: +[A-Za-z_]+\\)")
+
+(defconst dyalog-func-header-end "\\s-*\\(?:;\\|$\\)")
+
+(defconst dyalog-func-niladic (concat "\\(?:" dyalog-func-name
+                                       dyalog-func-header-end "\\)"))
+
+(defconst dyalog-func-monadic (concat "\\(?:" dyalog-func-name
+                                      dyalog-func-rarg
+                                      dyalog-func-header-end "\\)"))
+
+(defconst dyalog-func-dyadic (concat "\\(?:" dyalog-func-larg
+                                     dyalog-func-name
+                                     dyalog-func-rarg
+                                     dyalog-func-header-end "\\)"))
 
 (defconst dyalog-tradfn-header (concat dyalog-func-start dyalog-func-retval
-                                       dyalog-func-larg dyalog-func-name
-                                       dyalog-func-rarg))
+                                       "\\(?:" dyalog-func-niladic "\\|"
+                                       dyalog-func-monadic "\\|"
+                                       dyalog-func-dyadic "\\)"))
+
 
 (defvar dyalog-imenu-generic-expression
-  `(("Functions"  ,dyalog-tradfn-header 4)
+  `(("Functions"  ,dyalog-tradfn-header 1)
     ("Namespaces" "^\\s-*:Namespace *\\([A-Za-z_]+[A-Za-z_0-9]*\\)" 1)
     ("Classes"    "^\\s-*:Class *\\([A-Za-z_]+[A-Za-z_0-9]*\\)" 1)))
 
