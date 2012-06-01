@@ -377,7 +377,7 @@
   (if (not (re-search-forward dyalog-tradfn-header (point-max) t))
       (progn
         (goto-char (point-max))
-        (beginning-of-line))
+        (end-of-line))
     (progn
       (goto-char (match-beginning 0))
       (if (bobp)
@@ -389,7 +389,7 @@
               (forward-line -1))
           (end-of-line)
           (re-search-backward "^[ \r\n]")
-          (beginning-of-line))))))
+          (end-of-line))))))
 
 (defun dyalog-previous-defun-end ()
   (if (not (re-search-backward dyalog-tradfn-header (point-min) t))
