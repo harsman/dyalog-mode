@@ -347,6 +347,72 @@
     ("Namespaces" "^\\s-*:Namespace *\\([A-Za-z_]+[A-Za-z_0-9]*\\)" 1)
     ("Classes"    "^\\s-*:Class *\\([A-Za-z_]+[A-Za-z_0-9]*\\)" 1)))
 
+(defun dyalog-previous-defun ()
+  (if (not (re-search-backward dyalog-tradfn-header (point-min) t))
+      (goto-char (point-min))
+    (if (looking-at "\\s-*∇\\s-*$")
+        (forward-line 1))))
+
+(defun dyalog-next-defun ()
+  (if (not (re-search-forward dyalog-tradfn-header (point-max) t))
+      (goto-char (point-max))
+    (if (looking-at "\\s-*∇\\s-*$")
+        (forward-line 1))))
+  
+(defun dyalog-beginning-of-defun (&optional arg)
+  "Move backward to the beginning of a function definition."
+  (interactive "^p")
+  (unless arg (setq arg 1))
+  (if (< arg 0)
+      (while (< arg 0)
+        (progn
+          (dyalog-next-defun)
+          (incf arg)))
+    (while (> arg 0)
+      (progn
+        (dyalog-previous-defun)
+        (decf arg)))))
+
+(defun dyalog-next-defun-end ()
+  (if (not (re-search-forward dyalog-tradfn-header (point-max) t))
+      (progn
+        (goto-char (point-max))
+        (beginning-of-line))
+    (progn
+      (goto-char (match-beginning 0))
+      (if (bobp)
+          (progn
+             (forward-line 1)
+             (dyalog-next-defun-end))
+        (progn
+          (if (looking-at "\\s-*∇\\s-*$")
+              (forward-line -1))
+          (end-of-line)
+          (re-search-backward "^[ \r\n]")
+          (beginning-of-line))))))
+
+(defun dyalog-previous-defun-end ()
+  (if (not (re-search-backward dyalog-tradfn-header (point-min) t))
+      (goto-char (point-min))))
+
+(defun dyalog-end-of-defun (&optional arg)
+  "Move forward to the end of a function definition."
+  (interactive "^p")
+  (unless arg (setq arg 1))
+  (if (< arg 0)
+      ;; This case doesn't seem to be required, it seems
+      ;; like the top level end-of-defun handles negative
+      ;; arguments by combining calls to end-of-defun-function
+      ;; and beginning-of-defun-function.
+      (while (< arg 0)
+        (progn
+          (dyalog-previous-defun-end)
+          (incf arg)))
+    (while (> arg 0)
+      (progn
+        (dyalog-next-defun-end)
+        (decf arg)))))
+
 (defun dyalog-mode ()
   "Major mode for editing Dyalog APL code."
   (interactive)
@@ -367,7 +433,10 @@
   ;; ediff-forward-word. If same line is in .emacs it works, so setting
   ;; here is probably too late (or early?).
   (setq ediff-forward-word-function 'dyalog-ediff-forward-word)
-  (set (make-local-variable 'indent-line-function ) 'dyalog-indent-line)
+  (set (make-local-variable 'indent-line-function) 'dyalog-indent-line)
+  (set (make-local-variable 'beginning-of-defun-function) 'dyalog-beginning-of-defun)
+  (set (make-local-variable 'end-of-defun-function) 'dyalog-end-of-defun)
+
   (setq major-mode 'dyalog-mode)
   (setq mode-name "Dyalog")
   ;; Imenu and which-func-mode
