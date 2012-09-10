@@ -286,26 +286,24 @@
 
 (defun dyalog-search-indent (at-pause cond-fun count)
   (let ((ret nil)(indented nil))
-    (progn
-      (save-excursion
-        (while (not indented)
-          (forward-line -1)
-          (set 'ret (funcall cond-fun at-pause indented count))
-          (set 'indented (car ret))
-          (set 'count (cadr ret)))
-        indented))))
+    (save-excursion
+      (while (not indented)
+        (forward-line -1)
+        (set 'ret (funcall cond-fun at-pause indented count))
+        (set 'indented (car ret))
+        (set 'count (cadr ret)))
+      indented)))
 
 (defun dyalog-indent-line ()
   (indent-line-to (max 0 (dyalog-get-indent))))
 
 (defun dyalog-fix-whitespace ()
   (let ((dyalog-indent-comments nil))
-    (if (and (eq major-mode 'dyalog-mode)
-             dyalog-fix-whitespace)
-        (progn
-          (save-excursion
-            (delete-trailing-whitespace)
-            (dyalog-indent-buffer))))))
+    (when (and (eq major-mode 'dyalog-mode)
+               dyalog-fix-whitespace)
+      (save-excursion
+        (delete-trailing-whitespace)
+        (dyalog-indent-buffer)))))
 
 (defun dyalog-indent-buffer ()
   (save-excursion
@@ -365,31 +363,27 @@
   (unless arg (setq arg 1))
   (if (< arg 0)
       (while (< arg 0)
-        (progn
-          (dyalog-next-defun)
-          (incf arg)))
+        (dyalog-next-defun)
+        (incf arg))
     (while (> arg 0)
-      (progn
-        (dyalog-previous-defun)
-        (decf arg)))))
+      (dyalog-previous-defun)
+      (decf arg))))
 
 (defun dyalog-next-defun-end ()
   (if (not (re-search-forward dyalog-tradfn-header (point-max) t))
       (progn
         (goto-char (point-max))
         (end-of-line))
-    (progn
-      (goto-char (match-beginning 0))
-      (if (bobp)
-          (progn
-             (forward-line 1)
-             (dyalog-next-defun-end))
+    (goto-char (match-beginning 0))
+    (if (bobp)
         (progn
-          (if (looking-at "\\s-*∇\\s-*$")
-              (forward-line -1))
-          (end-of-line)
-          (re-search-backward "^[ \r\n]")
-          (end-of-line))))))
+          (forward-line 1)
+          (dyalog-next-defun-end))
+      (when (looking-at "\\s-*∇\\s-*$")
+        (forward-line -1))
+      (end-of-line)
+      (re-search-backward "^[ \r\n]")
+      (end-of-line))))
 
 (defun dyalog-previous-defun-end ()
   (if (not (re-search-backward dyalog-tradfn-header (point-min) t))
@@ -405,13 +399,11 @@
       ;; arguments by combining calls to end-of-defun-function
       ;; and beginning-of-defun-function.
       (while (< arg 0)
-        (progn
-          (dyalog-previous-defun-end)
-          (incf arg)))
+        (dyalog-previous-defun-end)
+        (incf arg))
     (while (> arg 0)
-      (progn
-        (dyalog-next-defun-end)
-        (decf arg)))))
+      (dyalog-next-defun-end)
+      (decf arg))))
 
 (defun dyalog-mode ()
   "Major mode for editing Dyalog APL code."
