@@ -312,7 +312,7 @@
 
 (defconst dyalog-func-start "\\(?:\\`\\|∇[\r\n]*\\)\\s-*")
 
-(defconst dyalog-func-retval "\\(?:[A-Za-z]+←\\|{[a-zA-Z]}←\\)?")
+(defconst dyalog-func-retval "\\(?:[A-Za-z]+ *← *\\|{[a-zA-Z]} *← *\\)?")
 
 (defconst dyalog-func-larg "\\(?:[A-Za-z_]+ +\\|{[A-Za-z_]+} *\\)")
 
