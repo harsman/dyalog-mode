@@ -113,7 +113,8 @@
    ;; Guards
    '(":" . font-lock-keyword-face)
    ;; Keywords
-   '("^\\s-*\\(:[A-Za-z]+\\)" . (1 font-lock-keyword-face t))
+   '("\\(^\\s-*:\\([A-Za-z]+\\)\\)\\|\\(⋄\\s-*:\\(?2:[A-Za-z]+\\)\\)"
+     . (2 font-lock-keyword-face nil))
    ;; Labels
    '("^\\s-*\\([A-Za-z_][A-Za-z0-9_]*:\\)" . (1 font-lock-keyword-face t))
    ;; Numerical constans
