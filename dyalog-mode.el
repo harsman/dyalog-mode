@@ -248,51 +248,75 @@
             ((bobp)
              dyalog-leading-spaces)
             ((looking-at dyalog-indent-stop)
-             (dyalog-search-indent t 'dyalog-indent-cond-generic 0))
+             (dyalog-search-indent t 'dyalog-indent-cond-generic 0 0))
             ((looking-at dyalog-indent-case)
-             (dyalog-search-indent t 'dyalog-indent-cond-case 0))
+             (dyalog-search-indent t 'dyalog-indent-cond-case 0 0))
             ((looking-at dyalog-indent-pause)
-             (dyalog-search-indent t 'dyalog-indent-cond-generic 0))
+             (dyalog-search-indent t 'dyalog-indent-cond-generic 0 0))
             ((looking-at "^\\s-*⍝")
              (if dyalog-indent-comments
-                 (dyalog-search-indent nil 'dyalog-indent-cond-generic 0)
+                 (dyalog-search-indent nil 'dyalog-indent-cond-generic 0 0)
                (skip-syntax-forward "-")))
             ((looking-at "^[A-Za-z_]+[A-Za-z0-9_]*:")
              0)
+            ((looking-at dyalog-naked-nabla)
+             (dyalog-search-indent t 'dyalog-indent-cond-generic 0 0))
+            ((looking-at (concat "\\s-*" dyalog-tradfn-header))
+             (dyalog-search-indent nil 'dyalog-indent-cond-header 0 0))
             (t
-             (dyalog-search-indent nil 'dyalog-indent-cond-generic 0))))
+             (dyalog-search-indent nil 'dyalog-indent-cond-generic 0 0))))
       (if (and (eq indent 1) (looking-at "\\s-*$"))
           0
         indent))))
 
-(defun dyalog-indent-cond-generic (at-pause indented count)
+(defun dyalog-indent-cond-generic (at-pause indented blockcount funcount)
   (cond ((looking-at dyalog-indent-stop)
-         (if (and (eq count 0) (not at-pause))
+         (if (and (eq blockcount 0) (not at-pause))
              (set 'indented (current-indentation))
-           (set 'count (+ 1 count))))
-        ((looking-at  dyalog-indent-start)
-         (if (eq count 0)
+           (set 'blockcount (+ 1 blockcount))))
+
+        ((looking-at dyalog-indent-start)
+         (if (eq blockcount 0)
              (set 'indented (if at-pause
                                 (current-indentation)
                               (dyalog-indent 0)))
-           (set 'count (- count (if (looking-at dyalog-block-start) 1 0)))))
+           (set 'blockcount (- blockcount (if (looking-at
+                                               dyalog-block-start) 1 0)))))
+
+        ((looking-at dyalog-naked-nabla)
+           (set 'funcount (+ 1 funcount)))
+
+        ((looking-at (concat "\\s-*" dyalog-tradfn-header))
+         (if (eq funcount 0)
+             (set 'indented (if at-pause
+                                (current-indentation)
+                              (skip-chars-forward "∇ ")))
+           (set 'funcount (- funcount 1))))
+
         ((bobp)
          (set 'indented dyalog-leading-spaces)))
-  (list indented count))
+  (list indented blockcount funcount))
 
-(defun dyalog-indent-cond-case (at-pause indented count)
+(defun dyalog-indent-cond-case (at-pause indented blockcount funcount)
   (let ((dyalog-indent-start "^\\s-*:\\(Select\\|Trap\\)")
         (dyalog-indent-stop "^\\s-*:End\\(Select\\|Trap\\)"))
-    (dyalog-indent-cond-generic at-pause indented count)))
+    (dyalog-indent-cond-generic at-pause indented blockcount funcount)))
 
-(defun dyalog-search-indent (at-pause cond-fun count)
+(defun dyalog-indent-cond-header (at-pause indented blockcount funcount)
+  (let ((dyalog-indent-start "^\\s-*:\\(Class\\|Namespace\\)")
+        (dyalog-indent-stop  "^\\s-*:End\\(Class\\|Namespace\\)"))
+    (dyalog-indent-cond-generic at-pause indented blockcount funcount)))
+
+(defun dyalog-search-indent (at-pause cond-fun blockcount funcount)
   (let ((ret nil)(indented nil))
     (save-excursion
       (while (not indented)
+        (beginning-of-line)
         (forward-line -1)
-        (set 'ret (funcall cond-fun at-pause indented count))
+        (set 'ret (funcall cond-fun at-pause indented blockcount funcount))
         (set 'indented (car ret))
-        (set 'count (cadr ret)))
+        (set 'blockcount (cadr ret))
+        (set 'funcount (caddr ret)))
       indented)))
 
 (defun dyalog-indent-line ()
@@ -340,6 +364,8 @@
                                        dyalog-func-monadic "\\|"
                                        dyalog-func-dyadic "\\)"))
 
+(defconst dyalog-naked-nabla "\\s-*∇\\s-*$")
+
 
 (defvar dyalog-imenu-generic-expression
   `(("Functions"  ,dyalog-tradfn-header 1)
@@ -349,13 +375,13 @@
 (defun dyalog-previous-defun ()
   (if (not (re-search-backward dyalog-tradfn-header (point-min) t))
       (goto-char (point-min))
-    (if (looking-at "\\s-*∇\\s-*$")
+    (if (looking-at dyalog-naked-nabla)
         (forward-line 1))))
 
 (defun dyalog-next-defun ()
   (if (not (re-search-forward dyalog-tradfn-header (point-max) t))
       (goto-char (point-max))
-    (if (looking-at "\\s-*∇\\s-*$")
+    (if (looking-at dyalog-naked-nabla)
         (forward-line 1))))
   
 (defun dyalog-beginning-of-defun (&optional arg)
@@ -380,7 +406,7 @@
         (progn
           (forward-line 1)
           (dyalog-next-defun-end))
-      (when (looking-at "\\s-*∇\\s-*$")
+      (when (looking-at dyalog-naked-nabla)
         (forward-line -1))
       (end-of-line)
       (re-search-backward "^[ \r\n]")
@@ -437,7 +463,7 @@
   (eval-after-load "which-func"
     '(add-to-list 'which-func-modes 'dyalog-mode))
   ;; Hooks
-  (add-hook 'before-save-hook 'dyalog-fix-whitespace)
+  (add-hook 'before-save-hook 'dyalog-fix-whitespace nil 'make-it-local)
   (run-hooks 'dyalog-mode-hook))
 
 (provide 'dyalog-mode)
