@@ -271,7 +271,7 @@
 
 (defun dyalog-indent-cond-generic (at-pause indented blockcount funcount)
   (cond ((looking-at dyalog-indent-stop)
-         (if (and (eq blockcount 0) (not at-pause))
+         (if (and (eq blockcount 0) (eq funcount 0) (not at-pause))
              (set 'indented (current-indentation))
            (set 'blockcount (+ 1 blockcount))))
 
