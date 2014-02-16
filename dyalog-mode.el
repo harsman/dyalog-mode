@@ -48,6 +48,7 @@
   (let ((map(make-keymap)))
     (define-key map (kbd"M-RET") 'comment-indent-new-line)
     (define-key map (kbd"M-f") 'dyalog-ediff-forward-word)
+    (define-key map (kbd"C-c C-c") 'dyalog-editor-fix)
     (define-key map [?\C-¯] "¯")
     (define-key map [?\C-≤] "≤")
     (define-key map [?\C-≥] "≥")
@@ -431,6 +432,80 @@
     (while (> arg 0)
       (dyalog-next-defun-end)
       (decf arg))))
+
+(defun dyalog-session-connect (&optional host port)
+  "Connect to a Dyalog session"
+  (interactive (list (read-string "Host (default localhost):"
+                                  "127.0.0.1")
+                     (read-number "Port (default 7979):" 7979)))
+  (make-comint "dyalog" (cons host port))
+  (switch-to-buffer "*dyalog*"))
+
+(defun dyalog-editor-connect (&optional host port)
+  "Connect to a Dyalog process as an editor"
+  (interactive (list (read-string "Host (default localhost):"
+                                  "127.0.0.1")
+                     (read-number "Port (default 8080):" 8080)))
+  (setq dyalog-receive-state 'ready)
+  (setq dyalog-receive-name "")
+  (make-network-process :name "dyalog-edit"
+                        :buffer " *dyalog-receive-buffer*"
+                        :family 'ipv4 :host host :service port
+                        :sentinel 'dyalog-editor-sentinel
+                        :filter 'dyalog-editor-receive))
+
+(defun dyalog-editor-sentinel (proc msg)
+  (when (string= msg "connection broken by remote peer\n")
+    (message (format "client %s has quit" proc))))
+
+(defun dyalog-editor-receive (process output)
+  "Receive data from a Dyalog editor connection"
+  (with-current-buffer (process-buffer process)
+    (save-excursion
+      ;; Insert the text, advancing the process marker.
+      (goto-char (process-mark process))
+      (insert output)
+      (set-marker (process-mark process) (point))
+      (goto-char (point-min))
+      (while (search-forward "\e" nil t)
+        (backward-char)
+        (let ((m (point)))
+          (goto-char (point-min))
+          (dyalog-editor-munge-command (point) m)
+          (with-current-buffer (process-buffer process)
+            (set-marker (process-mark
+                         (get-process "dyalog-edit")) 1)))))))
+
+(defun dyalog-editor-munge-command (p m)
+  "Parse and delete a Dyalog editor command in the currently active region"
+  ;;(interactive "r")
+  (cond ((looking-at "edit \\([^ ]+\\) ")
+         (let ((name (match-string 1))
+               (src  (buffer-substring-no-properties (match-end 0) m)))
+           (delete-region (point) (buffer-end 1))
+           (dyalog-open-edit-buffer name src)))))
+
+(defun dyalog-open-edit-buffer (name src)
+"Open a buffer to edit object NAME with source SRC"
+  (switch-to-buffer name)
+  (save-excursion
+    (mark-whole-buffer)
+    (delete-region (point) (mark))
+    (insert src))
+  (dyalog-mode)
+  (font-lock-fontify-buffer)
+  (setq dyalog-editor-name name)
+  (select-frame-set-input-focus (window-frame (selected-window))))
+
+(defun dyalog-editor-fix (&optional arg)
+  "Send the contents of the current buffer to the connected Dyalog process"
+  (interactive)
+  (if dyalog-editor-name
+      (progn
+        (process-send-string "dyalog-edit" "fx ")
+        (process-send-region "dyalog-edit" (point-min) (point-max))
+        (process-send-string "dyalog-edit" "\e"))))
+
 
 (defun dyalog-mode ()
   "Major mode for editing Dyalog APL code."
