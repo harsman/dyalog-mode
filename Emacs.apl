@@ -74,11 +74,19 @@
               :Select command
               :Case 'fx'
                   :If complete
-                      fix raw marker
+                      fix(i↓raw)(marker-i)
                       recvbuf←⍬
                   :Else
                       recvbuf,←i↓raw
                       state←'fx'
+                  :EndIf
+              :Case 'src'
+                  :If complete
+                      sendsource socket(i↓raw)(marker-i)
+                      recvbuf←⍬
+                  :Else
+                      recvbuf,←i↓raw
+                      state←'src'
                   :EndIf
               :Else
                   ⎕←'Received invalid command: ',command
@@ -101,6 +109,23 @@
           uni←'UTF-8'#.ENCODINGS_DECODE ⎕AV[src+⎕IO]
           src←'Dyalog APL Source'#.ENCODINGS_ENCODE uni
           r←#.⎕FX↑##.splitlines src
+        ∇
+
+        ∇ {r}←sendsource args;socket;raw;marker;name;uni;src
+          socket raw marker←args
+          name←recvbuf,raw[⍳marker-1]
+          uni←'UTF-8'#.ENCODINGS_DECODE ⎕AV[name+⎕IO]
+          name←'Dyalog APL Source'#.ENCODINGS_ENCODE uni
+          :Select ⊃#.⎕NC name
+          :CaseList 3 4
+              src←##.joinlines ##.cm2v #.⎕CR name
+          :Case 9
+              src←##.joinlines #.⎕SRC name
+          :Else
+              src←''
+          :EndSelect
+         
+          r←send socket('edit ',name,' ',src,eom)
         ∇
 
         ∇ {r}←close msg

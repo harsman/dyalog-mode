@@ -49,6 +49,7 @@
     (define-key map (kbd"M-RET") 'comment-indent-new-line)
     (define-key map (kbd"M-f") 'dyalog-ediff-forward-word)
     (define-key map (kbd"C-c C-c") 'dyalog-editor-fix)
+    (define-key map (kbd"C-c C-e") 'dyalog-editor-edit-symbol-at-point)
     (define-key map [?\C-¯] "¯")
     (define-key map [?\C-≤] "≤")
     (define-key map [?\C-≥] "≥")
@@ -505,6 +506,25 @@
         (process-send-string "dyalog-edit" "fx ")
         (process-send-region "dyalog-edit" (point-min) (point-max))
         (process-send-string "dyalog-edit" "\e"))))
+
+(defun dyalog-editor-edit (name)
+  "Ask the connected Dyalog process for the source of NAME and open it in an edit buffer"
+  (interactive "s")
+  (process-send-string "dyalog-edit" (concat "src " name "\e")))
+
+(defun dyalog-editor-edit-symbol-at-point ()
+  "Edit the source for the symbol at point."
+  (interactive)
+  (let ((sym (symbol-at-point)))
+    (dyalog-editor-edit (symbol-name sym))))
+
+(defun dyalog-session-connect (&optional host port)
+  "Connect to a Dyalog session"
+  (interactive (list (read-string "Host (default localhost):"
+                                  "127.0.0.1")
+                     (read-number "Port (default 7979):" 7979)))
+  (make-comint "dyalog" (cons host port))
+  (switch-to-buffer "*dyalog*"))
 
 
 (defun dyalog-mode ()
