@@ -50,61 +50,30 @@
     (define-key map (kbd"M-f") 'dyalog-ediff-forward-word)
     (define-key map (kbd"C-c C-c") 'dyalog-editor-fix)
     (define-key map (kbd"C-c C-e") 'dyalog-editor-edit-symbol-at-point)
-    (define-key map [?\C-¯] "¯")
-    (define-key map [?\C-≤] "≤")
-    (define-key map [?\C-≥] "≥")
-    (define-key map [?\C-≠] "≠")
-    (define-key map [?\C-∨] "∨")
-    (define-key map [?\C-∧] "∧")
-    (define-key map [?\C-÷] "÷")
-    (define-key map [?\C-⍵] "⍵")
-    (define-key map [?\C-∊] "∊")
-    (define-key map [?\C-⍴] "⍴")
-    (define-key map [?\C-~] "~")
-    (define-key map [?\C-↑] "↑")
-    (define-key map [?\C-↓] "↓")
-    (define-key map [?\C-⍳] "⍳")
-    (define-key map [?\C-○] "○")
-    (define-key map [?\C-*] "*")
-    (define-key map [?\C-←] "←")
-    (define-key map [?\C-→] "→")
-    (define-key map [?\C-⍺] "⍺")
-    (define-key map [?\C-⌈] "⌈")
-    (define-key map [?\C-⌊] "⌊")
-    (define-key map [?\C-∇] "∇")
-    (define-key map [?\C-∆] "∆")
-    (define-key map [?\C-∘] "∘")
-    (define-key map [?\C-⎕] "⎕")
-    (define-key map [?\C-⍎] "⍎")
-    (define-key map [?\C-⍕] "⍕")
-    (define-key map [?\C-⊂] "⊂")
-    (define-key map [?\C-⊃] "⊃")
-    (define-key map [?\C-∩] "∩")
-    (define-key map [?\C-∪] "∪")
-    (define-key map [?\C-⊥] "⊥")
-    (define-key map [?\C-⊤] "⊤")
-    (define-key map [?\C-⍝] "⍝")
-    (define-key map [?\C-⍷] "⍷")
-    (define-key map [?\C-⍨] "⍨")
-    (define-key map [?\C-⍒] "⍒")
-    (define-key map [?\C-⍋] "⍋")
-    (define-key map [?\C-⌽] "⌽")
-    (define-key map [?\C-⍉] "⍉")
-    (define-key map [?\C-⊖] "⊖")
-    (define-key map [?\C-⍟] "⍟")
-    (define-key map [?\C-⍱] "⍱")
-    (define-key map [?\C-⍲] "⍲")
-    (define-key map [?\C-⍬] "⍬")
-    (define-key map [?\C-⌹] "⌹")
-    (define-key map [?\C-≡] "≡")
-    (define-key map [?\C-≢] "≢")
-    (define-key map [?\C-⌶] "⌶")
-    (define-key map [?\C-⍪] "⍪")
-    (define-key map [?\C-⌿] "⌿")
-    (define-key map [?\C-⍀] "⍀")
     map)
   "Keymap for Dyalog APL mode.")
 
+(defun dyalog-fix-altgr-chars (keymap aplchars regularchars)
+  "Fix up a key map so that if the Dyalog IME uses AltGr+char for an
+APL character, Emacs doesn't confuse it for C-M-char.
+
+KEYMAP is an Emacs keymap.
+
+APLCHARS is a string of APL-characters produced by pressing AltGr together
+with some character.
+
+REGULARCHARS is a string of the characters that when pressed
+together with AltGr produce the corresponding apl character in APLCHARS."
+  (loop for pair in (mapcar* #'cons aplchars regularchars) do
+        (let* ((aplchar (car pair))
+               (char    (cdr pair))
+               (aplkey  (vector (list 'control 'meta aplchar)))
+               (regkey  (vector (list 'control 'meta char)))
+               (fun  (lookup-key (current-global-map) regkey)))
+          (if fun
+              (progn
+                (define-key keymap aplkey fun))))))
+    
 ;; This should probably be split into several layers of highlighting
 (defconst dyalog-font-lock-keywords1
   (list
