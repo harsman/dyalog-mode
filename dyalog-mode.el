@@ -472,17 +472,15 @@ together with AltGr produce the corresponding apl character in APLCHARS."
     (insert src))
   (dyalog-mode)
   (font-lock-fontify-buffer)
-  (setq dyalog-editor-name name)
   (select-frame-set-input-focus (window-frame (selected-window))))
 
 (defun dyalog-editor-fix (&optional arg)
   "Send the contents of the current buffer to the connected Dyalog process"
   (interactive)
-  (if dyalog-editor-name
-      (progn
-        (process-send-string "dyalog-edit" "fx ")
-        (process-send-region "dyalog-edit" (point-min) (point-max))
-        (process-send-string "dyalog-edit" "\e"))))
+  (progn
+    (process-send-string "dyalog-edit" "fx ")
+    (process-send-region "dyalog-edit" (point-min) (point-max))
+    (process-send-string "dyalog-edit" "\e")))
 
 (defun dyalog-editor-edit (name)
   "Ask the connected Dyalog process for the source of NAME and open it in an edit buffer"
