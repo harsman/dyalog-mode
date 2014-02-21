@@ -453,7 +453,15 @@ together with AltGr produce the corresponding apl character in APLCHARS."
          (let ((name (match-string 1))
                (src  (buffer-substring-no-properties (match-end 0) m)))
            (delete-region (point) (buffer-end 1))
-           (dyalog-open-edit-buffer name src)))))
+           (dyalog-open-edit-buffer name src)))
+         ((looking-at "fxresult \\([^ ]+\\)\e")
+          (let* ((result (match-string 1))
+                 (num    (string-to-number result)))
+            (progn
+              (if (eq num 0)
+                  (message "Fixed as %s" result)
+                (message "Can't fix, error in line %d" num))
+              (delete-region (point) (buffer-end 1)))))))
 
 (defun dyalog-open-edit-buffer (name src)
 "Open a buffer to edit object NAME with source SRC"

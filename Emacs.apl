@@ -74,7 +74,7 @@
               :Select command
               :Case 'fx'
                   :If complete
-                      fix(i↓raw)(marker-i)
+                      fix socket(i↓raw)(marker-i)
                       recvbuf←⍬
                   :Else
                       recvbuf,←i↓raw
@@ -94,7 +94,7 @@
          
           :Case 'fx'
               :If complete
-                  fix raw marker
+                  fix socket raw marker
                   state←'ready'
                   recvbuf←⍬
               :Else
@@ -103,12 +103,13 @@
           :EndSelect
         ∇
 
-        ∇ {r}←fix args;raw;marker;src;uni
-          raw marker←args
+        ∇ {r}←fix args;socket;raw;marker;src;uni
+          socket raw marker←args
           src←recvbuf,raw[⍳marker-1]
           uni←'UTF-8'#.ENCODINGS_DECODE ⎕AV[src+⎕IO]
           src←'Dyalog APL Source'#.ENCODINGS_ENCODE uni
           r←#.⎕FX↑##.splitlines src
+          send socket('fxresult ',(,⍕r),eom)
         ∇
 
         ∇ {r}←sendsource args;socket;raw;marker;name;uni;src
