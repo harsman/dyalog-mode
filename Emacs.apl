@@ -189,7 +189,7 @@
           :EndIf
          
           :Trap 0
-              z←⍎data
+              z←#.⍎data
               :If 3=⎕NC'z'
                   r←{(3+⍵⍳']')↓⍵},⍕⎕OR'z'
               :Else
