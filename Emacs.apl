@@ -12,11 +12,11 @@
           r←send #.⎕SE.Emacs∆socket('edit ',name,' ',src,eom)
         ∇
 
-        ∇ setupmenu shortcut;acc
-          acc←2↑shortcut,13 6
-          '⎕SE.popup.emacs'⎕WC'MenuItem'('Caption'('Edit in Emacs',⎕AV[10],'Ctrl+Alt+Enter'))
+        ∇ setupmenu shortcut;title;acc
+          title acc←2↑shortcut,'Ctrl+Alt+Enter'(13 6)
+          '⎕SE.popup.emacs'⎕WC'MenuItem'('Caption'('Edit in Emacs',⎕AV[10],title))
           '⎕SE.popup.emacs'⎕WS'Event' 'Select' '#.Emacs.editor.sessionedit'
-          '⎕SE.popup.emacs'⎕WS'Accelerator'(13 6)
+          '⎕SE.popup.emacs'⎕WS'Accelerator'acc
         ∇
 
         ∇ {msg}←sessionedit msg;name
