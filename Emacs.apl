@@ -214,6 +214,12 @@
         ∇
     :EndNamespace
 
+      listen←{
+          sessionport editorport←2↑⍵,7979 8080
+          a←session.listen sessionport
+          a,editor.listen editorport
+      }
+
       join←{
           0=⍴,⍵:⍵
           (-⍴,⍺)↓⊃,/⍵,¨⊂⍺
@@ -241,12 +247,12 @@
           s[hits/⍳⍴s]←'abcdefghijklmnopqrstuvwxyz'[hits/i]
           s
       }
-      
+
       text2bytes←{
           ⎕AVU←transtable
           'UTF-8'⎕UCS ⍵
       }
-      
+
       bytes2text←{
           ⎕AVU←transtable
           'UTF-8'⎕UCS ⍵
