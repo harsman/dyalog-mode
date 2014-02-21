@@ -8,7 +8,7 @@
 
         ∇ {r}←edit name;fullname;src
           fullname←(('#.'≢2↑name)/'#.'),name
-          src←##.joinlines ##.cm2v ⎕CR fullname
+          src←getsource fullname
           r←send #.⎕SE.Emacs∆socket('edit ',name,' ',src,eom)
         ∇
 
@@ -103,12 +103,18 @@
           :EndSelect
         ∇
 
-        ∇ {r}←fix args;socket;raw;marker;src;uni
+        ∇ {r}←fix args;socket;raw;marker;src;uni;header
           socket raw marker←args
           src←recvbuf,raw[⍳marker-1]
           uni←'UTF-8'#.ENCODINGS_DECODE ⎕AV[src+⎕IO]
           src←'Dyalog APL Source'#.ENCODINGS_ENCODE uni
-          r←#.⎕FX↑##.splitlines src
+          header←##.tolower src[⍳512⌊⊃⍴src]
+          :If ∨/':class'⍷header
+          :OrIf ∨/':namespace'⍷header
+              r←#.⎕FIX ##.splitlines src
+          :Else
+              r←#.⎕FX↑##.splitlines src
+          :EndIf
           send socket('fxresult ',(,⍕r),eom)
         ∇
 
@@ -117,15 +123,7 @@
           name←recvbuf,raw[⍳marker-1]
           uni←'UTF-8'#.ENCODINGS_DECODE ⎕AV[name+⎕IO]
           name←'Dyalog APL Source'#.ENCODINGS_ENCODE uni
-          :Select ⊃#.⎕NC name
-          :CaseList 3 4
-              src←##.joinlines ##.cm2v #.⎕CR name
-          :Case 9
-              src←##.joinlines #.⎕SRC name
-          :Else
-              src←''
-          :EndSelect
-         
+          src←getsource name
           r←send socket('edit ',name,' ',src,eom)
         ∇
 
@@ -136,6 +134,17 @@
 
         ∇ {r}←error msg
           ∘
+        ∇
+
+        ∇ src←getsource name
+          :Select ⊃#.⎕NC name
+          :CaseList 3 4
+              src←##.joinlines ##.cm2v #.⎕CR name
+          :Case 9
+              src←##.joinlines #.⎕SRC name
+          :Else
+              src←''
+          :EndSelect
         ∇
     :EndNamespace
 
@@ -234,4 +243,13 @@
       }
 
     cm2v←{(+/∨\' '≠⌽⍵)↑¨↓⍵}
+
+      tolower←{
+          s←⍵
+          i←⎕A⍳s
+          hits←i≤⊃⍴⎕A
+          s[hits/⍳⍴s]←'abcdefghijklmnopqrstuvwxyz'[hits/i]
+          s
+      }
+
 :EndNamespace
