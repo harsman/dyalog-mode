@@ -170,7 +170,7 @@
           r←2 ⎕NQ socket'TCPSend'raw
         ∇
 
-        ∇ {r}←receive msg;socket;raw;ip;data;z;prompt
+        ∇ {r}←receive msg;socket;raw;ip;data;z;prompt;dm
          
           socket raw ip←msg[1 3 4]
          
@@ -201,7 +201,8 @@
                   send socket((,(r,cr),lf),prompt)
               :EndIf
           :Else
-              send socket((,((↑''prompt prompt,¨0 12 12↓¨⎕DM),cr),lf),prompt)
+              dm←⎕DM
+              send socket(##.joinlines(1↓⊃dm)(prompt,12↓2⊃dm)(6↓3⊃dm)prompt)
           :EndTrap
         ∇
 
