@@ -409,7 +409,11 @@ together with AltGr produce the corresponding apl character in APLCHARS."
                                   "127.0.0.1")
                      (read-number "Port (default 7979):" 7979)))
   (make-comint "dyalog" (cons host port))
-  (switch-to-buffer "*dyalog*"))
+  (switch-to-buffer "*dyalog*")
+  (setq comint-scroll-show-maximum-output nil)
+  (define-key (current-local-map)
+    (kbd"C-c C-e") 'dyalog-editor-edit-symbol-at-point)
+  (run-hooks 'dyalog-session-connect-hook))
 
 (defun dyalog-editor-connect (&optional host port)
   "Connect to a Dyalog process as an editor"
