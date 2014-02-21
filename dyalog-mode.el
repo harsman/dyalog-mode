@@ -466,12 +466,14 @@ together with AltGr produce the corresponding apl character in APLCHARS."
 (defun dyalog-open-edit-buffer (name src)
 "Open a buffer to edit object NAME with source SRC"
   (switch-to-buffer name)
+  (setq buffer-undo-list t)
   (save-excursion
     (mark-whole-buffer)
     (delete-region (point) (mark))
     (insert src))
   (dyalog-mode)
   (font-lock-fontify-buffer)
+  (setq buffer-undo-list nil)
   (select-frame-set-input-focus (window-frame (selected-window))))
 
 (defun dyalog-editor-fix (&optional arg)
