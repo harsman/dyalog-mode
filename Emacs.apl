@@ -135,7 +135,7 @@
           :CaseList 3 4
               src←##.joinlines ##.cm2v #.⎕CR name
           :Case 9
-              src←##.joinlines #.⎕SRC name
+              src←##.joinlines #.⎕SRC(⍎name)
           :Else
               src←''
           :EndSelect
