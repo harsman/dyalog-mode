@@ -170,7 +170,7 @@
           r←2 ⎕NQ socket'TCPSend'raw
         ∇
 
-        ∇ {r}←receive msg;socket;raw;ip;data;z;prompt;dm
+        ∇ {r}←receive msg;socket;raw;ip;data;z;prompt;dm;err;stack;cursor
          
           socket raw ip←msg[1 3 4]
          
@@ -202,7 +202,13 @@
               :EndIf
           :Else
               dm←⎕DM
-              send socket(##.joinlines(1↓⊃dm)(prompt,12↓2⊃dm)(6↓3⊃dm)prompt)
+              err←(('⍎'=⊃⊃dm)∧~'⍎'∊data)↓1⊃dm
+              cursor←3⊃dm
+              :If 'receive[19] '≡12↑stack←2⊃dm
+                  stack←prompt,12↓stack
+                  cursor←6↓cursor
+              :EndIf
+              send socket(##.joinlines err stack cursor prompt)
           :EndTrap
         ∇
 
