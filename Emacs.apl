@@ -1,5 +1,5 @@
 :Namespace Emacs
-
+    transtable←0 8 10 13 32 12 6 7 27 9 9014 14 37 39 9082 9077 95 97 98 99 100 101 102 103 104 105 106 107 108 109 110 111 112 113 114 115 116 117 118 119 120 121 122 1 2 175 46 9068 48 49 50 51 52 53 54 55 56 57 3 8866 165 36 163 162 8710 65 66 67 68 69 70 71 72 73 74 75 76 77 78 79 80 81 82 83 84 85 86 87 88 89 90 4 5 253 183 127 9049 9398 9399 9400 9401 9402 9403 9404 9405 9406 9407 9408 9409 9410 9411 9412 9413 9414 9415 9416 9417 9418 9419 9420 9421 9422 9423 123 8364 125 8867 9015 168 192 196 197 198 9064 201 209 214 216 220 223 224 225 226 228 229 230 231 232 233 234 235 237 238 239 241 91 47 9023 92 9024 60 8804 61 8805 62 8800 8744 8743 45 43 247 215 63 8714 9076 126 8593 8595 9075 9675 42 8968 8970 8711 8728 40 8834 8835 8745 8746 8869 8868 124 59 44 9073 9074 9042 9035 9033 9021 8854 9055 9017 33 9045 9038 9067 9066 8801 8802 243 244 246 248 34 35 30 38 8217 9496 9488 9484 9492 9532 9472 9500 9508 9524 9516 9474 64 249 250 251 94 252 96 166 182 58 9079 191 161 8900 8592 8594 9053 41 93 31 160 167 9109 9054 9059
     :Namespace editor
         eomraw←27
         eom←⎕UCS eomraw
@@ -47,11 +47,9 @@
           r←newname
         ∇
 
-        ∇ {r}←send args;socket;text;uni;raw;⎕PATH
+        ∇ {r}←send args;socket;text;raw
           socket text←args
-          ⎕PATH←'↑'
-          uni←'Dyalog APL Source'#.ENCODINGS_DECODE text
-          raw←¯1+⎕AV⍳'UTF-8'#.ENCODINGS_ENCODE uni
+          raw←##.text2bytes text
           r←2 ⎕NQ socket'TCPSend'raw
         ∇
 
@@ -103,11 +101,9 @@
           :EndSelect
         ∇
 
-        ∇ {r}←fix args;socket;raw;marker;src;uni;header
+        ∇ {r}←fix args;socket;raw;marker;src;header
           socket raw marker←args
-          src←recvbuf,raw[⍳marker-1]
-          uni←'UTF-8'#.ENCODINGS_DECODE ⎕AV[src+⎕IO]
-          src←'Dyalog APL Source'#.ENCODINGS_ENCODE uni
+          src←##.bytes2text recvbuf,raw[⍳marker-1]
           header←##.tolower src[⍳512⌊⊃⍴src]
           :If ∨/':class'⍷header
           :OrIf ∨/':namespace'⍷header
@@ -118,11 +114,9 @@
           send socket('fxresult ',(,⍕r),eom)
         ∇
 
-        ∇ {r}←sendsource args;socket;raw;marker;name;uni;src
+        ∇ {r}←sendsource args;socket;raw;marker;name;src
           socket raw marker←args
-          name←recvbuf,raw[⍳marker-1]
-          uni←'UTF-8'#.ENCODINGS_DECODE ⎕AV[name+⎕IO]
-          name←'Dyalog APL Source'#.ENCODINGS_ENCODE uni
+          name←##.bytes2text recvbuf,raw[⍳marker-1]
           src←getsource name
           r←send socket('edit ',name,' ',src,eom)
         ∇
@@ -150,7 +144,7 @@
 
     :Namespace session
         cr←⎕UCS 13
-        lf←⎕ucs 10
+        lf←⎕UCS 10
 
         ∇ {r}←listen port;sockname;callbacks;_
           sockname←'⎕SE.Emacs_socket',⍕port
@@ -170,15 +164,13 @@
           send socket(6⍴' ')
         ∇
 
-        ∇ {r}←send args;socket;text;uni;raw;⎕PATH
+        ∇ {r}←send args;socket;text;raw
           socket text←args
-          ⎕PATH←'↑'
-          uni←'Dyalog APL Source'#.ENCODINGS_DECODE text
-          raw←¯1+⎕AV⍳'UTF-8'#.ENCODINGS_ENCODE uni
+          raw←##.text2bytes text
           r←2 ⎕NQ socket'TCPSend'raw
         ∇
 
-        ∇ {r}←receive msg;socket;raw;ip;uni;data;z;prompt;⎕PATH
+        ∇ {r}←receive msg;socket;raw;ip;data;z;prompt
          
           socket raw ip←msg[1 3 4]
          
@@ -186,9 +178,7 @@
               :Return
           :EndIf
          
-          ⎕PATH←'↑'
-          uni←'UTF-8'#.ENCODINGS_DECODE ⎕AV[⎕IO+raw]
-          data←'Dyalog APL Source'#.ENCODINGS_ENCODE uni
+          data←##.bytes2text raw
           prompt←6⍴' '
           data←(-+/(¯2↑data)∊cr lf)↓data
          
@@ -250,6 +240,16 @@
           hits←i≤⊃⍴⎕A
           s[hits/⍳⍴s]←'abcdefghijklmnopqrstuvwxyz'[hits/i]
           s
+      }
+      
+      text2bytes←{
+          ⎕AVU←transtable
+          'UTF-8'⎕UCS ⍵
+      }
+      
+      bytes2text←{
+          ⎕AVU←transtable
+          'UTF-8'⎕UCS ⍵
       }
 
 :EndNamespace
