@@ -183,6 +183,7 @@
           data←(-+/(¯2↑data)∊cr lf)↓data
          
           :If data∧.=' ' ⍝ An empty input line
+          :OrIf ∧/(data=' ')∨∨\data='⍝' ⍝ A comment
               send socket prompt
               :Return
           :EndIf
