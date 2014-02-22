@@ -234,48 +234,48 @@
         ∇
     :EndNamespace
 
-      listen←{
-          sessionport editorport←2↑⍵,7979 8080
-          a←session.listen sessionport
-          a,editor.listen editorport
-      }
+    listen←{
+        sessionport editorport←2↑⍵,7979 8080
+        a←session.listen sessionport
+        a,editor.listen editorport
+    }
 
-      join←{
-          0=⍴,⍵:⍵
-          (-⍴,⍺)↓⊃,/⍵,¨⊂⍺
-      }
+    join←{
+        0=⍴,⍵:⍵
+        (-⍴,⍺)↓⊃,/⍵,¨⊂⍺
+    }
 
-      split←{
-          p←⊃1↑⍵
-          (1↓¨(1,⍺)⊂p,⍵)~⊂0⍴p
-      }
+    split←{
+        p←⊃1↑⍵
+        (1↓¨(1,⍺)⊂p,⍵)~⊂0⍴p
+    }
 
-      splitlines←{
-          (⍵∊⎕UCS 10 13)split ⍵
-      }
+    splitlines←{
+        (⍵∊⎕UCS 10 13)split ⍵
+    }
 
-      joinlines←{
-          (⎕UCS 13 10)join ⍵
-      }
+    joinlines←{
+        (⎕UCS 13 10)join ⍵
+    }
 
     cm2v←{(+/∨\' '≠⌽⍵)↑¨↓⍵}
 
-      tolower←{
-          s←⍵
-          i←⎕A⍳s
-          hits←i≤⊃⍴⎕A
-          s[hits/⍳⍴s]←'abcdefghijklmnopqrstuvwxyz'[hits/i]
-          s
-      }
+    tolower←{
+        s←⍵
+        i←⎕A⍳s
+        hits←i≤⊃⍴⎕A
+        s[hits/⍳⍴s]←'abcdefghijklmnopqrstuvwxyz'[hits/i]
+        s
+    }
 
-      text2bytes←{
-          ⎕AVU←transtable
-          'UTF-8'⎕UCS ⍵
-      }
+    text2bytes←{
+        ⎕AVU←transtable
+        'UTF-8'⎕UCS ⍵
+    }
 
-      bytes2text←{
-          ⎕AVU←transtable
-          'UTF-8'⎕UCS ⍵
-      }
+    bytes2text←{
+        ⎕AVU←transtable
+        'UTF-8'⎕UCS ⍵
+    }
 
 :EndNamespace
