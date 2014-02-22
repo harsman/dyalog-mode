@@ -5,10 +5,10 @@
         eom←⎕UCS eomraw
         recvbuf←⍬
         state←'ready'
+        onMissing←''
 
-        ∇ {r}←edit name;fullname;src
-          fullname←(('#.'≢2↑name)/'#.'),name
-          src←getsource fullname
+        ∇ {r}←edit name;src
+          src←getsource name
           r←send #.⎕SE.Emacs∆socket('edit ',name,' ',src,eom)
         ∇
 
@@ -130,8 +130,20 @@
           ∘
         ∇
 
-        ∇ src←getsource name
+        ∇ src←{noload}getsource name;_
+          :If 0=⎕NC'noload'
+              noload←0
+          :EndIf
+
           :Select ⊃#.⎕NC name
+          :Case 0
+              :If 3≠⎕NC '#.',onMissing
+              :OrIf noload
+                  src←''
+              :Else
+                  _←(#.⍎'#.',onMissing) name
+                  src←1 getsource name
+              :EndIf
           :CaseList 3 4
               src←##.joinlines ##.cm2v #.⎕CR name
           :Case 9
