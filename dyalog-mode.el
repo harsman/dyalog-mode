@@ -501,14 +501,6 @@ together with AltGr produce the corresponding apl character in APLCHARS."
   (let ((sym (symbol-at-point)))
     (dyalog-editor-edit (symbol-name sym))))
 
-(defun dyalog-session-connect (&optional host port)
-  "Connect to a Dyalog session"
-  (interactive (list (read-string "Host (default localhost):"
-                                  "127.0.0.1")
-                     (read-number "Port (default 7979):" 7979)))
-  (make-comint "dyalog" (cons host port))
-  (switch-to-buffer "*dyalog*"))
-
 
 (defun dyalog-mode ()
   "Major mode for editing Dyalog APL code."
