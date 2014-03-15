@@ -54,21 +54,21 @@
         ∇
 
         ∇ {r}←receive msg;socket;raw;ip;uni;data;cr;lf;i;command;src;name;marker;complete
-         
+
           socket raw ip←msg[1 3 4]
-         
+
           :If ip≢'127.0.0.1'
               :Return
           :EndIf
-         
+
           marker←raw⍳eomraw
           complete←marker≤⊃⍴raw
-         
+
           :Select state
           :Case 'ready'
               i←raw⍳'UTF-8'⎕UCS' '
               command←'UTF-8'⎕UCS raw[⍳i-1]
-         
+
               :Select command
               :Case 'fx'
                   :If complete
@@ -89,7 +89,7 @@
               :Else
                   ⎕←'Received invalid command: ',command
               :EndSelect
-         
+
           :Case 'fx'
               :If complete
                   fix socket raw marker
@@ -182,31 +182,38 @@
           r←2 ⎕NQ socket'TCPSend'raw
         ∇
 
-        ∇ {r}←receive msg;socket;raw;ip;data;z;prompt;dm;err;stack;cursor
-         
+        ∇ {r}←receive msg;socket;raw;ip;data;z;prompt;dm;err;stack;cursor;m;n
+
           socket raw ip←msg[1 3 4]
-         
+
           :If ip≢'127.0.0.1'
               :Return
           :EndIf
-         
+
           data←##.bytes2text raw
           prompt←6⍴' '
           data←(-+/(¯2↑data)∊cr lf)↓data
-         
+
           :If data∧.=' ' ⍝ An empty input line
           :OrIf ∧/(data=' ')∨∨\data='⍝' ⍝ A comment
               send socket prompt
               :Return
           :EndIf
-         
+
           :Trap 0
+              m←⊃⍴'#.⎕SE'⎕WG'Log'
               z←#.⍎data
+              n←⊃⍴'#.⎕SE'⎕WG'Log'
               :If 3=⎕NC'z'
-                  r←{(3+⍵⍳']')↓⍵},⍕⎕OR'z'
+                  r←' ∇',data
               :Else
                   r←⎕FMT z
               :EndIf
+
+              :If n>m ⍝ Log grew, probably output to session
+                  r←↑(('#.⎕SE'⎕WG'Log')[m+¯1+⍳n-m]),##.cm2v r
+              :EndIf
+
               :If '←'∊data ⍝ TODO: Better test for assignment
                   send socket prompt
               :Else
