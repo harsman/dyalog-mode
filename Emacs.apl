@@ -202,8 +202,15 @@
 
           :Trap 0
               m←⊃⍴'#.⎕SE'⎕WG'Log'
-              z←#.⍎data
+              :If 3=#.⎕NC data
+              :AndIf 0=1⊃1⊃#.⎕AT data
+                  #.⍎data
+                  z←0 0⍴''
+              :Else
+                  z←#.⍎data
+              :EndIf
               n←⊃⍴'#.⎕SE'⎕WG'Log'
+
               :If 3=⎕NC'z'
                   r←' ∇',data
               :Else
