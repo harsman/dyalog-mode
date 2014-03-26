@@ -81,11 +81,12 @@ together with AltGr produce the corresponding apl character in APLCHARS."
    ;; below values work
    ;; System functions
    '("⎕[A-Za-z]*" . font-lock-builtin-face)
-   ;; Guards
-   '(":" . font-lock-keyword-face)
    ;; Keywords
    '("\\(^\\s-*:\\([A-Za-z]+\\)\\)\\|\\(⋄\\s-*:\\(?2:[A-Za-z]+\\)\\)"
      . (2 font-lock-keyword-face nil))
+   '("\\s-+\\(:\\(In\\|InEach\\)\\)\\s-+" . (2 font-lock-keyword-face t))
+   ;; Guards
+   '(":" . font-lock-keyword-face)
    ;; Labels
    '("^\\s-*\\([A-Za-z_][A-Za-z0-9_]*:\\)" . (1 font-lock-keyword-face t))
    ;; Numerical constans
