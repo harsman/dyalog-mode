@@ -182,7 +182,7 @@
           r←2 ⎕NQ socket'TCPSend'raw
         ∇
 
-        ∇ {r}←receive msg;socket;raw;ip;data;z;prompt;dm;err;stack;cursor;m;n
+        ∇ {r}←receive msg;socket;raw;ip;data;z;prompt;dm;err;stack;cursor;m;n;len;logbefore;logafter;match
 
           socket raw ip←msg[1 3 4]
 
@@ -201,7 +201,7 @@
           :EndIf
 
           :Trap 0
-              m←⊃⍴'#.⎕SE'⎕WG'Log'
+              m←⊃⍴logbefore←'#.⎕SE'⎕WG'Log'
               :If 3=#.⎕NC data
               :AndIf 0=1⊃1⊃#.⎕AT data
                   #.⍎data
@@ -209,7 +209,7 @@
               :Else
                   z←#.⍎data
               :EndIf
-              n←⊃⍴'#.⎕SE'⎕WG'Log'
+              n←⊃⍴logafter←'#.⎕SE'⎕WG'Log'
 
               :If 3=⎕NC'z'
                   r←' ∇',data
@@ -217,8 +217,14 @@
                   r←⎕FMT z
               :EndIf
 
-              :If n>m ⍝ Log grew, probably output to session
-                  r←↑(('#.⎕SE'⎕WG'Log')[m+¯1+⍳n-m]),##.cm2v r
+              :If logbefore≢logafter ⍝ Log changed, must be due to output to session
+                  :If n≠m
+                      len←|n-m
+                  :Else
+                      match←(¯1×''≡⊃⌽logbefore)↓(-11⌊n)↑logbefore
+                      len←(+/∨\⌽<\⌽match⍷logafter)-(⊃⍴match)+''≡⊃⌽logafter
+                  :EndIf
+                  r←↑(logafter[(n-len)+¯1+⍳len]),##.cm2v r
               :EndIf
 
               :If '←'∊data ⍝ TODO: Better test for assignment
