@@ -139,6 +139,23 @@ together with AltGr produce the corresponding apl character in APLCHARS."
     st)
   "Syntax table for `dyalog-mode'.")
 
+(defun dyalog-syntax-propertize-function (start end)
+  "Alter syntax table for escaped single quotes within strings."
+  (goto-char start)
+  (let* ((syntax-state (syntax-ppss))
+         (inside-string-p (not (not (nth 3 syntax-state)))))
+    (while (< (point) end)
+      (skip-chars-forward "^'" end)
+      (when (looking-at "'")
+        (if (and inside-string-p (looking-at "''"))
+            (progn
+              (put-text-property (point) (+ 2 (point))
+                                 'syntax-table
+                                 (string-to-syntax "."))
+              (forward-char))
+          (setq inside-string-p (not inside-string-p))))
+      (forward-char))))
+
 (defvar dyalog-name  "[A-Za-z∆_]+[A-Za-z∆_0-9]*")
 
 (defvar dyalog-number "\\b¯?[0-9]+\\.?[0-9]*\\b")
@@ -517,6 +534,8 @@ together with AltGr produce the corresponding apl character in APLCHARS."
   (kill-all-local-variables)
   (use-local-map dyalog-mode-map)
   (set-syntax-table dyalog-mode-syntax-table)
+  (set (make-local-variable 'syntax-propertize-function)
+                            #'dyalog-syntax-propertize-function)
   ;; Below lines make [un]comment region and fill paragraph work correctly, I'm
   ;; not sure why defining the syntax table isn't enough.
   (set (make-local-variable 'comment-start) "⍝ ")
