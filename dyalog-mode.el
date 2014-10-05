@@ -144,20 +144,21 @@ together with AltGr produce the corresponding apl character in APLCHARS."
 
 (defun dyalog-syntax-propertize-function (start end)
   "Alter syntax table for escaped single quotes within strings."
-  (goto-char start)
-  (let* ((syntax-state (syntax-ppss))
-         (inside-string-p (not (not (nth 3 syntax-state)))))
-    (while (< (point) end)
-      (skip-chars-forward "^'" end)
-      (when (looking-at "'")
-        (if (and inside-string-p (looking-at "''"))
-            (progn
-              (put-text-property (point) (+ 2 (point))
-                                 'syntax-table
-                                 (string-to-syntax "."))
-              (forward-char))
-          (setq inside-string-p (not inside-string-p))))
-      (forward-char))))
+  (save-excursion
+    (goto-char start)
+    (let* ((syntax-state (syntax-ppss))
+           (inside-string-p (not (not (nth 3 syntax-state)))))
+      (while (< (point) end)
+        (skip-chars-forward "^'" end)
+        (when (looking-at "'")
+          (if (and inside-string-p (looking-at "''"))
+              (progn
+                (put-text-property (point) (+ 2 (point))
+                                   'syntax-table
+                                   (string-to-syntax "."))
+                (ignore-errors (forward-char)))
+            (setq inside-string-p (not inside-string-p))))
+        (ignore-errors (forward-char))))))
 
 (defvar dyalog-name  "[A-Za-z∆_]+[A-Za-z∆_0-9]*")
 
