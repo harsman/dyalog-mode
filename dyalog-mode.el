@@ -84,7 +84,7 @@ together with AltGr produce the corresponding apl character in APLCHARS."
    ;; Keywords
    '("\\(^\\s-*:\\([A-Za-z]+\\)\\)\\|\\(⋄\\s-*:\\(?2:[A-Za-z]+\\)\\)"
      . (2 font-lock-keyword-face nil))
-   '("\\s-+\\(:\\(In\\|InEach\\)\\)\\s-+" . (2 font-lock-keyword-face t))
+   '("\\s-+\\(:\\(In\\|InEach\\)\\)\\s-+" . (2 font-lock-keyword-face nil))
    ;; Guards
    '(":" . font-lock-keyword-face)
    ;; Labels
