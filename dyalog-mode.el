@@ -480,11 +480,15 @@ together with AltGr produce the corresponding apl character in APLCHARS."
 (defun dyalog-editor-munge-command (p m)
   "Parse and delete a Dyalog editor command in the currently active region"
   ;;(interactive "r")
-  (cond ((looking-at "edit \\([^ ]+\\) ")
+  (cond ((looking-at "edit \\([^ []+\\)\\(\\[\\([0-9]+\\)\\]\\)? ")
          (let ((name (match-string 1))
+               (linetext (match-string 3))
+               (lineno nil)
                (src  (buffer-substring-no-properties (match-end 0) m)))
+           (when linetext
+               (set 'lineno (string-to-int linetext)))
            (delete-region (point) (buffer-end 1))
-           (dyalog-open-edit-buffer name src)))
+           (dyalog-open-edit-buffer name src lineno)))
          ((looking-at "fxresult \\([^ ]+\\)\e")
           (let* ((result (match-string 1))
                  (num    (string-to-number result)))
@@ -494,7 +498,7 @@ together with AltGr produce the corresponding apl character in APLCHARS."
                 (message "Can't fix, error in line %d" num))
               (delete-region (point) (buffer-end 1)))))))
 
-(defun dyalog-open-edit-buffer (name src)
+(defun dyalog-open-edit-buffer (name src &optional lineno)
   "Open a buffer to edit object NAME with source SRC"
   (switch-to-buffer name)
   (setq buffer-undo-list t)
@@ -505,7 +509,9 @@ together with AltGr produce the corresponding apl character in APLCHARS."
       (insert src))
     (dyalog-mode)
     (font-lock-fontify-buffer)
-    (goto-char (min pos (point-max)))
+    (if lineno
+        (forward-line lineno)
+      (goto-char (min pos (point-max))))
     (setq buffer-undo-list nil)
     (select-frame-set-input-focus (window-frame (selected-window)))))
 
@@ -525,8 +531,11 @@ together with AltGr produce the corresponding apl character in APLCHARS."
 (defun dyalog-editor-edit-symbol-at-point ()
   "Edit the source for the symbol at point."
   (interactive)
-  (let ((sym (symbol-at-point)))
-    (dyalog-editor-edit (symbol-name sym))))
+  (let ((sym (symbol-at-point))
+        (linespec ""))
+    (when (looking-at "[A-Za-z∆_0-9]+\\(\\[[0-9]+\\]\\)")
+        (setq linespec (match-string 1)))
+    (dyalog-editor-edit (concat (symbol-name sym) linespec))))
 
 
 (defun dyalog-mode ()

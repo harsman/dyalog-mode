@@ -7,9 +7,11 @@
         state←'ready'
         onMissing←''
 
-        ∇ {r}←edit name;src
+        ∇ {r}←edit rarg;name;lineno;src;linespec
+          name lineno←rarg
           src←getsource name
-          r←send #.⎕SE.Emacs∆socket('edit ',name,' ',src,eom)
+          linespec←(⎕IO+¯1=lineno)⊃('[',(⍕lineno),']')''
+          r←send #.⎕SE.Emacs∆socket('edit ',name,linespec,' ',src,eom)
         ∇
 
         ∇ setupmenu shortcut;title;acc
@@ -19,9 +21,25 @@
           '⎕SE.popup.emacs'⎕WS'Accelerator'acc
         ∇
 
-        ∇ {msg}←sessionedit msg;name
-          name←'⎕SE'⎕WG'CurObj'
-          edit name
+        ∇ {msg}←sessionedit msg;name;pos;log;focus;line;slurp;symbolalphabet;lineno
+          name pos log←'⎕SE'⎕WG'CurObj' 'CurPos' 'Log'
+          focus←2 ⎕NQ '.' 'GetFocus'
+
+          :If '⎕SE'≡focus
+              line←(⊃pos)⊃log
+              slurp←{(+/∧\⍵∊⍺)⍺⍺ ⍵}
+              ⍝ Below line is actually broken since symbols can contain
+              ⍝ diacritics, but I'm lazy
+              symbolalphabet←⎕A,⎕D,'abcdefghijklmnopqrstuvwxyz_∆'
+              lineno←{'['≠⊃⍵:¯1 ⋄ ⊃2⊃⎕VFI ⎕D↑slurp 1↓⍵}symbolalphabet↓slurp (1↓pos)↓line
+          :Else
+              ⍝ Inside the editor we can't get the full text around the
+              ⍝ cursor (including any line number within brackets), so we just
+              ⍝ use the default line number
+              lineno←¯1
+          :EndIf
+              
+          edit name lineno
         ∇
 
         ∇ {r}←listen port;sockname;callbacks;_
@@ -130,10 +148,12 @@
           ∘
         ∇
 
-        ∇ src←{noload}getsource name;_
+        ∇ src←{noload}getsource fullname;name;_
           :If 0=⎕NC'noload'
               noload←0
           :EndIf
+
+          name←(∧\fullname≠'[')/fullname
 
           :Select ⊃#.⎕NC name
           :Case 0
