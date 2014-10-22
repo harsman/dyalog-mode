@@ -309,8 +309,15 @@ together with AltGr produce the corresponding apl character in APLCHARS."
       indented)))
 
 (defun dyalog-indent-line ()
-  (save-excursion
-    (indent-line-to (max 0 (dyalog-get-indent)))))
+  (let* ((startpos (point))
+         (bol (progn (beginning-of-line) (point)))
+         (relpos (- startpos bol))
+         (oldindent (current-indentation))
+         (newindent (max 0 (dyalog-get-indent))))
+    (indent-line-to newindent)
+    (if (> relpos newindent)
+        (goto-char (min (+ startpos (- newindent oldindent))
+                        (point-max))))))
 
 (defun dyalog-fix-whitespace ()
   (let ((dyalog-indent-comments nil))
