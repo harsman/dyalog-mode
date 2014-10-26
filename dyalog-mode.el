@@ -403,9 +403,9 @@ together with AltGr produce the corresponding apl character in APLCHARS."
   (forward-line 1)
   (let ((defunstart (point)))
     (if (not (re-search-forward dyalog-tradfn-header (point-max) t))
-        (progn
-          (goto-char (point-max))
-          (end-of-line))
+          (unless (re-search-forward dyalog-naked-nabla (point-max) t)
+            (goto-char (point-max))
+            (end-of-line))
       (goto-char (match-beginning 0))
       (if (bobp)
           (progn
@@ -436,6 +436,74 @@ together with AltGr produce the corresponding apl character in APLCHARS."
     (while (> arg 0)
       (dyalog-next-defun-end)
       (decf arg))))
+
+(defun dyalog-dfun-name ()
+  (interactive)
+  "If point is inside a dynamic function return the functions name.
+If point is inside an anonymous function, return \"\", and if it
+isn't inside a dynamic function, return nil"
+  (save-excursion
+    (let ((syn-table (copy-syntax-table dyalog-mode-syntax-table))
+          (openbrace nil))
+      (modify-syntax-entry ?\( "." syn-table)
+      (modify-syntax-entry ?\) "." syn-table)
+      (modify-syntax-entry ?\[ "." syn-table)
+      (modify-syntax-entry ?\] "." syn-table)
+      (set 'openbrace
+           (with-syntax-table syn-table
+             (condition-case err
+                 (goto-char (scan-lists (point) -1 1))
+               (scan-error nil))))
+      (let* ((ret-and-larg (concat "\\(?:[A-Za-z]+ *← *\\|\\(?1:{[a-zA-Z]+}\\) *← *\\)?"
+                                   "\\(?:[A-Za-z_]+ +\\|\\(?2:{[A-Za-z_]+}\\) *\\)"))
+             (in-dfun-p
+              (and openbrace
+                   (not
+                    (progn
+                      (forward-line)
+                      (end-of-line)
+                      (and
+                       (re-search-backward dyalog-tradfn-header (point-min) t)
+                       (re-search-forward ret-and-larg (match-end 0) t)
+                       (memq openbrace (list (match-beginning 1)
+                                             (match-beginning 2)))))))))
+        (if in-dfun-p
+            (progn
+              (goto-char openbrace)
+              (let ((dfun-name
+                     (if (looking-back (concat "\\(" dyalog-name "\\) *← *")
+                                       (line-beginning-position)
+                                       t)
+                         (match-string-no-properties 1)
+                       "")))
+                (condition-case err
+                    (progn
+                      (forward-sexp)
+                      (if (looking-at " *[^\r\n ⋄]")
+                          ""
+                        dfun-name))
+                  (scan-error dfun-name))))
+          nil)))))
+
+(defun dyalog-current-defun ()
+  "Return the name of the defun point is in."
+  (let ((dfun-name (dyalog-dfun-name))
+        (start-pos (point)))
+    (or dfun-name
+        (save-excursion
+          (dyalog-previous-defun)
+          (when (not (looking-at "∇"))
+            (forward-line -1))         ; Nabla is on its own line
+          (if (re-search-forward dyalog-tradfn-header nil t)
+              (let ((tradfn-name (match-string-no-properties 1)))
+                (dyalog-end-of-defun)
+                (if (< (point) start-pos)
+                    ""
+                  tradfn-name))
+            "")))))
+
+;; Socket connection
+
 
 (defun dyalog-session-connect (&optional host port)
   "Connect to a Dyalog session"
@@ -577,8 +645,9 @@ together with AltGr produce the corresponding apl character in APLCHARS."
   (setq imenu-generic-expression dyalog-imenu-generic-expression)
   (eval-after-load "which-func"
     '(add-to-list 'which-func-modes 'dyalog-mode))
+  (add-hook 'which-func-functions 'dyalog-current-defun nil 'make-it-local)
   ;; Hooks
-  (add-hook 'before-save-hook 'dyalog-fix-whitespace nil 'make-it-local)
+  (add-hook 'before-save-hook 'dyalog-fix-whitespace-before-save nil 'make-it-local)
   (run-hooks 'dyalog-mode-hook))
 
 (provide 'dyalog-mode)
