@@ -73,7 +73,10 @@ together with AltGr produce the corresponding apl character in APLCHARS."
           (if fun
               (progn
                 (define-key keymap aplkey fun))))))
-    
+
+(defconst dyalog-keyword-regex
+  "\\(^\\s-*:\\([A-Za-z]+\\)\\)\\|\\(⋄\\s-*:\\(?2:[A-Za-z]+\\)\\)")
+
 ;; This should probably be split into several layers of highlighting
 (defconst dyalog-font-lock-keywords1
   (list
@@ -82,7 +85,7 @@ together with AltGr produce the corresponding apl character in APLCHARS."
    ;; System functions
    '("⎕[A-Za-z]*" . font-lock-builtin-face)
    ;; Keywords
-   '("\\(^\\s-*:\\([A-Za-z]+\\)\\)\\|\\(⋄\\s-*:\\(?2:[A-Za-z]+\\)\\)"
+   `(,dyalog-keyword-regex
      . (2 font-lock-keyword-face nil))
    '("\\s-+\\(:\\(In\\|InEach\\)\\)\\s-+" . (2 font-lock-keyword-face nil))
    ;; Guards
@@ -211,10 +214,13 @@ together with AltGr produce the corresponding apl character in APLCHARS."
   :type 'boolean
   :group 'dyalog)
 
-(defcustom dyalog-fix-whitespace nil
-  "True if buffers should be re-indented and have trailing whitespace removed before they are saved."
+(defcustom dyalog-fix-whitespace-before-save nil
+  "True if buffers should be re-indented and have trailing
+whitespace removed before they are saved."
   :type 'boolean
   :group 'dyalog)
+
+;;; Indentation
 
 (defun dyalog-dedent (line)
   "Dedent current line one level relative to LINE lines before."
@@ -319,18 +325,70 @@ together with AltGr produce the corresponding apl character in APLCHARS."
         (goto-char (min (+ startpos (- newindent oldindent))
                         (point-max))))))
 
+(defun dyalog-in-comment-or-string (&optional pt)
+  "Return t if PT (defaults to point) is inside a string literal or a comment."
+  (save-excursion
+    (progn
+      (when pt
+        (goto-char pt))
+      (let ((match (match-data)))
+        (not (not (memq (syntax-ppss-context (syntax-ppss)) '(string comment))))
+        (set-match-data match)))))
+
+(defun dyalog-fix-whitespace-before-save ()
+  "Clean up whitespace in the current buffer before saving."
+  (when (and (eq major-mode 'dyalog-mode) dyalog-fix-whitespace-before-save)
+    (dyalog-fix-whitespace)))
+
 (defun dyalog-fix-whitespace ()
-  (let ((dyalog-indent-comments nil))
-    (when (and (eq major-mode 'dyalog-mode)
-               dyalog-fix-whitespace)
-      (save-excursion
-        (delete-trailing-whitespace)
-        (dyalog-indent-buffer)))))
+  "Clean up white space in the current buffer like Dyalog does."
+  (interactive)
+  (let ((dyalog-indent-comments nil)
+        (punctuation-char "\\s.\\|\\s(\\|\\s)"))
+
+    (save-excursion
+      (delete-trailing-whitespace)
+      ;; Reduce all runs of whitespace to a single space, except
+      ;; when succeeded by a comment character, or if inside a comment
+      ;; or string literal
+      (goto-char (point-min))
+      (while (re-search-forward "\\(  +\\)\\(\\S<\\)" (point-max) t)
+        (let ((start (match-beginning 0))
+              (ws-start (match-beginning 1)))
+          (unless (dyalog-in-comment-or-string ws-start)
+            (replace-match " \\2"))))
+      ;; Remove spaces before punctuation
+      (goto-char (point-min))
+      (while (re-search-forward (concat "\\( +\\)"
+                                        "\\(" punctuation-char "\\)")
+                                (point-max)
+                                t)
+        (let ((start (match-beginning 0))
+              (ws-start (match-beginning 1)))
+          (unless (dyalog-in-comment-or-string ws-start)
+            (replace-match "\\2")
+            (goto-char start))))
+      ;; Now remove spaces after punctuation unless they are followed by a
+      ;; comment. We can't remove spaces both before and after punctuation in
+      ;; one pass because matches might overlap.
+      (goto-char (point-min))
+      (while (re-search-forward (concat "\\(" punctuation-char "\\)"
+                                        "\\( +\\)" "\\([^⍝ ]\\)")
+                                (point-max)
+                                t)
+        (let ((start (match-beginning 0))
+              (ws-start (match-beginning 2)))
+          (unless (dyalog-in-comment-or-string ws-start)
+            (replace-match "\\1\\3")
+            (goto-char start))))
+      (dyalog-indent-buffer))))
 
 (defun dyalog-indent-buffer ()
   (save-excursion
     (mark-whole-buffer)
     (indent-region (region-beginning) (region-end))))
+
+;;; Defun recognition and navigation
 
 (defconst dyalog-func-start "\\(?:\\`\\|∇[\r\n]*\\)\\s-*")
 
@@ -386,7 +444,7 @@ together with AltGr produce the corresponding apl character in APLCHARS."
       (goto-char (point-max))
     (if (looking-at dyalog-naked-nabla)
         (forward-line 1))))
-  
+
 (defun dyalog-beginning-of-defun (&optional arg)
   "Move backward to the beginning of a function definition."
   (interactive "^p")
