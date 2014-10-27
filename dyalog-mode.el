@@ -50,6 +50,7 @@
     (define-key map (kbd"M-f") 'dyalog-ediff-forward-word)
     (define-key map (kbd"C-c C-c") 'dyalog-editor-fix)
     (define-key map (kbd"C-c C-e") 'dyalog-editor-edit-symbol-at-point)
+    (define-key map (kbd"C-c C-l") 'dyalog-toggle-local)
     map)
   "Keymap for Dyalog APL mode.")
 
@@ -686,6 +687,29 @@ isn't inside a dynamic function, return nil"
         (setq linespec (match-string 1)))
     (dyalog-editor-edit (concat (symbol-name sym) linespec))))
 
+(defun dyalog-toggle-local ()
+  "Toggle localization for symbol at point."
+  (interactive)
+  (let* ((sym   (symbol-at-point))
+         (name  (symbol-name sym))
+         (str   (concat ";" name))
+         (fname (dyalog-current-defun)))
+    (unless (or (not sym)
+                (equal (length fname) 0)
+                (dyalog-in-comment-or-string)
+                (dyalog-in-keyword)
+                (dyalog-dfun-name))
+      (save-excursion
+        (beginning-of-defun)
+        (if (search-forward str nil t)
+            (progn
+              (goto-char (match-beginning 0))
+              (delete-char (length str))
+              (message "Made %s non-local in function %s" name fname))
+          (progn
+            (move-end-of-line nil)
+            (insert str)
+            (message "Made %s local in function %s" name fname)))))))
 
 (defun dyalog-mode ()
   "Major mode for editing Dyalog APL code."
