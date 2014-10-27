@@ -142,24 +142,6 @@ together with AltGr produce the corresponding apl character in APLCHARS."
     st)
   "Syntax table for `dyalog-mode'.")
 
-(defun dyalog-syntax-propertize-function (start end)
-  "Alter syntax table for escaped single quotes within strings."
-  (save-excursion
-    (goto-char start)
-    (let* ((syntax-state (syntax-ppss))
-           (inside-string-p (not (not (nth 3 syntax-state)))))
-      (while (< (point) end)
-        (skip-chars-forward "^'" end)
-        (when (looking-at "'")
-          (if (and inside-string-p (looking-at "''"))
-              (progn
-                (put-text-property (point) (+ 2 (point))
-                                   'syntax-table
-                                   (string-to-syntax "."))
-                (ignore-errors (forward-char)))
-            (setq inside-string-p (not inside-string-p))))
-        (ignore-errors (forward-char))))))
-
 (defvar dyalog-name  "[A-Za-z∆_]+[A-Za-z∆_0-9]*")
 
 (defvar dyalog-number "\\b¯?[0-9]+\\.?[0-9]*\\b")
@@ -325,19 +307,6 @@ whitespace removed before they are saved."
     (if (> relpos newindent)
         (goto-char (min (+ startpos (- newindent oldindent))
                         (point-max))))))
-
-(defun dyalog-in-comment-or-string (&optional pt)
-  "Return t if PT (defaults to point) is inside a string literal or a comment."
-  (save-excursion
-    (progn
-      (when pt
-        (goto-char pt))
-      (let ((match (match-data))
-            (res (not (not
-                       (memq (syntax-ppss-context (syntax-ppss))
-                             '(string comment))))))
-        (set-match-data match)
-        res))))
 
 (defun dyalog-fix-whitespace-before-save ()
   "Clean up whitespace in the current buffer before saving."
@@ -564,7 +533,50 @@ isn't inside a dynamic function, return nil"
                   tradfn-name))
             "")))))
 
-;; Socket connection
+
+;;; Syntax
+
+(defun dyalog-syntax-propertize-function (start end)
+  "Alter syntax table for escaped single quotes within strings."
+  (save-excursion
+    (goto-char start)
+    (let* ((syntax-state (syntax-ppss))
+           (inside-string-p (not (not (nth 3 syntax-state)))))
+      (while (< (point) end)
+        (skip-chars-forward "^'" end)
+        (when (looking-at "'")
+          (if (and inside-string-p (looking-at "''"))
+              (progn
+                (put-text-property (point) (+ 2 (point))
+                                   'syntax-table
+                                   (string-to-syntax "."))
+                (ignore-errors (forward-char)))
+            (setq inside-string-p (not inside-string-p))))
+        (ignore-errors (forward-char))))))
+
+(defun dyalog-in-keyword ()
+  "Return t if point is inside a keyword (e.g. :If)."
+  (save-excursion
+    (skip-chars-backward "A-Za-z:")
+    (skip-syntax-backward "-")
+    (and (looking-at dyalog-keyword-regex)
+         (not (dyalog-dfun-name)))))
+
+(defun dyalog-in-comment-or-string (&optional pt)
+  "Return t if PT (defaults to point) is inside a string literal or a comment."
+  (save-excursion
+    (progn
+      (when pt
+        (goto-char pt))
+      (let ((match (match-data))
+            (res (not (not
+                       (memq (syntax-ppss-context (syntax-ppss))
+                             '(string comment))))))
+        (set-match-data match)
+        res))))
+
+
+;;; Socket connection
 
 
 (defun dyalog-session-connect (&optional host port)
