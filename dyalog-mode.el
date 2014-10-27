@@ -332,9 +332,12 @@ whitespace removed before they are saved."
     (progn
       (when pt
         (goto-char pt))
-      (let ((match (match-data)))
-        (not (not (memq (syntax-ppss-context (syntax-ppss)) '(string comment))))
-        (set-match-data match)))))
+      (let ((match (match-data))
+            (res (not (not
+                       (memq (syntax-ppss-context (syntax-ppss))
+                             '(string comment))))))
+        (set-match-data match)
+        res))))
 
 (defun dyalog-fix-whitespace-before-save ()
   "Clean up whitespace in the current buffer before saving."
