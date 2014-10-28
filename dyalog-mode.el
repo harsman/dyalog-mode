@@ -393,7 +393,7 @@ whitespace removed before they are saved."
                                        dyalog-func-monadic "\\|"
                                        dyalog-func-dyadic "\\)"))
 
-(defconst dyalog-naked-nabla "\\s-*∇\\s-*$")
+(defconst dyalog-naked-nabla "^\\s-*∇\\s-*$")
 
 
 (defvar dyalog-imenu-generic-expression
@@ -435,9 +435,9 @@ whitespace removed before they are saved."
   (forward-line 1)
   (let ((defunstart (point)))
     (if (not (re-search-forward dyalog-tradfn-header (point-max) t))
-          (unless (re-search-forward dyalog-naked-nabla (point-max) t)
-            (goto-char (point-max))
-            (end-of-line))
+        (unless (re-search-forward dyalog-naked-nabla (point-max) t)
+          (goto-char (point-max))
+          (end-of-line))
       (goto-char (match-beginning 0))
       (if (bobp)
           (progn
@@ -445,9 +445,9 @@ whitespace removed before they are saved."
             (dyalog-next-defun-end)))
       (if (re-search-backward dyalog-naked-nabla defunstart t)
           (goto-char (match-beginning 0))
-        (if (looking-at dyalog-naked-nabla)
-            (forward-line -1)))
-          (end-of-line))))
+        (when (looking-at dyalog-naked-nabla)
+          (forward-line -1)))
+      (end-of-line))))
 
 (defun dyalog-previous-defun-end ()
   (if (not (re-search-backward dyalog-tradfn-header (point-min) t))
@@ -476,11 +476,15 @@ If point is inside an anonymous function, return \"\", and if it
 isn't inside a dynamic function, return nil"
   (save-excursion
     (let ((syn-table (copy-syntax-table dyalog-mode-syntax-table))
-          (openbrace nil))
+          (openbrace nil)
+          (context (syntax-ppss-context (syntax-ppss))))
       (modify-syntax-entry ?\( "." syn-table)
       (modify-syntax-entry ?\) "." syn-table)
       (modify-syntax-entry ?\[ "." syn-table)
       (modify-syntax-entry ?\] "." syn-table)
+      (cond 
+       ((eq context 'string) (re-search-backward "\\s\""))
+       ((eq context 'comment) (re-search-backward "\\s<")))
       (set 'openbrace
            (with-syntax-table syn-table
              (condition-case err
@@ -736,6 +740,8 @@ isn't inside a dynamic function, return nil"
   (set (make-local-variable 'indent-line-function) 'dyalog-indent-line)
   (set (make-local-variable 'beginning-of-defun-function) 'dyalog-beginning-of-defun)
   (set (make-local-variable 'end-of-defun-function) 'dyalog-end-of-defun)
+  ;; Ensure parens inside comments don't trip up navigation
+  (set (make-local-variable 'parse-sexp-ignore-comments) t)
 
   (setq major-mode 'dyalog-mode)
   (setq mode-name "Dyalog")
