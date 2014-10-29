@@ -726,10 +726,10 @@ isn't inside a dynamic function, return nil"
   ;; Below lines make [un]comment region and fill paragraph work correctly, I'm
   ;; not sure why defining the syntax table isn't enough.
   (set (make-local-variable 'comment-start) "⍝ ")
-  (set (make-local-variable 'comment-start-skip) "⍝\\s-+")
-  ;; Make comment processing use the syntax table
+  (set (make-local-variable 'comment-start-skip) "⍝+\\s-*")
   (set (make-local-variable 'comment-use-global-state) t)
   (set (make-local-variable 'comment-use-syntax) t)
+  (set (make-local-variable 'comment-auto-fill-only-comments) t)
   (set (make-local-variable 'font-lock-defaults) '(dyalog-font-lock-keywords))
   ;; Dyalog always indents with spaces
   (set (make-local-variable 'indent-tabs-mode) nil)
