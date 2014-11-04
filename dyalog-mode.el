@@ -725,11 +725,11 @@ isn't inside a dynamic function, return nil"
             (insert str)
             (message "Made %s local in function %s" name fname)))))))
 
-(defun dyalog-mode ()
-  "Major mode for editing Dyalog APL code."
-  (interactive)
-  (kill-all-local-variables)
-  (use-local-map dyalog-mode-map)
+(define-derived-mode dyalog-mode prog-mode "Dyalog"
+  "Major mode for editing Dyalog APL code.
+
+\\{dyalog-mode-map}"
+  '(:group 'dyalog :syntax-table dyalog-mode-syntax-table)
   (set-syntax-table dyalog-mode-syntax-table)
   (set (make-local-variable 'syntax-propertize-function)
                             #'dyalog-syntax-propertize-function)
@@ -752,16 +752,14 @@ isn't inside a dynamic function, return nil"
   ;; Ensure parens inside comments don't trip up navigation
   (set (make-local-variable 'parse-sexp-ignore-comments) t)
 
-  (setq major-mode 'dyalog-mode)
-  (setq mode-name "Dyalog")
   ;; Imenu and which-func-mode
-  (setq imenu-generic-expression dyalog-imenu-generic-expression)
+  (set (make-local-variable 'imenu-generic-expression)
+                            dyalog-imenu-generic-expression)
   (eval-after-load "which-func"
     '(add-to-list 'which-func-modes 'dyalog-mode))
   (add-hook 'which-func-functions 'dyalog-current-defun nil 'make-it-local)
   ;; Hooks
-  (add-hook 'before-save-hook 'dyalog-fix-whitespace-before-save nil 'make-it-local)
-  (run-hooks 'dyalog-mode-hook))
+  (add-hook 'before-save-hook 'dyalog-fix-whitespace-before-save nil 'make-it-local))
 
 (provide 'dyalog-mode)
 
