@@ -653,7 +653,7 @@ isn't inside a dynamic function, return nil"
                (lineno nil)
                (src  (buffer-substring-no-properties (match-end 0) m)))
            (when linetext
-               (set 'lineno (string-to-int linetext)))
+               (set 'lineno (string-to-number linetext)))
            (delete-region (point) (buffer-end 1))
            (dyalog-open-edit-buffer name src lineno)))
          ((looking-at "fxresult \\([^ ]+\\)\e")
