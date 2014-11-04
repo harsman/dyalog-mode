@@ -78,6 +78,9 @@ together with AltGr produce the corresponding apl character in APLCHARS."
 (defconst dyalog-keyword-regex
   "\\(^\\s-*:\\([A-Za-z]+\\)\\)\\|\\(⋄\\s-*:\\(?2:[A-Za-z]+\\)\\)")
 
+(defconst dyalog-middle-keyword-regex
+  "\\s-+\\(:\\(In\\|InEach\\)\\)\\s-+")
+
 ;; This should probably be split into several layers of highlighting
 (defconst dyalog-font-lock-keywords1
   (list
@@ -88,7 +91,7 @@ together with AltGr produce the corresponding apl character in APLCHARS."
    ;; Keywords
    `(,dyalog-keyword-regex
      . (2 font-lock-keyword-face nil))
-   '("\\s-+\\(:\\(In\\|InEach\\)\\)\\s-+" . (2 font-lock-keyword-face nil))
+   `(,dyalog-middle-keyword-regex . (2 font-lock-keyword-face nil))
    ;; Guards
    '(":" . font-lock-keyword-face)
    ;; Labels
@@ -326,33 +329,40 @@ whitespace removed before they are saved."
       ;; when succeeded by a comment character, or if inside a comment
       ;; or string literal
       (goto-char (point-min))
-      (while (re-search-forward "\\(  +\\)\\(\\S<\\)" (point-max) t)
+      (while (re-search-forward "  +\\([^⍝ \r\n]\\)" (point-max) t)
         (let ((start (match-beginning 0))
               (ws-start (match-beginning 1)))
           (unless (dyalog-in-comment-or-string ws-start)
-            (replace-match " \\2"))))
+            (replace-match " \\1"))))
       ;; Remove spaces before punctuation
       (goto-char (point-min))
-      (while (re-search-forward (concat "\\( +\\)"
+      (while (re-search-forward (concat "\\([^ \r\n]\\)" "\\( +\\)"
                                         "\\(" punctuation-char "\\)")
                                 (point-max)
                                 t)
         (let ((start (match-beginning 0))
-              (ws-start (match-beginning 1)))
-          (unless (dyalog-in-comment-or-string ws-start)
-            (replace-match "\\2")
+              (ws-start (match-beginning 2)))
+          (unless (or (dyalog-in-comment-or-string ws-start)
+                      (string-match "[∇⋄⍬]" (match-string 3))
+                      (string-match "[∇⋄⍬]" (match-string 1))
+                      (dyalog-in-keyword (match-beginning 3))
+                      (dyalog-in-keyword (match-beginning 1)))
+            (replace-match "\\1\\3")
             (goto-char start))))
       ;; Now remove spaces after punctuation unless they are followed by a
       ;; comment. We can't remove spaces both before and after punctuation in
       ;; one pass because matches might overlap.
       (goto-char (point-min))
       (while (re-search-forward (concat "\\(" punctuation-char "\\)"
-                                        "\\( +\\)" "\\([^⍝ ]\\)")
+                                        "\\( +\\)" "\\([^⍝ \r\n]\\)")
                                 (point-max)
                                 t)
         (let ((start (match-beginning 0))
               (ws-start (match-beginning 2)))
-          (unless (dyalog-in-comment-or-string ws-start)
+          (unless (or (dyalog-in-comment-or-string ws-start)
+                      (string-match "[∇⋄⍬]" (match-string 1))
+                      (string-match "[∇⋄⍬]" (match-string 3))
+                      (dyalog-in-keyword (match-beginning 3)))
             (replace-match "\\1\\3")
             (goto-char start))))
       (dyalog-indent-buffer))))
@@ -559,12 +569,15 @@ isn't inside a dynamic function, return nil"
             (setq inside-string-p (not inside-string-p))))
         (ignore-errors (forward-char))))))
 
-(defun dyalog-in-keyword ()
-  "Return t if point is inside a keyword (e.g. :If)."
+(defun dyalog-in-keyword (&optional pt)
+  "Return t if PT (defaults to point) is inside a keyword (e.g. :If)."
   (save-excursion
+    (when pt
+      (goto-char pt))
     (skip-chars-backward "A-Za-z:")
     (skip-syntax-backward "-")
-    (and (looking-at dyalog-keyword-regex)
+    (and (or (looking-at dyalog-keyword-regex)
+             (looking-at dyalog-middle-keyword-regex))
          (not (dyalog-dfun-name)))))
 
 (defun dyalog-in-comment-or-string (&optional pt)
