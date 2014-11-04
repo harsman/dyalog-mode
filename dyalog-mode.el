@@ -1,4 +1,5 @@
 ;;; dyalog-mode.el --- Major mode for editing Dyalog APL source code -*- coding: utf-8 -*-
+;;; -*- lexical-binding: t -*-
 
 ;; Copyright (C) 2008, 2009, 2010, 2011 Joakim Hårsman
 
@@ -41,7 +42,7 @@
 
 
 
-(require 'cl)
+(require 'cl-lib)
 
 ;; Set up mode specific keys below
 (defvar dyalog-mode-map
@@ -65,7 +66,7 @@ with some character.
 
 REGULARCHARS is a string of the characters that when pressed
 together with AltGr produce the corresponding apl character in APLCHARS."
-  (loop for pair in (mapcar* #'cons aplchars regularchars) do
+  (dolist (pair (cl-mapcar #'cons aplchars regularchars))
         (let* ((aplchar (car pair))
                (char    (cdr pair))
                (aplkey  (vector (list 'control 'meta aplchar)))
@@ -596,7 +597,6 @@ isn't inside a dynamic function, return nil"
 
 ;;; Socket connection
 
-
 (defun dyalog-session-connect (&optional host port)
   "Connect to a Dyalog session"
   (interactive (list (read-string "Host (default localhost):"
@@ -614,8 +614,6 @@ isn't inside a dynamic function, return nil"
   (interactive (list (read-string "Host (default localhost):"
                                   "127.0.0.1")
                      (read-number "Port (default 8080):" 8080)))
-  (setq dyalog-receive-state 'ready)
-  (setq dyalog-receive-name "")
   (make-network-process :name "dyalog-edit"
                         :buffer " *dyalog-receive-buffer*"
                         :family 'ipv4 :host host :service port
@@ -641,13 +639,12 @@ isn't inside a dynamic function, return nil"
           (goto-char (point-min))
           (dyalog-editor-munge-command (point) m)
           (with-current-buffer (process-buffer process)
-            (set-marker (process-mark
-                         (get-process "dyalog-edit")) 1)))))))
+            (set-marker (process-mark process) 1)))))))
 
 (defun dyalog-editor-munge-command (p m)
   "Parse and delete a Dyalog editor command in the currently active region"
   ;;(interactive "r")
-  (cond ((looking-at "edit \\([^ []+\\)\\(\\[\\([0-9]+\\)\\]\\)? ")
+  (cond ((looking-at "edit \\([^ []+\\)\\(\\[\\([0-9]+\\)\\]\\)?\0\\([^\0]*\\)\0")
          (let ((name (match-string 1))
                (linetext (match-string 3))
                (lineno nil)
@@ -740,7 +737,6 @@ isn't inside a dynamic function, return nil"
   ;; not sure why defining the syntax table isn't enough.
   (set (make-local-variable 'comment-start) "⍝ ")
   (set (make-local-variable 'comment-start-skip) "⍝+\\s-*")
-  (set (make-local-variable 'comment-use-global-state) t)
   (set (make-local-variable 'comment-use-syntax) t)
   (set (make-local-variable 'comment-auto-fill-only-comments) t)
   (set (make-local-variable 'font-lock-defaults) '(dyalog-font-lock-keywords))
