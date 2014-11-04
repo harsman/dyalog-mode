@@ -124,9 +124,9 @@ together with AltGr produce the corresponding apl character in APLCHARS."
 (defvar dyalog-mode-syntax-table
   (let ((st (make-syntax-table)))
     ;; Make various APL chars punctuation
-    (loop for char in
-          (string-to-list (concat dyalog-keyword-chars dyalog-ascii-chars))
-          do (modify-syntax-entry char "." st))
+    (dolist (char
+             (string-to-list (concat dyalog-keyword-chars dyalog-ascii-chars)))
+      (modify-syntax-entry char "." st))
     ;; Make sure delta, quad and underscore are part of symbol names
     ;; This doesn't seem to work for delta and quad?
     (modify-syntax-entry ?_ "_" st)
@@ -299,7 +299,7 @@ whitespace removed before they are saved."
         (set 'ret (funcall cond-fun at-pause indented blockcount funcount))
         (set 'indented (car ret))
         (set 'blockcount (cadr ret))
-        (set 'funcount (caddr ret)))
+        (set 'funcount (cl-caddr ret)))
       indented)))
 
 (defun dyalog-indent-line ()
@@ -437,10 +437,10 @@ whitespace removed before they are saved."
   (if (< arg 0)
       (while (< arg 0)
         (dyalog-next-defun)
-        (incf arg))
+        (cl-incf arg))
     (while (> arg 0)
       (dyalog-previous-defun)
-      (decf arg))))
+      (cl-decf arg))))
 
 (defun dyalog-next-defun-end ()
   (forward-line 1)
@@ -475,10 +475,10 @@ whitespace removed before they are saved."
       ;; and beginning-of-defun-function.
       (while (< arg 0)
         (dyalog-previous-defun-end)
-        (incf arg))
+        (cl-incf arg))
     (while (> arg 0)
       (dyalog-next-defun-end)
-      (decf arg))))
+      (cl-decf arg))))
 
 (defun dyalog-dfun-name ()
   (interactive)

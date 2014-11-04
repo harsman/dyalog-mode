@@ -3,15 +3,28 @@
     :Namespace editor
         eomraw←27
         eom←⎕UCS eomraw
+        null←⎕UCS 0
         recvbuf←⍬
         state←'ready'
+        ⍝ onMissing contains the name of a function to call when the name that
+        ⍝ is being edited doesn't exist. It recives the name being edited as
+        ⍝ right argument and is expected to establish the name in the session.
+        ⍝ The return value should be the full path to the source file of the
+        ⍝ name. If the source file is unknown or missing, the function should
+        ⍝ return ''.
         onMissing←''
+        ⍝ getPath contains the name of a function to call to get the path to
+        ⍝ the source of a given name. It receives a name as right argument and
+        ⍝ is expected to return the path to the source file the function is
+        ⍝ defined in. If the path is unknown, getPath should return ''.
+        getPath←''
 
-        ∇ {r}←edit rarg;name;lineno;src;linespec
+        ∇ {r}←edit rarg;name;lineno;src;path;linespec;msg
           name lineno←rarg
-          src←getsource name
+          src path←getsource name
           linespec←(⎕IO+¯1=lineno)⊃('[',(⍕lineno),']')''
-          r←send #.⎕SE.Emacs∆socket('edit ',name,linespec,' ',src,eom)
+          msg←'edit ',name,linespec,null,path,null,src,
+          r←send #.⎕SE.Emacs∆socket(msg,eom)
         ∇
 
         ∇ setupmenu shortcut;title;acc
@@ -71,7 +84,7 @@
           r←2 ⎕NQ socket'TCPSend'raw
         ∇
 
-        ∇ {r}←receive msg;socket;raw;ip;uni;data;cr;lf;i;command;src;name;marker;complete
+        ∇ {r}←receive msg;socket;raw;ip;uni;data;i;command;src;name;marker;complete
 
           socket raw ip←msg[1 3 4]
 
@@ -132,11 +145,12 @@
           send socket('fxresult ',(,⍕r),eom)
         ∇
 
-        ∇ {r}←sendsource args;socket;raw;marker;name;src
+        ∇ {r}←sendsource args;socket;raw;marker;name;src;path
+          ∘
           socket raw marker←args
           name←##.bytes2text recvbuf,raw[⍳marker-1]
-          src←getsource name
-          r←send socket('edit ',name,' ',src,eom)
+          src path←getsource name
+          r←send socket('edit ',name,nl,path,nl,src,eom)
         ∇
 
         ∇ {r}←close msg
@@ -148,7 +162,15 @@
           ∘
         ∇
 
-        ∇ src←{noload}getsource fullname;name;_
+        ∇ path←getpath name
+          :If 3≠⎕NC '#.',getPath
+              path←''
+          :Else
+              path←(#.⍎'#.',getPath)name
+          :EndIf
+        ∇
+
+        ∇ r←{noload}getsource fullname;name;src;path;_
           :If 0=⎕NC'noload'
               noload←0
           :EndIf
@@ -159,18 +181,21 @@
           :Case 0
               :If 3≠⎕NC '#.',onMissing
               :OrIf noload
-                  src←''
+                  src←path←''
               :Else
-                  _←(#.⍎'#.',onMissing) name
-                  src←1 getsource name
+                  path←(#.⍎'#.',onMissing)name
+                  src←⊃1 getsource name
               :EndIf
           :CaseList 3 4
               src←##.joinlines ##.cm2v #.⎕CR name
+              path←getpath name
           :Case 9
               src←##.joinlines #.⎕SRC(#.⍎name)
+              path←getpath name
           :Else
-              src←''
+              src←path←''
           :EndSelect
+          r←src path
         ∇
     :EndNamespace
 
