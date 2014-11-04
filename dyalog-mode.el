@@ -151,6 +151,7 @@ together with AltGr produce the corresponding apl character in APLCHARS."
 
 (defvar dyalog-number "\\b¯?[0-9]+\\.?[0-9]*\\b")
 
+;;;###autoload
 (defun dyalog-ediff-forward-word ()
   "Move point forward one word."
   (interactive)
@@ -597,6 +598,7 @@ isn't inside a dynamic function, return nil"
 
 ;;; Socket connection
 
+;;;###autoload
 (defun dyalog-session-connect (&optional host port)
   "Connect to a Dyalog session"
   (interactive (list (read-string "Host (default localhost):"
@@ -609,6 +611,7 @@ isn't inside a dynamic function, return nil"
     (kbd"C-c C-e") 'dyalog-editor-edit-symbol-at-point)
   (run-hooks 'dyalog-session-connect-hook))
 
+;;;###autoload
 (defun dyalog-editor-connect (&optional host port)
   "Connect to a Dyalog process as an editor"
   (interactive (list (read-string "Host (default localhost):"
@@ -725,6 +728,7 @@ isn't inside a dynamic function, return nil"
             (insert str)
             (message "Made %s local in function %s" name fname)))))))
 
+;;;###autoload
 (define-derived-mode dyalog-mode prog-mode "Dyalog"
   "Major mode for editing Dyalog APL code.
 
