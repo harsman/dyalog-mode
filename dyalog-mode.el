@@ -644,7 +644,7 @@ isn't inside a dynamic function, return nil"
 (defun dyalog-editor-munge-command (p m)
   "Parse and delete a Dyalog editor command in the currently active region"
   ;;(interactive "r")
-  (cond ((looking-at "edit \\([^ []+\\)\\(\\[\\([0-9]+\\)\\]\\)?\0\\([^\0]*\\)\0")
+  (cond ((looking-at "edit \\([^ []+\\)\\(\\[\\([0-9]+\\)\\]\\)? ")
          (let ((name (match-string 1))
                (linetext (match-string 3))
                (lineno nil)
