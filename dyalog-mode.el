@@ -109,7 +109,7 @@ together with AltGr produce the corresponding apl character in APLCHARS."
    ;; Localizations
    '(";\\([A-Za-z0-9_∆]+\\)" (1 font-lock-constant-face nil))
    ;; Illegal chars (and del/nabla)
-   '("[∇$@]+" . font-lock-warning-face))
+   '("[∇$@\"]+" . font-lock-warning-face))
   "Minimal highlighting for Dyalog APL.")
 
 (defvar dyalog-font-lock-keywords dyalog-font-lock-keywords1
@@ -137,6 +137,7 @@ together with AltGr produce the corresponding apl character in APLCHARS."
     (modify-syntax-entry ?\n">" st)
     ;; Strings
     (modify-syntax-entry ?' "\"" st)
+    (modify-syntax-entry ?\" "." st)
     ;; Delimiters
     (modify-syntax-entry ?\[ "(]" st)
     (modify-syntax-entry ?\] ")[" st)
@@ -733,12 +734,10 @@ isn't inside a dynamic function, return nil"
   "Major mode for editing Dyalog APL code.
 
 \\{dyalog-mode-map}"
-  '(:group 'dyalog :syntax-table dyalog-mode-syntax-table)
+  `(:group 'dyalog)
   (set-syntax-table dyalog-mode-syntax-table)
   (set (make-local-variable 'syntax-propertize-function)
                             #'dyalog-syntax-propertize-function)
-  ;; Below lines make [un]comment region and fill paragraph work correctly, I'm
-  ;; not sure why defining the syntax table isn't enough.
   (set (make-local-variable 'comment-start) "⍝ ")
   (set (make-local-variable 'comment-start-skip) "⍝+\\s-*")
   (set (make-local-variable 'comment-use-syntax) t)
@@ -753,8 +752,8 @@ isn't inside a dynamic function, return nil"
   (set (make-local-variable 'indent-line-function) 'dyalog-indent-line)
   (set (make-local-variable 'beginning-of-defun-function) 'dyalog-beginning-of-defun)
   (set (make-local-variable 'end-of-defun-function) 'dyalog-end-of-defun)
-  ;; Ensure parens inside comments don't trip up navigation
   (set (make-local-variable 'parse-sexp-ignore-comments) t)
+  (set (make-local-variable 'parse-sexp-lookup-properties) t)
 
   ;; Imenu and which-func-mode
   (set (make-local-variable 'imenu-generic-expression)
