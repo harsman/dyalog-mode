@@ -744,6 +744,11 @@ isn't inside a dynamic function, return nil"
   :syntax-table dyalog-mode-syntax-table
   (setq-local syntax-propertize-function
               #'dyalog-syntax-propertize-function)
+  (setq-local parse-sexp-ignore-comments t)
+  (setq-local parse-sexp-lookup-properties t)
+  (setq-local beginning-of-defun-function 'dyalog-beginning-of-defun)
+  (setq-local end-of-defun-function 'dyalog-end-of-defun)
+  ;; Comments
   (setq-local comment-start "⍝ ")
   (setq-local comment-start-skip "⍝+\\s-*")
   (setq-local comment-use-syntax t)
@@ -752,10 +757,8 @@ isn't inside a dynamic function, return nil"
   ;; Dyalog alays indents with spaces
   (setq-local indent-tabs-mode nil)
   (setq-local indent-line-function 'dyalog-indent-line)
-  (setq-local beginning-of-defun-function 'dyalog-beginning-of-defun)
-  (setq-local end-of-defun-function 'dyalog-end-of-defun)
-  (setq-local parse-sexp-ignore-comments t)
-  (setq-local parse-sexp-lookup-properties t)
+  ;; Misc
+  (setq-local require-final-newline nil)
   ;; Imenu and which-func-mode
   (setq-local imenu-generic-expression
               dyalog-imenu-generic-expression)
