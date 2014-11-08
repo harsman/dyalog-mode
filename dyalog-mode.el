@@ -72,9 +72,8 @@ together with AltGr produce the corresponding apl character in APLCHARS."
                (aplkey  (vector (list 'control 'meta aplchar)))
                (regkey  (vector (list 'control 'meta char)))
                (fun  (lookup-key (current-global-map) regkey)))
-          (if fun
-              (progn
-                (define-key keymap aplkey fun))))))
+          (when fun
+            (define-key keymap aplkey fun)))))
 
 (defconst dyalog-keyword-regex
   "\\(^\\s-*:\\([A-Za-z]+\\)\\)\\|\\(⋄\\s-*:\\(?2:[A-Za-z]+\\)\\)")
