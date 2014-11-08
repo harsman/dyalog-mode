@@ -733,35 +733,31 @@ isn't inside a dynamic function, return nil"
   "Major mode for editing Dyalog APL code.
 
 \\{dyalog-mode-map}"
-  `(:group 'dyalog)
-  (set-syntax-table dyalog-mode-syntax-table)
-  (set (make-local-variable 'syntax-propertize-function)
-                            #'dyalog-syntax-propertize-function)
-  (set (make-local-variable 'comment-start) "⍝ ")
-  (set (make-local-variable 'comment-start-skip) "⍝+\\s-*")
-  (set (make-local-variable 'comment-use-syntax) t)
-  (set (make-local-variable 'comment-auto-fill-only-comments) t)
-  (set (make-local-variable 'font-lock-defaults) '(dyalog-font-lock-keywords))
-  ;; Dyalog always indents with spaces
-  (set (make-local-variable 'indent-tabs-mode) nil)
-  ;; below line doesn't seem to help, same results as with standard
-  ;; ediff-forward-word. If same line is in .emacs it works, so setting
-  ;; here is probably too late (or early?).
-  (setq ediff-forward-word-function 'dyalog-ediff-forward-word)
-  (set (make-local-variable 'indent-line-function) 'dyalog-indent-line)
-  (set (make-local-variable 'beginning-of-defun-function) 'dyalog-beginning-of-defun)
-  (set (make-local-variable 'end-of-defun-function) 'dyalog-end-of-defun)
-  (set (make-local-variable 'parse-sexp-ignore-comments) t)
-  (set (make-local-variable 'parse-sexp-lookup-properties) t)
-
+  :group 'dyalog
+  :syntax-table dyalog-mode-syntax-table
+  (setq-local syntax-propertize-function
+              #'dyalog-syntax-propertize-function)
+  (setq-local comment-start "⍝ ")
+  (setq-local comment-start-skip "⍝+\\s-*")
+  (setq-local comment-use-syntax t)
+  (setq-local comment-auto-fill-only-comments t)
+  (setq-local font-lock-defaults '(dyalog-font-lock-keywords))
+  ;; Dyalog alays indents with spaces
+  (setq-local indent-tabs-mode nil)
+  (setq-local indent-line-function 'dyalog-indent-line)
+  (setq-local beginning-of-defun-function 'dyalog-beginning-of-defun)
+  (setq-local end-of-defun-function 'dyalog-end-of-defun)
+  (setq-local parse-sexp-ignore-comments t)
+  (setq-local parse-sexp-lookup-properties t)
   ;; Imenu and which-func-mode
-  (set (make-local-variable 'imenu-generic-expression)
-                            dyalog-imenu-generic-expression)
+  (setq-local imenu-generic-expression
+              dyalog-imenu-generic-expression)
   (eval-after-load "which-func"
     '(add-to-list 'which-func-modes 'dyalog-mode))
   (add-hook 'which-func-functions 'dyalog-current-defun nil 'make-it-local)
   ;; Hooks
-  (add-hook 'before-save-hook 'dyalog-fix-whitespace-before-save nil 'make-it-local))
+  (add-hook 'before-save-hook
+            'dyalog-fix-whitespace-before-save nil 'make-it-local))
 
 (provide 'dyalog-mode)
 
