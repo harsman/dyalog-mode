@@ -304,15 +304,12 @@ whitespace removed before they are saved."
       indented)))
 
 (defun dyalog-indent-line ()
-  (let* ((startpos (point))
-         (bol (progn (beginning-of-line) (point)))
-         (relpos (- startpos bol))
-         (oldindent (current-indentation))
-         (newindent (max 0 (dyalog-get-indent))))
-    (indent-line-to newindent)
-    (if (> relpos newindent)
-        (goto-char (min (+ startpos (- newindent oldindent))
-                        (point-max))))))
+  (interactive)
+  (let ((restorepos (> (current-column) (current-indentation)))
+        (indent (max 0 (dyalog-get-indent))))
+    (if restorepos
+        (save-excursion (indent-line-to indent))
+      (indent-line-to indent))))
 
 (defun dyalog-fix-whitespace-before-save ()
   "Clean up whitespace in the current buffer before saving."
