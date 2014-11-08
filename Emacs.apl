@@ -23,7 +23,7 @@
           name lineno←rarg
           src path←getsource name
           linespec←(⎕IO+¯1=lineno)⊃('[',(⍕lineno),']')''
-          msg←'edit ',name,linespec,null,path,null,src,
+          msg←'edit ',name,linespec,null,path,null,src
           r←send #.⎕SE.Emacs∆socket(msg,eom)
         ∇
 

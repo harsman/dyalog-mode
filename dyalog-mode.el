@@ -644,15 +644,16 @@ isn't inside a dynamic function, return nil"
 (defun dyalog-editor-munge-command (p m)
   "Parse and delete a Dyalog editor command in the currently active region"
   ;;(interactive "r")
-  (cond ((looking-at "edit \\([^ []+\\)\\(\\[\\([0-9]+\\)\\]\\)? ")
+  (cond ((looking-at "edit \\([^ []+\\)\\(\\[\\([0-9]+\\)\\]\\)?\0\\([^\0]*\\)\0")
          (let ((name (match-string 1))
                (linetext (match-string 3))
                (lineno nil)
+               (path (match-string 4))
                (src  (buffer-substring-no-properties (match-end 0) m)))
            (when linetext
                (set 'lineno (string-to-number linetext)))
            (delete-region (point) (buffer-end 1))
-           (dyalog-open-edit-buffer name src lineno)))
+           (dyalog-open-edit-buffer name src lineno path)))
          ((looking-at "fxresult \\([^ ]+\\)\e")
           (let* ((result (match-string 1))
                  (num    (string-to-number result)))
@@ -662,22 +663,31 @@ isn't inside a dynamic function, return nil"
                 (message "Can't fix, error in line %d" num))
               (delete-region (point) (buffer-end 1)))))))
 
-(defun dyalog-open-edit-buffer (name src &optional lineno)
+(defun dyalog-open-edit-buffer (name src &optional lineno path)
   "Open a buffer to edit object NAME with source SRC"
-  (switch-to-buffer name)
-  (setq buffer-undo-list t)
-  (let ((pos (point)))
-    (save-excursion
-      (mark-whole-buffer)
-      (delete-region (point) (mark))
-      (insert src))
-    (dyalog-mode)
-    (font-lock-fontify-buffer)
-    (if lineno
-        (forward-line lineno)
-      (goto-char (min pos (point-max))))
-    (setq buffer-undo-list nil)
-    (select-frame-set-input-focus (window-frame (selected-window)))))
+  (let* ((file-name (if (and path (not (string= path "")))
+                        path
+                      nil))
+         (bufname (if file-name
+                      (file-name-nondirectory file-name)
+                    name)))
+    (switch-to-buffer bufname)
+    (setq buffer-undo-list t)
+    (let ((pos (point)))
+      (save-excursion
+        (mark-whole-buffer)
+        (delete-region (point) (mark))
+        (insert src))
+      (when file-name
+        (set-visited-file-name file-name t)
+        (set-buffer-modified-p nil))
+      (dyalog-mode)
+      (font-lock-fontify-buffer)
+      (if lineno
+          (forward-line (- lineno 1))
+        (goto-char (min pos (point-max))))
+      (setq buffer-undo-list nil)
+      (select-frame-set-input-focus (window-frame (selected-window))))))
 
 (defun dyalog-editor-fix (&optional arg)
   "Send the contents of the current buffer to the connected Dyalog process"
