@@ -565,8 +565,9 @@ isn't inside a dynamic function, return nil"
                                    'syntax-table
                                    (string-to-syntax "."))
                 (ignore-errors (forward-char)))
-            (setq inside-string-p (not inside-string-p))))
-        (ignore-errors (forward-char))))))
+            (when (not (equal 'comment (syntax-ppss-context (syntax-ppss))))
+              (setq inside-string-p (not inside-string-p))))
+          (ignore-errors (forward-char)))))))
 
 (defun dyalog-in-keyword (&optional pt)
   "Return t if PT (defaults to point) is inside a keyword (e.g. :If)."
