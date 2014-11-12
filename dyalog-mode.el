@@ -736,6 +736,10 @@ isn't inside a dynamic function, return nil"
             (insert str)
             (message "Made %s local in function %s" name fname)))))))
 
+(unless (fboundp 'setq-local)
+  (defmacro setq-local (var val)
+    `(set (make-local-variable ',var) ,val)))
+
 ;;;###autoload
 (define-derived-mode dyalog-mode prog-mode "Dyalog"
   "Major mode for editing Dyalog APL code.
