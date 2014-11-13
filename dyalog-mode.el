@@ -81,8 +81,21 @@ together with AltGr produce the corresponding apl character in APLCHARS."
 (defconst dyalog-middle-keyword-regex
   "\\s-+\\(:\\(In\\|InEach\\)\\)\\s-+")
 
-;; This should probably be split into several layers of highlighting
-(defconst dyalog-font-lock-keywords1
+(defvar dyalog-ascii-chars "][<>+---=/¨~\\?*(){}&|.;"
+  "APL symbols also present in ASCII.")
+
+(defvar dyalog-keyword-chars
+  "*×≤≥>≠∨∧÷∊⍴↑↓⍳○←→⌈⌊∘⍎⍕⊂⊃∩∪⊥⊤⍨⍒⍋⌽⍉⊖⍟⍱⍲⍬⌹≡≢⍪⌿⍀⍺⍵⎕⍞⋄⍷⌷⍣⊣⊢⌶")
+
+(defvar dyalog-name  "[A-Za-z∆_]+[A-Za-z∆_0-9]*")
+
+(defvar dyalog-number 
+  "[^A-Za-z_∆0-9]\\(¯?[0-9]+\\.?[0-9]*\\(E¯?[0-9]+\\.?[0-9]*\\)?\\)")
+
+(defconst dyalog-access-type 
+  "^\\s-*:Access +\\(WebMethod\\|\\(?:\\(Public\\|Private\\)\\)?\\(?: +\\(Instance\\( +Override\\|Overridable\\)\\|Shared\\)\\)?\\)")
+
+(defvar dyalog-font-lock-keywords
   (list
    ;; See emacs help for `font-lock-keywords' for a description of how the
    ;; below values work
@@ -97,28 +110,18 @@ together with AltGr produce the corresponding apl character in APLCHARS."
    ;; Labels
    '("^\\s-*\\([A-Za-z_][A-Za-z0-9_]*:\\)" . (1 font-lock-keyword-face t))
    ;; Numerical constans
-   '("[^A-Za-z_∆0-9]\\(¯?[0-9]+\\.?[0-9]*\\(E¯?[0-9]+\\.?[0-9]*\\)?\\)" (1 font-lock-constant-face nil))
+   `(,dyalog-number (1 font-lock-constant-face nil))
    ;; APL chars
-   '("[][<>+---=/¨~\\\\?*(){}&|]" . font-lock-keyword-face)
-   '("[*×≤≥>≠∨∧÷∊⍴↑↓⍳○←→⌈⌊∘⎕⍎⍕⊂⊃∩∪⊥⊤⍨⍒⍋⌽⍉⊖⍟⍱⍲⍬⌹≡≢⍪⌿⍀⍺⍵⎕⍞⋄⍷]"
-     . font-lock-keyword-face)
-   ;; Below line is broken for dfuns and very broken for
-   ;; nested dfuns
-   ;;'("{\\([^}]*\\)}" (1 font-lock-constant-face t))
+   (cons (concat "[" dyalog-ascii-chars "]") 'font-lock-keyword-face)
+   (cons (concat "[" dyalog-keyword-chars "]") 'font-lock-keyword-face)
    ;; Localizations
    '(";\\([A-Za-z0-9_∆]+\\)" (1 font-lock-constant-face nil))
    ;; Illegal chars (and del/nabla)
-   '("[∇$@\"]+" . font-lock-warning-face))
-  "Minimal highlighting for Dyalog APL.")
-
-(defvar dyalog-font-lock-keywords dyalog-font-lock-keywords1
+   '("[∇$@\"%]+" . font-lock-warning-face)
+   `(,dyalog-access-type (1 font-lock-variable-name-face)
+                         (2 font-lock-variable-name-face)
+                         (3 font-lock-variable-name-face)))
   "Default highlighting mode for Dyalog mode.")
-
-(defvar dyalog-ascii-chars "[]<>+---=/¨~\\?*(){}¨&|"
-  "APL symbols also present in ASCII.")
-
-(defvar dyalog-keyword-chars
-  "*×≤≥>≠∨∧÷∊⍴↑↓⍳○←→⌈⌊∘⍎⍕⊂⊃∩∪⊥⊤⍨⍒⍋⌽⍉⊖⍟⍱⍲⍬⌹≡≢⍪⌿⍀⍺⍵⎕⍞⋄⍷")
 
 (defvar dyalog-mode-syntax-table
   (let ((st (make-syntax-table)))
@@ -146,10 +149,6 @@ together with AltGr produce the corresponding apl character in APLCHARS."
     (modify-syntax-entry ?\} "){" st)
     st)
   "Syntax table for `dyalog-mode'.")
-
-(defvar dyalog-name  "[A-Za-z∆_]+[A-Za-z∆_0-9]*")
-
-(defvar dyalog-number "\\b¯?[0-9]+\\.?[0-9]*\\b")
 
 ;;;###autoload
 (defun dyalog-ediff-forward-word ()
