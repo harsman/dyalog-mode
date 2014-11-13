@@ -95,6 +95,13 @@ together with AltGr produce the corresponding apl character in APLCHARS."
 (defconst dyalog-access-type 
   "^\\s-*:Access +\\(WebMethod\\|\\(?:\\(Public\\|Private\\)\\)?\\(?: +\\(Instance\\( +Override\\|Overridable\\)\\|Shared\\)\\)?\\)")
 
+(defconst dyalog-field-def
+  (concat "^\\s-*:Field" 
+          "\\(?: +\\(Public\\|Private\\)\\)?"
+          "\\(?: +\\(Instance\\|Shared\\)\\)?"
+          "\\(?: +\\(ReadOnly\\)\\)?"
+          " +" "\\(" dyalog-name "\\)"))
+
 (defvar dyalog-font-lock-keywords
   (list
    ;; See emacs help for `font-lock-keywords' for a description of how the
@@ -118,9 +125,13 @@ together with AltGr produce the corresponding apl character in APLCHARS."
    '(";\\([A-Za-z0-9_∆]+\\)" (1 font-lock-constant-face nil))
    ;; Illegal chars (and del/nabla)
    '("[∇$@\"%]+" . font-lock-warning-face)
-   `(,dyalog-access-type (1 font-lock-variable-name-face)
-                         (2 font-lock-variable-name-face)
-                         (3 font-lock-variable-name-face)))
+   `(,dyalog-access-type (1 font-lock-keyword-face)
+                         (2 font-lock-keyword-face)
+                         (3 font-lock-keyword-face))
+   `(,dyalog-field-def (1 font-lock-keyword-face t t)
+                       (4 font-lock-variable-name-face)
+                       (2 font-lock-keyword-face t t)
+                       (3 font-lock-keyword-face t t)))
   "Default highlighting mode for Dyalog mode.")
 
 (defvar dyalog-mode-syntax-table
