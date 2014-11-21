@@ -421,16 +421,27 @@ whitespace removed before they are saved."
     ("Classes"    "^\\s-*:Class *\\([A-Za-z_]+[A-Za-z_0-9]*\\)" 1)))
 
 (defun dyalog-previous-defun ()
-  (let ((pos (point)))
+"Move backward to the start of a function definition."
+;; Point can be anywhere when this function is called
+  (let ((pos (point))
+        (start nil))
     (beginning-of-line)
-    (skip-chars-forward " \\t")
-    (if (and (> pos (point)) (looking-at "∇"))
-        (end-of-line)
-      (goto-char pos)))
-  (if (not (re-search-backward dyalog-tradfn-header (point-min) t))
-      (goto-char (point-min))
-    (if (looking-at dyalog-naked-nabla)
-        (forward-line 1))))
+    (skip-chars-forward "^∇\r\n")
+    (if (and (looking-at dyalog-tradfn-header)
+             (> pos (match-beginning 0)))
+        (setq start (match-beginning 0))
+      (progn
+        (forward-line -1)
+        (if (and (looking-at dyalog-naked-nabla)
+                 (skip-chars-forward "^∇\r\n")
+                 (looking-at dyalog-tradfn-header))
+            (setq start (match-beginning 0))
+          (progn
+            (goto-char pos)
+            (if (re-search-backward dyalog-tradfn-header (point-min) t)
+                (setq start (match-beginning 0))
+              (setq start (point-min)))))))
+    (goto-char start)))
 
 (defun dyalog-next-defun ()
   (if (not (re-search-forward dyalog-tradfn-header (point-max) t))
@@ -450,43 +461,20 @@ whitespace removed before they are saved."
       (dyalog-previous-defun)
       (cl-decf arg))))
 
-(defun dyalog-next-defun-end ()
-  (forward-line 1)
+(defun dyalog-end-of-defun ()
+  "Move forward to the end of a function definition."
+  ;; We can assume point is at the start of a defun when
+  ;; this function is called.
   (let ((defunstart (point)))
+    (ignore-errors (forward-char))
     (if (not (re-search-forward dyalog-tradfn-header (point-max) t))
         (unless (re-search-forward dyalog-naked-nabla (point-max) t)
           (goto-char (point-max))
           (end-of-line))
       (goto-char (match-beginning 0))
-      (if (bobp)
-          (progn
-            (forward-line 1)
-            (dyalog-next-defun-end)))
+      (skip-chars-backward " ")
       (if (re-search-backward dyalog-naked-nabla defunstart t)
-          (goto-char (match-beginning 0))
-        (when (looking-at dyalog-naked-nabla)
-          (forward-line -1)))
-      (end-of-line))))
-
-(defun dyalog-previous-defun-end ()
-  (if (not (re-search-backward dyalog-tradfn-header (point-min) t))
-      (goto-char (point-min))))
-
-(defun dyalog-end-of-defun (&optional arg)
-  "Move forward to the end of a function definition."
-  (interactive "^p")
-  (unless arg (setq arg 1))
-  (if (< arg 0)
-      ;; This case doesn't seem to be required, it seems
-      ;; like the top level end-of-defun handles negative
-      ;; arguments by combining calls to end-of-defun-function
-      ;; and beginning-of-defun-function.
-      (while (< arg 0)
-        (dyalog-previous-defun-end)
-        (cl-incf arg))
-    (while (> arg 0)
-      (dyalog-next-defun-end)
-      (cl-decf arg))))
+          (goto-char (match-end 0))))))
 
 (defun dyalog-dfun-name ()
   (interactive)
@@ -501,7 +489,7 @@ isn't inside a dynamic function, return nil"
       (modify-syntax-entry ?\) "." syn-table)
       (modify-syntax-entry ?\[ "." syn-table)
       (modify-syntax-entry ?\] "." syn-table)
-      (cond 
+      (cond
        ((eq context 'string) (re-search-backward "\\s\""))
        ((eq context 'comment) (re-search-backward "\\s<")))
       (set 'openbrace
