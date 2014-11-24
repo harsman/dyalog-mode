@@ -18,12 +18,39 @@
         ⍝ is expected to return the path to the source file the function is
         ⍝ defined in. If the path is unknown, getPath should return ''.
         getPath←''
+        ⍝ If boxing is 1, display of nested arrays in the editor is
+        ⍝ automatically done with boxed values, similar to the DISPLAY
+        ⍝ function.
+        boxing←0
 
-        ∇ {r}←edit rarg;name;lineno;src;path;linespec;msg
+        ∇ init
+          ⎕CY'DISPLAY'
+          disp←DISPLAY
+          ⎕EX'DISPLAY'
+        ∇
+
+        ∇ {r}←edit rarg;name;lineno
+          name lineno←rarg
+          :Select ⊃#.⎕NC name
+          :CaseList 3 4 9
+              editfun name lineno
+          :Case 2
+              editarray name lineno
+          :EndSelect
+        ∇
+    
+        ∇ {r}←editfun rarg;name;lineno;src;path;linespec;msg
           name lineno←rarg
           src path←getsource name
           linespec←(⎕IO+¯1=lineno)⊃('[',(⍕lineno),']')''
           msg←'edit ',name,linespec,null,path,null,src
+          r←send #.⎕SE.Emacs∆socket(msg,eom)
+        ∇
+
+        ∇ {r}←editarray rarg;name;lineno;type;value;msg
+          name lineno←rarg
+          type value←getvalue name
+          msg←'editarray ',name,' ',type,' ',value
           r←send #.⎕SE.Emacs∆socket(msg,eom)
         ∇
 
@@ -34,28 +61,28 @@
           '⎕SE.popup.emacs'⎕WS'Accelerator'acc
         ∇
 
-        ∇ {msg}←sessionedit msg;name;pos;log;focus;line;slurp;symbolalphabet;lineno
+        ∇ {msg}←sessionedit msg;name;pos;log;focus;line;symbolalphabet;lineno
           name pos log←'⎕SE'⎕WG'CurObj' 'CurPos' 'Log'
-          focus←2 ⎕NQ '.' 'GetFocus'
-
+          focus←2 ⎕NQ'.' 'GetFocus'
+          
           :If '⎕SE'≡focus
               line←(⊃pos)⊃log
-              slurp←{(+/∧\⍵∊⍺)⍺⍺ ⍵}
               ⍝ Below line is actually broken since symbols can contain
               ⍝ diacritics, but I'm lazy
               symbolalphabet←⎕A,⎕D,'abcdefghijklmnopqrstuvwxyz_∆'
-              lineno←{'['≠⊃⍵:¯1 ⋄ ⊃2⊃⎕VFI ⎕D↑slurp 1↓⍵}symbolalphabet↓slurp (1↓pos)↓line
+              lineno←{'['≠⊃⍵:¯1 ⋄ 1+⊃2⊃⎕VFI ⎕D↑##.slurp 1↓⍵}symbolalphabet↓##.slurp(1↓pos)↓line
           :Else
               ⍝ Inside the editor we can't get the full text around the
               ⍝ cursor (including any line number within brackets), so we just
               ⍝ use the default line number
               lineno←¯1
           :EndIf
-              
+          
           edit name lineno
         ∇
 
         ∇ {r}←listen port;sockname;callbacks;_
+          init
           sockname←'⎕SE.Emacs_socket',⍕port
           callbacks←⊂('Event' 'TCPAccept' '#.Emacs.editor.accept')
           callbacks,←⊂('Event' 'TCPRecv' '#.Emacs.editor.receive')
@@ -67,11 +94,6 @@
         ∇
 
         ∇ {r}←accept msg;socket;newname
-          :If 0≠⎕NC #.⎕SE.Emacs∆socket
-              ⍝ Another editor is already connected
-              r←0
-              :Return
-          :EndIf
           socket←1⊃msg
           newname←socket,⍕?¯2+2*31
           newname ⎕WC'TCPSocket'('SocketNumber'(3⊃msg))('Event'(socket ⎕WG'Event'))
@@ -85,21 +107,21 @@
         ∇
 
         ∇ {r}←receive msg;socket;raw;ip;uni;data;i;command;src;name;marker;complete
-
+          
           socket raw ip←msg[1 3 4]
-
+          
           :If ip≢'127.0.0.1'
               :Return
           :EndIf
-
+          
           marker←raw⍳eomraw
           complete←marker≤⊃⍴raw
-
+          
           :Select state
           :Case 'ready'
               i←raw⍳'UTF-8'⎕UCS' '
               command←'UTF-8'⎕UCS raw[⍳i-1]
-
+              
               :Select command
               :Case 'fx'
                   :If complete
@@ -120,16 +142,24 @@
               :Else
                   ⎕←'Received invalid command: ',command
               :EndSelect
-
-          :Case 'fx'
-              :If complete
-                  fix socket raw marker
-                  state←'ready'
-                  recvbuf←⍬
-              :Else
-                  recvbuf,←raw
-              :EndIf
-          :EndSelect
+              
+        :Case 'fx'
+            :If complete
+                fix socket raw marker
+                state←'ready'
+                recvbuf←⍬
+            :Else
+                recvbuf,←raw
+            :EndIf
+            
+        :Case 'src'
+            :If complete
+                sendsource socket(i↓raw)(marker-i)
+                recvbuf←⍬
+            :Else
+                recvbuf,←i↓raw
+            :EndIf
+        :EndSelect
         ∇
 
         ∇ {r}←fix args;socket;raw;marker;src;header
@@ -145,12 +175,11 @@
           send socket('fxresult ',(,⍕r),eom)
         ∇
 
-        ∇ {r}←sendsource args;socket;raw;marker;name;src;path
-          ∘
+        ∇ {r}←sendsource args;socket;raw;marker;fullname;name;lineno
           socket raw marker←args
-          name←##.bytes2text recvbuf,raw[⍳marker-1]
-          src path←getsource name
-          r←send socket('edit ',name,nl,path,nl,src,eom)
+          fullname←##.bytes2text recvbuf,raw[⍳marker-1]
+          name lineno←parsename fullname
+          edit name lineno
         ∇
 
         ∇ {r}←close msg
@@ -163,7 +192,7 @@
         ∇
 
         ∇ path←getpath name
-          :If 3≠⎕NC '#.',getPath
+          :If 3≠⎕NC'#.',getPath
               path←''
           :Else
               path←(#.⍎'#.',getPath)name
@@ -174,12 +203,12 @@
           :If 0=⎕NC'noload'
               noload←0
           :EndIf
-
+          
           name←(∧\fullname≠'[')/fullname
-
+          
           :Select ⊃#.⎕NC name
           :Case 0
-              :If 3≠⎕NC '#.',onMissing
+              :If 3≠⎕NC'#.',onMissing
               :OrIf noload
                   src←path←''
               :Else
@@ -195,7 +224,55 @@
           :Else
               src←path←''
           :EndSelect
+          
           r←src path
+        ∇
+
+        ∇ r←getvalue name;type;value;src
+          value←#.⍎name
+          :If 1=≡value
+          :AndIf ''≡0⍴value
+              type←⊃'charvec' 'charmat' 'array'[1 2⍳⍴⍴value]
+          :ElseIf 1=⍴⍴value
+          :AndIf 326=⎕DR value
+              dr←{
+                  11::⊃⎕NC'⍵' ⍝ use ⎕NC if DOMAIN ERROR
+                  ⎕DR ⍵
+              }¨value
+              
+              :If ∧/dr∊80 82 160 320
+                  type←'stringvec'
+              :Else
+                  type←'array'
+              :EndIf
+          :Else
+              type←'array'
+          :EndIf
+          
+          :Select type
+          :Case 'stringvec'
+              src←##.joinlines value
+          :Case 'charvec'
+              src←value
+          :Case 'charmat'
+              src←##.joinlines ##.cm2v value
+          :Else
+              :If boxing
+                  value←1 disp value
+              :Else
+                  value←⍕value
+              :EndIf
+              src←##.joinlines ##.cm2v value
+          :EndSelect
+          
+          r←type src
+        ∇
+    
+        ∇ r←parsename fullname;name;linespec;line
+          name←(+/∧\fullname≠'[')↑fullname
+          linespec←(∨\fullname='[')/fullname
+          line←1+⊃2⊃⎕VFI ⎕D↑##.slurp 1↓linespec
+          r←name line
         ∇
     :EndNamespace
 
@@ -228,23 +305,23 @@
         ∇
 
         ∇ {r}←receive msg;socket;raw;ip;data;z;prompt;dm;err;stack;cursor;m;n;len;logbefore;logafter;match
-
+          
           socket raw ip←msg[1 3 4]
-
+          
           :If ip≢'127.0.0.1'
               :Return
           :EndIf
-
+          
           data←##.bytes2text raw
           prompt←6⍴' '
           data←(-+/(¯2↑data)∊cr lf)↓data
-
+          
           :If data∧.=' ' ⍝ An empty input line
           :OrIf ∧/(data=' ')∨∨\data='⍝' ⍝ A comment
               send socket prompt
               :Return
           :EndIf
-
+          
           :Trap 0
               m←⊃⍴logbefore←'#.⎕SE'⎕WG'Log'
               :If 3=#.⎕NC data
@@ -255,13 +332,13 @@
                   z←#.⍎data
               :EndIf
               n←⊃⍴logafter←'#.⎕SE'⎕WG'Log'
-
+              
               :If 3=⎕NC'z'
                   r←' ∇',data
               :Else
                   r←⎕FMT z
               :EndIf
-
+              
               :If logbefore≢logafter ⍝ Log changed, must be due to output to session
                   :If n≠m
                       len←|n-m
@@ -271,7 +348,7 @@
                   :EndIf
                   r←↑(logafter[(n-len)+¯1+⍳len]),##.cm2v r
               :EndIf
-
+              
               :If '←'∊data ⍝ TODO: Better test for assignment
                   send socket prompt
               :Else
@@ -342,5 +419,7 @@
         ⎕AVU←transtable
         'UTF-8'⎕UCS ⍵
     }
+
+    slurp←{(+/∧\⍵∊⍺)⍺⍺ ⍵}
 
 :EndNamespace

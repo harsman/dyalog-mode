@@ -55,6 +55,13 @@
     map)
   "Keymap for Dyalog APL mode.")
 
+(defvar dyalog-array-mode-map
+  (let ((map(make-sparse-keymap)))
+    ;;(define-key map (kbd"C-c C-c") 'dyalog-array-fix)
+    (define-key map (kbd"C-c C-e") 'dyalog-editor-edit-symbol-at-point)
+    map)
+  "Keymap for Dyalog Array edit mode.")
+
 (defun dyalog-fix-altgr-chars (keymap aplchars regularchars)
   "Fix up a key map so that if the Dyalog IME uses AltGr+char for an
 APL character, Emacs doesn't confuse it for C-M-char.
@@ -160,6 +167,24 @@ together with AltGr produce the corresponding apl character in APLCHARS."
     (modify-syntax-entry ?\} "){" st)
     st)
   "Syntax table for `dyalog-mode'.")
+
+(defvar dyalog-array-mode-syntax-table
+  (let ((st (make-syntax-table)))
+    (dolist (char
+             (string-to-list (concat dyalog-keyword-chars dyalog-ascii-chars)))
+      (modify-syntax-entry char "." st))
+    (modify-syntax-entry ?_ "_" st)
+    (modify-syntax-entry ?∆ "_" st)
+    (modify-syntax-entry ?⎕ "_" st)
+    ;; Delimiters
+    (modify-syntax-entry ?\[ "(]" st)
+    (modify-syntax-entry ?\] ")[" st)
+    (modify-syntax-entry ?\( "()" st)
+    (modify-syntax-entry ?\) ")(" st)
+    (modify-syntax-entry ?{ "(}" st)
+    (modify-syntax-entry ?\} "){" st)
+    st)
+  "Syntax table for `dyalog-array-mode'.")
 
 ;;;###autoload
 (defun dyalog-ediff-forward-word ()
@@ -638,11 +663,12 @@ isn't inside a dynamic function, return nil"
           (goto-char (point-min))
           (dyalog-editor-munge-command (point) m)
           (with-current-buffer (process-buffer process)
-            (set-marker (process-mark process) 1)))))))
+            (set-marker (process-mark process) 1)))
+        (sit-for 0.01)))))
 
-(defun dyalog-editor-munge-command (p m)
-  "Parse and delete a Dyalog editor command in the currently active region"
-  ;;(interactive "r")
+(defun dyalog-editor-munge-command (start end)
+  "Parse and delete a Dyalog editor command in the currently active region.
+START is the start of the command and END is where it ends."
   (cond ((looking-at "edit \\([^ []+\\)\\(\\[\\([0-9]+\\)\\]\\)?\0\\([^\0]*\\)\0")
          (let ((name (match-string 1))
                (linetext (match-string 3))
@@ -650,17 +676,24 @@ isn't inside a dynamic function, return nil"
                (path (match-string 4))
                (src  (buffer-substring-no-properties (match-end 0) m)))
            (when linetext
-               (set 'lineno (string-to-number linetext)))
-           (delete-region (point) (buffer-end 1))
+             (set 'lineno (string-to-number linetext)))
+           (delete-region start (1+ end))
            (dyalog-open-edit-buffer name src lineno path)))
-         ((looking-at "fxresult \\([^ ]+\\)\e")
-          (let* ((result (match-string 1))
-                 (num    (string-to-number result)))
-            (progn
-              (if (eq num 0)
-                  (message "Fixed as %s" result)
-                (message "Can't fix, error in line %d" num))
-              (delete-region (point) (buffer-end 1)))))))
+        ((looking-at "fxresult \\([^ ]+\\)\e")
+         (let* ((result (match-string 1))
+                (num    (string-to-number result)))
+           (if (eq num 0)
+               (message "Fixed as %s" result)
+             (message "Can't fix, error in line %d" num))
+           (delete-region start (1+ end))))
+        ((looking-at "editarray \\([^ ]+\\) \\([^ ]+\\) ")
+         (let* ((name (match-string 1))
+                (kind (match-string 2))
+                (src (buffer-substring-no-properties (match-end 0) m)))
+           (delete-region start (1+ end))
+           (dyalog-open-edit-array name kind src)))
+        (t
+         (error "Ivalid message received"))))
 
 (defun dyalog-open-edit-buffer (name src &optional lineno path)
   "Open a buffer to edit object NAME with source SRC"
@@ -687,6 +720,27 @@ isn't inside a dynamic function, return nil"
         (goto-char (min pos (point-max))))
       (setq buffer-undo-list nil)
       (select-frame-set-input-focus (window-frame (selected-window))))))
+
+(defun dyalog-open-edit-array (name kind src)
+  "Open a buffer to edit array NAME of type KIND with contents SRC.
+KIND is \"charvec\", \"charmat\", \"stringvec\" or \"array\"."
+  (switch-to-buffer name)
+  (setq buffer-undo-list t)
+  (let ((pos (point))
+        (lineno nil))
+    (save-excursion
+      (when buffer-read-only
+        (setq buffer-read-only nil))
+      (mark-whole-buffer)
+      (delete-region (point) (mark))
+      (insert src))
+    (dyalog-array-mode)
+    (read-only-mode)
+    (if lineno
+        (forward-line (- lineno 1))
+      (goto-char (min pos (point-max))))
+    (setq buffer-undo-list nil)
+    (select-frame-set-input-focus (window-frame (selected-window)))))
 
 (defun dyalog-editor-fix (&optional arg)
   "Send the contents of the current buffer to the connected Dyalog process"
@@ -771,6 +825,13 @@ isn't inside a dynamic function, return nil"
   ;; Hooks
   (add-hook 'before-save-hook
             'dyalog-fix-whitespace-before-save nil 'make-it-local))
+
+(define-derived-mode dyalog-array-mode fundamental-mode "DyalogArr"
+  "Major mode for editing Dyalog APL arrays.
+
+\\{dyalog-array-mode-map\\}"
+  :syntax-table dyalog-array-mode-syntax-table
+  (setq-local require-final-newline nil))
 
 (provide 'dyalog-mode)
 
