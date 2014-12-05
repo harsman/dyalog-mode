@@ -803,6 +803,9 @@ KIND is \"charvec\", \"charmat\", \"stringvec\" or \"array\"."
                 (dyalog-dfun-name))
       (save-excursion
         (beginning-of-defun)
+        (skip-chars-forward "∇ \r\n")
+        (when (looking-at dyalog-naked-nabla)
+            (forward-line 1))
         (if (search-forward str nil t)
             (progn
               (goto-char (match-beginning 0))
