@@ -410,15 +410,15 @@ whitespace removed before they are saved."
 
 (defconst dyalog-func-start "\\(?:\\`\\|∇[\r\n]*\\)\\s-*")
 
-(defconst dyalog-func-retval "\\(?:[A-Za-z]+ *← *\\|{[a-zA-Z]+} *← *\\)?")
+(defconst dyalog-func-retval "\\(?:\\(?2:[A-Za-z]+\\) *← *\\|{\\(?2:[a-zA-Z]+\\)} *← *\\)?")
 
-(defconst dyalog-func-larg "\\(?:[A-Za-z_]+ +\\|{[A-Za-z_]+} *\\)")
+(defconst dyalog-func-larg "\\(?:\\(?3:[A-Za-z_]+\\) +\\|{\\(?3:[A-Za-z_]+\\)} *\\)")
 
 (defconst dyalog-func-name "\\(?1:[A-Za-z_]+[A-Za-z_0-9]*\\)")
 
-(defconst dyalog-func-rarg "\\(?: +[A-Za-z_]+\\)")
+(defconst dyalog-func-rarg "\\(?: +\\(?4:[A-Za-z_]+\\)\\)")
 
-(defconst dyalog-func-header-end "\\s-*\\(?:;\\|$\\)")
+(defconst dyalog-func-header-end "\\s-*\\(?5:;\\|$\\)")
 
 (defconst dyalog-func-niladic (concat "\\(?:" dyalog-func-name
                                        dyalog-func-header-end "\\)"))
@@ -557,18 +557,43 @@ isn't inside a dynamic function, return nil"
   "Return the name of the defun point is in."
   (let ((dfun-name (dyalog-dfun-name))
         (start-pos (point)))
-    (or dfun-name
-        (save-excursion
-          (dyalog-previous-defun)
-          (when (not (looking-at "∇"))
-            (forward-line -1))         ; Nabla is on its own line
-          (if (re-search-forward dyalog-tradfn-header nil t)
-              (let ((tradfn-name (match-string-no-properties 1)))
-                (dyalog-end-of-defun)
-                (if (< (point) start-pos)
-                    ""
-                  tradfn-name))
-            "")))))
+    (or dfun-name (car (dyalog-tradfn-info)))))
+
+(defun dyalog-tradfn-info ()
+  "Return a list of information on the tradfn defun point is in.
+This name is only valid if point isn't inside a dfn. The list
+contains the name of the function a list containing the names of
+the arguments and a list containing localized names."
+  (save-excursion
+    (let ((start-pos (point)))
+      (dyalog-previous-defun)
+      (when (not (looking-at "∇"))
+        (forward-line -1))         ; Nabla is on its own line
+      (if (re-search-forward dyalog-tradfn-header nil t)
+          (let* ((tradfn-name (match-string-no-properties 1))
+                 (retval (match-string-no-properties 2))
+                 (larg (match-string-no-properties 3))
+                 (rarg (match-string-no-properties 4))
+                 (localstart (match-end 5))
+                 (args (remq nil (list retval larg rarg)))
+                 (locals nil))
+            (dyalog-end-of-defun)
+            (if (< (point) start-pos)
+                (list "" nil nil)
+              (progn
+                (goto-char localstart)
+                (if (looking-at "[A-Za-z]+\\(;[A-Za-z]+\\)*")
+                    (setq locals 
+                          (split-string
+                           (match-string-no-properties 0)
+                           ";" 'omit-nulls)))
+                (list tradfn-name args locals))))
+        (list "" nil nil)))))
+
+;;; Font Lock
+(defun dyalog-fontify-locals (begin end)
+  "Fontify local names in tradfns."
+  nil)
 
 
 ;;; Syntax
