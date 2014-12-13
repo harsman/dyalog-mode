@@ -567,7 +567,8 @@ isn't inside a dynamic function, return nil"
   "Return a list of information on the tradfn defun point is in.
 This name is only valid if point isn't inside a dfn. The list
 contains the name of the function a list containing the names of
-the arguments and a list containing localized names."
+the arguments, a list containing localized names and the
+character position where the function header ends."
   (save-excursion
     (let ((start-pos (point)))
       (dyalog-previous-defun)
@@ -579,26 +580,121 @@ the arguments and a list containing localized names."
                  (larg (match-string-no-properties 3))
                  (rarg (match-string-no-properties 4))
                  (localstart (match-end 5))
+                 (end-of-header (match-end 0))
                  (args (remq nil (list retval larg rarg)))
                  (locals nil))
             (dyalog-end-of-defun)
             (if (< (point) start-pos)
-                (list "" nil nil)
+                (list "" nil nil 0)
               (progn
                 (goto-char localstart)
                 (if (looking-at (concat dyalog-name "\\(;"
                                         dyalog-name "\\)*"))
-                    (setq locals 
+                    (setq end-of-header (match-end 0)
+                          locals 
                           (split-string
                            (match-string-no-properties 0)
                            ";" 'omit-nulls)))
-                (list tradfn-name args locals))))
-        (list "" nil nil)))))
+                (list tradfn-name args locals end-of-header))))
+        (list "" nil nil 0)))))
 
 ;;; Font Lock
-(defun dyalog-fontify-locals (begin end)
+
+(defun dyalog-defun-info ()
+  "Return information on the defun at point."
+  (save-excursion
+  (beginning-of-line)
+  (skip-chars-forward "^∇\r\n")
+  ;; TODO: In the tradfn case we already have a match, so no need to call
+  ;; tradfn-info, just extract the match data directly.
+  (if (looking-at dyalog-tradfn-header)
+    (list 'tradfn (progn
+                    (forward-char)
+                    (dyalog-tradfn-info)))
+    (list 'dfun   (dyalog-dfun-name)))))
+
+
+;; TODO: We need a separate function for getting info on the
+;; defun at point, which is something we can use to get an initial state, and
+;; moving forward to the next defun and getting info on that. That way we avoid
+;; redundant work.
+;;
+;; TODO: Most of the time is currently spent in the re-search-forward for local
+;; names. Try to improve performance by skipping over comments and strings and
+;; try searching for symbols instead, and checking for a match at each hit.
+;; That way the regex is cheaper but we spend a little more time at each hit.
+;;
+;; TODO: Finding the end of the current defun with save-excursion and
+;; dyalog-end-of-defun is fairly expensive, see if we can make it cheaper by
+;; using a less general function. If we have the end of the defun, we should
+;; also use that to move more quickly to the next defun, so dyalog-next-defun
+;; doesn't have to process as much data.
+;;
+;; Performance evaluation, time for fontifying MAKE_M.apl
+;;
+;; regexp with all local names: 8.32
+
+(defun dyalog-string-set (strings)
+  (let ((hash (make-hash-table :test 'equal)))
+    (dolist (s strings hash) (puthash s t hash))))
+
+(defun dyalog-fontify-locals (start end)
   "Fontify local names in tradfns."
-  nil)
+  (save-excursion
+    (let* ((beg-line (progn (goto-char start)(line-beginning-position)))
+           (done nil)
+           (case-fold-search nil)
+           (dfun-name nil)
+           (info nil))
+      ;; Remove old fontification here?
+      (goto-char beg-line)
+      (set 'info (dyalog-tradfn-info))
+      
+      (while (not done)
+        (if dfun-name
+            (let ((dfunend end))
+              ;; TODO add actually working code here. We should have a
+              ;; dfun-info that returns extents as well
+              (search-forward "}"))
+          ;; (while (re-search-forward (concat "\\_<"
+          ;;                                   dyalog-name
+          ;;                                   "\\_>") dfunend t)
+          ;;   (put-text-property (match-beginning 0) (match-end 0)
+          ;;                      'face'font-lock-constant-face)))
+          (let ((fname (car info)))
+            (when (and fname (not (string-equal fname "")))
+              (let* ((args (nth 1 info))
+                     (localizations (nth 2 info))
+                     (locals (append args localizations))
+                     (end-of-header (nth 3 info))
+                     ;;(rx "\\_<\\(\\sw\\|\\s_\\)+\\_>")
+                     (rx (concat "\\_<\\("
+                                 (mapconcat 'identity locals "\\|")
+                                 "\\)\\_>"))
+                     (end-of-defun (save-excursion
+                                (dyalog-end-of-defun)
+                                (point)))
+                     (limit (max end-of-defun end)))
+                (goto-char end-of-header)
+                (while (re-search-forward rx limit t)
+                  ;; (unless (or (not (gethash
+                  ;;                   (match-string-no-properties 0)
+                  ;;                   locals))
+                  ;;             (dyalog-in-comment-or-string))
+                  (unless (dyalog-in-comment-or-string)
+                    (put-text-property (match-beginning 0) (match-end 0)
+                                       'face
+                                       font-lock-constant-face)))
+                (goto-char limit)))))
+        (dyalog-next-defun)
+        (set 'done (>= (point) end))
+        (when (not done)
+          (let ((defuninfo (dyalog-defun-info)))
+            (pcase (car defuninfo)
+              (`dfun (setq dfun-name (nth 1 defuninfo)
+                           info (list "" nil nil)))
+              (`tradfn (setq dfun-name nil
+                             info (nth 1 defuninfo))))))))))
 
 
 ;;; Syntax
