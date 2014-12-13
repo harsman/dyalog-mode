@@ -410,7 +410,7 @@ whitespace removed before they are saved."
 
 (defconst dyalog-func-start "\\(?:\\`\\|∇[\r\n]*\\)\\s-*")
 
-(defconst dyalog-func-retval "\\(?:\\(?2:[A-Za-z]+\\) *← *\\|{\\(?2:[a-zA-Z]+\\)} *← *\\)?")
+(defconst dyalog-func-retval "\\(?:\\(?2:[A-Za-z_]+\\) *← *\\|{\\(?2:[a-zA-Z_]+\\)} *← *\\)?")
 
 (defconst dyalog-func-larg "\\(?:\\(?3:[A-Za-z_]+\\) +\\|{\\(?3:[A-Za-z_]+\\)} *\\)")
 
