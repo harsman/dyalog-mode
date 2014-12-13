@@ -468,11 +468,12 @@ whitespace removed before they are saved."
               (setq start (point-min)))))))
     (goto-char start)))
 
-(defun dyalog-next-defun ()
-  (if (not (re-search-forward dyalog-tradfn-header (point-max) t))
-      (goto-char (point-max))
+(defun dyalog-next-defun (&optional limit)
+  (let ((lim (or limit (point-max))))
+  (if (not (re-search-forward dyalog-tradfn-header lim t))
+      (goto-char lim)
     (if (looking-at dyalog-naked-nabla)
-        (forward-line 1))))
+        (forward-line 1)))))
 
 (defun dyalog-beginning-of-defun (&optional arg)
   "Move backward to the beginning of a function definition."
@@ -582,7 +583,8 @@ the arguments and a list containing localized names."
                 (list "" nil nil)
               (progn
                 (goto-char localstart)
-                (if (looking-at "[A-Za-z]+\\(;[A-Za-z]+\\)*")
+                (if (looking-at (concat dyalog-name "\\(;"
+                                        dyalog-name "\\)*"))
                     (setq locals 
                           (split-string
                            (match-string-no-properties 0)
