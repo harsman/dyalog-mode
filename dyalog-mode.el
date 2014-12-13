@@ -470,10 +470,13 @@ whitespace removed before they are saved."
 
 (defun dyalog-next-defun (&optional limit)
   (let ((lim (or limit (point-max))))
-  (if (not (re-search-forward dyalog-tradfn-header lim t))
-      (goto-char lim)
-    (if (looking-at dyalog-naked-nabla)
-        (forward-line 1)))))
+    (when (looking-at dyalog-tradfn-header)
+      (goto-char (match-end 0)))
+    (if (not (re-search-forward dyalog-tradfn-header lim t))
+        (goto-char lim)
+      (progn
+        (goto-char (match-beginning 0))
+        (skip-chars-forward "^∇\r\n")))))
 
 (defun dyalog-beginning-of-defun (&optional arg)
   "Move backward to the beginning of a function definition."
