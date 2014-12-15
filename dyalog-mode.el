@@ -109,6 +109,37 @@ together with AltGr produce the corresponding apl character in APLCHARS."
           "\\(?: +\\(ReadOnly\\)\\)?"
           " +" "\\(" dyalog-name "\\)"))
 
+(defconst dyalog-naked-nabla "^\\s-*∇\\s-*$")
+
+(defconst dyalog-func-start "\\(?:\\`\\|∇[\r\n]*\\)\\s-*")
+
+(defconst dyalog-func-retval "\\(?:\\(?2:[A-Za-z_]+\\) *← *\\|{\\(?2:[a-zA-Z_]+\\)} *← *\\)?")
+
+(defconst dyalog-func-larg "\\(?:\\(?3:[A-Za-z_]+\\) +\\|{\\(?3:[A-Za-z_]+\\)} *\\)")
+
+(defconst dyalog-func-name "\\(?1:[A-Za-z_]+[A-Za-z_0-9]*\\)")
+
+(defconst dyalog-func-rarg "\\(?: +\\(?4:[A-Za-z_]+\\)\\)")
+
+(defconst dyalog-func-header-end "\\s-*\\(?5:;\\|$\\)")
+
+(defconst dyalog-func-niladic (concat "\\(?:" dyalog-func-name
+                                       dyalog-func-header-end "\\)"))
+
+(defconst dyalog-func-monadic (concat "\\(?:" dyalog-func-name
+                                      dyalog-func-rarg
+                                      dyalog-func-header-end "\\)"))
+
+(defconst dyalog-func-dyadic (concat "\\(?:" dyalog-func-larg
+                                     dyalog-func-name
+                                     dyalog-func-rarg
+                                     dyalog-func-header-end "\\)"))
+
+(defconst dyalog-tradfn-header (concat dyalog-func-start dyalog-func-retval
+                                       "\\(?:" dyalog-func-niladic "\\|"
+                                       dyalog-func-monadic "\\|"
+                                       dyalog-func-dyadic "\\)"))
+
 (defvar dyalog-font-lock-keywords
   (list
    ;; See emacs help for `font-lock-keywords' for a description of how the
@@ -407,38 +438,6 @@ whitespace removed before they are saved."
     (indent-region (region-beginning) (region-end))))
 
 ;;; Defun recognition and navigation
-
-(defconst dyalog-func-start "\\(?:\\`\\|∇[\r\n]*\\)\\s-*")
-
-(defconst dyalog-func-retval "\\(?:\\(?2:[A-Za-z_]+\\) *← *\\|{\\(?2:[a-zA-Z_]+\\)} *← *\\)?")
-
-(defconst dyalog-func-larg "\\(?:\\(?3:[A-Za-z_]+\\) +\\|{\\(?3:[A-Za-z_]+\\)} *\\)")
-
-(defconst dyalog-func-name "\\(?1:[A-Za-z_]+[A-Za-z_0-9]*\\)")
-
-(defconst dyalog-func-rarg "\\(?: +\\(?4:[A-Za-z_]+\\)\\)")
-
-(defconst dyalog-func-header-end "\\s-*\\(?5:;\\|$\\)")
-
-(defconst dyalog-func-niladic (concat "\\(?:" dyalog-func-name
-                                       dyalog-func-header-end "\\)"))
-
-(defconst dyalog-func-monadic (concat "\\(?:" dyalog-func-name
-                                      dyalog-func-rarg
-                                      dyalog-func-header-end "\\)"))
-
-(defconst dyalog-func-dyadic (concat "\\(?:" dyalog-func-larg
-                                     dyalog-func-name
-                                     dyalog-func-rarg
-                                     dyalog-func-header-end "\\)"))
-
-(defconst dyalog-tradfn-header (concat dyalog-func-start dyalog-func-retval
-                                       "\\(?:" dyalog-func-niladic "\\|"
-                                       dyalog-func-monadic "\\|"
-                                       dyalog-func-dyadic "\\)"))
-
-(defconst dyalog-naked-nabla "^\\s-*∇\\s-*$")
-
 
 (defvar dyalog-imenu-generic-expression
   `(("Functions"  ,dyalog-tradfn-header 1)
@@ -800,7 +799,7 @@ START is the start of the command and END is where it ends."
                (linetext (match-string 3))
                (lineno nil)
                (path (match-string 4))
-               (src  (buffer-substring-no-properties (match-end 0) m)))
+               (src  (buffer-substring-no-properties (match-end 0) end)))
            (when linetext
              (set 'lineno (string-to-number linetext)))
            (delete-region start (1+ end))
@@ -815,7 +814,7 @@ START is the start of the command and END is where it ends."
         ((looking-at "editarray \\([^ ]+\\) \\([^ ]+\\) ")
          (let* ((name (match-string 1))
                 (kind (match-string 2))
-                (src (buffer-substring-no-properties (match-end 0) m)))
+                (src (buffer-substring-no-properties (match-end 0) end)))
            (delete-region start (1+ end))
            (dyalog-open-edit-array name kind src)))
         (t
