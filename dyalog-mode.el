@@ -702,20 +702,18 @@ character position where the function header ends."
   "Alter syntax table for escaped single quotes within strings."
   (save-excursion
     (goto-char start)
-    (let* ((syntax-state (syntax-ppss))
-           (inside-string-p (not (not (nth 3 syntax-state)))))
-      (while (< (point) end)
-        (skip-chars-forward "^'" end)
-        (when (looking-at "'")
-          (if (and inside-string-p (looking-at "''"))
-              (progn
+      (while (and 
+              (search-forward "''" end 'no-error)
+              (< (point) end))
+        (goto-char (match-beginning 0))
+        (let* ((endpos (match-end 0))
+               (state (syntax-ppss))
+               (context (syntax-ppss-context state)))
+          (when (eq 'string context)
                 (put-text-property (point) (+ 2 (point))
                                    'syntax-table
-                                   (string-to-syntax "."))
-                (ignore-errors (forward-char)))
-            (when (not (equal 'comment (syntax-ppss-context (syntax-ppss))))
-              (setq inside-string-p (not inside-string-p))))
-          (ignore-errors (forward-char)))))))
+                                   (string-to-syntax ".")))
+          (goto-char endpos)))))
 
 (defun dyalog-in-keyword (&optional pt)
   "Return t if PT (defaults to point) is inside a keyword (e.g. :If)."
