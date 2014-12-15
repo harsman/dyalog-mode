@@ -674,7 +674,7 @@ character position where the function header ends."
                      (end-of-defun (save-excursion
                                 (dyalog-end-of-defun)
                                 (point)))
-                     (limit (max end-of-defun end)))
+                     (limit (min end-of-defun end)))
                 (goto-char end-of-header)
                 (while (re-search-forward rx limit t)
                   ;; (unless (or (not (gethash
