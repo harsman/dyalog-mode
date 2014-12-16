@@ -898,7 +898,8 @@ KIND is \"charvec\", \"charmat\", \"stringvec\" or \"array\"."
   "Toggle localization for symbol at point."
   (interactive)
   (let* ((sym   (symbol-at-point))
-         (name  (symbol-name sym))
+         (symname  (symbol-name sym))
+         (name (substring-no-properties symname))
          (str   (concat ";" name))
          (fname (dyalog-current-defun)))
     (unless (or (not sym)
