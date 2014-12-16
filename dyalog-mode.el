@@ -676,14 +676,21 @@ character position where the function header ends."
                      (limit (min end-of-defun end)))
                 (goto-char end-of-header)
                 (while (re-search-forward rx limit t)
-                  ;; (unless (or (not (gethash
-                  ;;                   (match-string-no-properties 0)
-                  ;;                   locals))
-                  ;;             (dyalog-in-comment-or-string))
-                  (unless (dyalog-in-comment-or-string)
-                    (put-text-property (match-beginning 0) (match-end 0)
-                                       'face
-                                       font-lock-constant-face)))
+                  (let* ((symbol-start (match-beginning 0))
+                         (symbol-end (match-end 0))
+                         (state (syntax-ppss))
+                         (context (syntax-ppss-context state))
+                         (in-string (eq 'string context))
+                         (in-comment (eq 'comment context)))
+                    
+                    ;; (unless (or (not (gethash
+                    ;;                   (match-string-no-properties 0)
+                    ;;                   locals))
+                    ;;             (dyalog-in-comment-or-string))
+                    (unless (or in-string in-comment)
+                      (put-text-property symbol-start symbol-end
+                                         'face
+                                         font-lock-constant-face))))
                 (goto-char limit)))))
         (dyalog-next-defun)
         (set 'done (>= (point) end))
