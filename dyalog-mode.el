@@ -671,8 +671,8 @@ character position where the function header ends."
                                  (mapconcat 'identity locals "\\|")
                                  "\\)\\_>"))
                      (end-of-defun (save-excursion
-                                (dyalog-end-of-defun)
-                                (point)))
+                                     (dyalog-end-of-defun)
+                                     (point)))
                      (limit (min end-of-defun end)))
                 (goto-char end-of-header)
                 (while (re-search-forward rx limit t)
