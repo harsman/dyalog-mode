@@ -489,20 +489,27 @@ whitespace removed before they are saved."
       (dyalog-previous-defun)
       (cl-decf arg))))
 
-(defun dyalog-end-of-defun ()
+(defun dyalog-end-of-defun (&optional bound)
   "Move forward to the end of a function definition."
   ;; We can assume point is at the start of a defun when
   ;; this function is called.
-  (let ((defunstart (point)))
-    (ignore-errors (forward-char))
-    (if (not (re-search-forward dyalog-tradfn-header (point-max) t))
-        (unless (re-search-forward dyalog-naked-nabla (point-max) t)
-          (goto-char (point-max))
-          (end-of-line))
-      (goto-char (match-beginning 0))
-      (skip-chars-backward " ")
-      (if (re-search-backward dyalog-naked-nabla defunstart t)
-          (goto-char (match-end 0))))))
+  (let ((defunstart (point))
+        (end (or bound (point-max)))
+        (done nil)
+        (in-dfun-p nil))
+    (ignore-errors (forward-char)) ; skip past nabla
+    (while (not done)
+      (if (not (re-search-forward "^ *∇" bound t))
+          (progn
+            (goto-char end)
+            (set 'done t))
+        (when (set 'done (not in-dfun-p))
+          (ignore-errors (backward-char 1))
+          (if (looking-at dyalog-tradfn-header)
+              (ignore-errors (backward-char 1))
+              (ignore-errors (forward-char 1))))))))
+            
+
 
 (defun dyalog-dfun-name ()
   (interactive)
@@ -566,8 +573,9 @@ isn't inside a dynamic function, return nil"
   "Return a list of information on the tradfn defun point is in.
 This name is only valid if point isn't inside a dfn. The list
 contains the name of the function a list containing the names of
-the arguments, a list containing localized names and the
-character position where the function header ends."
+the arguments, a list containing localized names, the character
+position where the function header ends and the character
+position where the defun ends."
   (save-excursion
     (let ((start-pos (point)))
       (dyalog-previous-defun)
@@ -581,10 +589,12 @@ character position where the function header ends."
                  (localstart (match-end 5))
                  (end-of-header (match-end 0))
                  (args (remq nil (list retval larg rarg)))
-                 (locals nil))
+                 (locals nil)
+                 (end-of-defun 0))
             (dyalog-end-of-defun)
-            (if (< (point) start-pos)
-                (list "" nil nil 0)
+            (set 'end-of-defun (point))
+            (if (< end-of-defun start-pos)
+                (list "" nil nil 0 0)
               (progn
                 (goto-char localstart)
                 (if (looking-at (concat dyalog-name "\\(;"
@@ -594,8 +604,8 @@ character position where the function header ends."
                           (split-string
                            (match-string-no-properties 0)
                            ";" 'omit-nulls)))
-                (list tradfn-name args locals end-of-header))))
-        (list "" nil nil 0)))))
+                (list tradfn-name args locals end-of-header end-of-defun))))
+        (list "" nil nil 0 0)))))
 
 ;;; Font Lock
 
@@ -654,7 +664,7 @@ character position where the function header ends."
             (let ((dfunend end))
               ;; TODO add actually working code here. We should have a
               ;; dfun-info that returns extents as well
-              (search-forward "}"))
+              (search-forward "}" end t))
           ;; (while (re-search-forward (concat "\\_<"
           ;;                                   dyalog-name
           ;;                                   "\\_>") dfunend t)
@@ -666,14 +676,12 @@ character position where the function header ends."
                      (localizations (nth 2 info))
                      (locals (append args localizations))
                      (end-of-header (nth 3 info))
+                     (end-of-defun (nth 4 info))
+                     (limit (min end-of-defun end))
                      ;;(rx "\\_<\\(\\sw\\|\\s_\\)+\\_>")
                      (rx (concat "\\_<\\("
                                  (mapconcat 'identity locals "\\|")
-                                 "\\)\\_>"))
-                     (end-of-defun (save-excursion
-                                     (dyalog-end-of-defun)
-                                     (point)))
-                     (limit (min end-of-defun end)))
+                                 "\\)\\_>")))
                 (goto-char end-of-header)
                 (while (re-search-forward rx limit t)
                   (let* ((symbol-start (match-beginning 0))
@@ -692,9 +700,9 @@ character position where the function header ends."
                                          'face
                                          font-lock-constant-face))))
                 (goto-char limit)))))
-        (dyalog-next-defun)
         (set 'done (>= (point) end))
         (when (not done)
+          (dyalog-next-defun)
           (let ((defuninfo (dyalog-defun-info)))
             (pcase (car defuninfo)
               (`dfun (setq dfun-name (nth 1 defuninfo)
