@@ -676,7 +676,13 @@ position where the defun ends."
                     (unless (or in-string in-comment)
                       (put-text-property symbol-start symbol-end
                                          'face
-                                         font-lock-constant-face))))
+                                         font-lock-constant-face)
+                      (if (and (equal ?. (char-after symbol-end))
+                               (looking-at (concat "\\." dyalog-name)))
+                          (put-text-property (match-beginning 0)
+                                             (match-end 0)
+                                             'face
+                                             font-lock-constant-face)))))
                 (goto-char limit)))))
         (set 'done (>= (point) end))
         (when (not done)
