@@ -623,26 +623,15 @@ position where the defun ends."
     (list 'dfun   (dyalog-dfun-name)))))
 
 
-;; TODO: We need a separate function for getting info on the
-;; defun at point, which is something we can use to get an initial state, and
-;; moving forward to the next defun and getting info on that. That way we avoid
-;; redundant work.
+;; TODO: We need a separate function for getting info on the defun at point,
+;; which is something we can use to get an initial state, and moving forward
+;; to the next defun and getting info on that. That way we avoid redundant
+;; work.
 ;;
-;; TODO: Most of the time is currently spent in the re-search-forward for local
-;; names. Try to improve performance by skipping over comments and strings and
-;; try searching for symbols instead, and checking for a match at each hit.
-;; That way the regex is cheaper but we spend a little more time at each hit.
-;;
-;; TODO: Finding the end of the current defun with save-excursion and
-;; dyalog-end-of-defun is fairly expensive, see if we can make it cheaper by
-;; using a less general function. If we have the end of the defun, we should
-;; also use that to move more quickly to the next defun, so dyalog-next-defun
-;; doesn't have to process as much data.
-;;
-;; Performance evaluation, time for fontifying MAKE_M.apl
-;;
-;; regexp with all local names: 8.32
-
+;; TODO: syntax-ppss consumes most of the cpu and does most of the
+;; allocations. Try just skipping matches that have already been fontified
+;; instead, that way we could cheaply skip matches inside comments, strings
+;; and keywords.
 (defun dyalog-string-set (strings)
   (let ((hash (make-hash-table :test 'equal)))
     (dolist (s strings hash) (puthash s t hash))))
@@ -665,11 +654,6 @@ position where the defun ends."
               ;; TODO add actually working code here. We should have a
               ;; dfun-info that returns extents as well
               (search-forward "}" end t))
-          ;; (while (re-search-forward (concat "\\_<"
-          ;;                                   dyalog-name
-          ;;                                   "\\_>") dfunend t)
-          ;;   (put-text-property (match-beginning 0) (match-end 0)
-          ;;                      'face'font-lock-constant-face)))
           (let ((fname (car info)))
             (when (and fname (not (string-equal fname "")))
               (let* ((args (nth 1 info))
@@ -678,7 +662,6 @@ position where the defun ends."
                      (end-of-header (nth 3 info))
                      (end-of-defun (nth 4 info))
                      (limit (min end-of-defun end))
-                     ;;(rx "\\_<\\(\\sw\\|\\s_\\)+\\_>")
                      (rx (concat "\\_<\\("
                                  (mapconcat 'identity locals "\\|")
                                  "\\)\\_>")))
@@ -690,11 +673,6 @@ position where the defun ends."
                          (context (syntax-ppss-context state))
                          (in-string (eq 'string context))
                          (in-comment (eq 'comment context)))
-                    
-                    ;; (unless (or (not (gethash
-                    ;;                   (match-string-no-properties 0)
-                    ;;                   locals))
-                    ;;             (dyalog-in-comment-or-string))
                     (unless (or in-string in-comment)
                       (put-text-property symbol-start symbol-end
                                          'face
