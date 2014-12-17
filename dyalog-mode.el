@@ -938,7 +938,7 @@ KIND is \"charvec\", \"charmat\", \"stringvec\" or \"array\"."
   (setq-local comment-auto-fill-only-comments t)
   (setq-local font-lock-defaults '(dyalog-font-lock-keywords))
   (jit-lock-register #'dyalog-fontify-locals)
-  ;; Dyalog alays indents with spaces
+  ;; Dyalog always indents with spaces
   (setq-local indent-tabs-mode nil)
   (setq-local indent-line-function 'dyalog-indent-line)
   ;; Misc
