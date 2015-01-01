@@ -39,7 +39,7 @@
               editarray name lineno
           :EndSelect
         ∇
-    
+
         ∇ {r}←editfun rarg;name;lineno;src;path;linespec;msg
           name lineno←rarg
           src path←getsource name
@@ -65,7 +65,7 @@
         ∇ {msg}←sessionedit msg;name;pos;log;focus;line;symbolalphabet;lineno
           name pos log←'⎕SE'⎕WG'CurObj' 'CurPos' 'Log'
           focus←2 ⎕NQ'.' 'GetFocus'
-          
+
           :If '⎕SE'≡focus
               line←(⊃pos)⊃log
               ⍝ Below line is actually broken since symbols can contain
@@ -78,7 +78,7 @@
               ⍝ use the default line number
               lineno←¯1
           :EndIf
-          
+
           edit name lineno
         ∇
 
@@ -109,21 +109,21 @@
         ∇
 
         ∇ {r}←receive msg;socket;raw;ip;uni;data;i;command;src;name;marker;complete
-          
+
           socket raw ip←msg[1 3 4]
-          
+
           :If ip≢'127.0.0.1'
               :Return
           :EndIf
-          
+
           marker←raw⍳eomraw
           complete←marker≤⊃⍴raw
-          
+
           :Select state
           :Case 'ready'
               i←raw⍳'UTF-8'⎕UCS' '
               command←'UTF-8'⎕UCS raw[⍳i-1]
-              
+
               :Select command
               :Case 'fx'
                   :If complete
@@ -144,7 +144,7 @@
               :Else
                   ⎕←'Received invalid command: ',command
               :EndSelect
-              
+
         :Case 'fx'
             :If complete
                 fix socket raw marker
@@ -153,7 +153,7 @@
             :Else
                 recvbuf,←raw
             :EndIf
-            
+
         :Case 'src'
             :If complete
                 sendsource socket(i↓raw)(marker-i)
@@ -215,9 +215,9 @@
           :If 0=⎕NC'noload'
               noload←0
           :EndIf
-          
+
           name←(∧\fullname≠'[')/fullname
-          
+
           :Select ⊃#.⎕NC name
           :Case 0
               :If 3≠⎕NC'#.',onMissing
@@ -236,7 +236,7 @@
           :Else
               src←path←''
           :EndSelect
-          
+
           r←src path
         ∇
 
@@ -251,7 +251,7 @@
                   11::⊃⎕NC'⍵' ⍝ use ⎕NC if DOMAIN ERROR
                   ⎕DR ⍵
               }¨value
-              
+
               :If ∧/dr∊80 82 160 320
                   type←'stringvec'
               :Else
@@ -260,7 +260,7 @@
           :Else
               type←'array'
           :EndIf
-          
+
           :Select type
           :Case 'stringvec'
               src←##.joinlines value
@@ -276,10 +276,10 @@
               :EndIf
               src←##.joinlines ##.cm2v value
           :EndSelect
-          
+
           r←type src
         ∇
-    
+
         ∇ r←parsename fullname;name;linespec;line
           name←(+/∧\fullname≠'[')↑fullname
           linespec←(∨\fullname='[')/fullname
@@ -317,23 +317,23 @@
         ∇
 
         ∇ {r}←receive msg;socket;raw;ip;data;z;prompt;dm;err;stack;cursor;m;n;len;logbefore;logafter;match
-          
+
           socket raw ip←msg[1 3 4]
-          
+
           :If ip≢'127.0.0.1'
               :Return
           :EndIf
-          
+
           data←##.bytes2text raw
           prompt←6⍴' '
           data←(-+/(¯2↑data)∊cr lf)↓data
-          
+
           :If data∧.=' ' ⍝ An empty input line
           :OrIf ∧/(data=' ')∨∨\data='⍝' ⍝ A comment
               send socket prompt
               :Return
           :EndIf
-          
+
           :Trap 0
               m←⊃⍴logbefore←'#.⎕SE'⎕WG'Log'
               :If 3=#.⎕NC data
@@ -344,13 +344,13 @@
                   z←#.⍎data
               :EndIf
               n←⊃⍴logafter←'#.⎕SE'⎕WG'Log'
-              
+
               :If 3=⎕NC'z'
                   r←' ∇',data
               :Else
                   r←⎕FMT z
               :EndIf
-              
+
               :If logbefore≢logafter ⍝ Log changed, must be due to output to session
                   :If n≠m
                       len←|n-m
@@ -360,7 +360,7 @@
                   :EndIf
                   r←↑(logafter[(n-len)+¯1+⍳len]),##.cm2v r
               :EndIf
-              
+
               :If '←'∊data ⍝ TODO: Better test for assignment
                   send socket prompt
               :Else
