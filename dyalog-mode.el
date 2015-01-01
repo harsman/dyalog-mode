@@ -741,6 +741,12 @@ position where the defun ends."
 
 ;;; Socket connection
 
+(defvar-local dyalog-connection nil
+  "The connection to Dyalog used for this buffer, if any.")
+
+(defvar dyalog-connections ()
+  "A list of all connections to Dyalog processes.")
+
 ;;;###autoload
 (defun dyalog-session-connect (&optional host port)
   "Connect to a Dyalog session"
@@ -760,15 +766,19 @@ position where the defun ends."
   (interactive (list (read-string "Host (default localhost):"
                                   "127.0.0.1")
                      (read-number "Port (default 8080):" 8080)))
-  (make-network-process :name "dyalog-edit"
-                        :buffer " *dyalog-receive-buffer*"
-                        :family 'ipv4 :host host :service port
-                        :sentinel 'dyalog-editor-sentinel
-                        :filter 'dyalog-editor-receive))
+  (let* ((bufname (generate-new-buffer-name " *dyalog-receive*"))
+        (process (make-network-process :name "dyalog-edit"
+                                       :buffer bufname
+                                       :family 'ipv4 :host host :service port
+                                       :sentinel 'dyalog-editor-sentinel
+                                       :filter 'dyalog-editor-receive)))
+       (push process dyalog-connections)
+       process))
 
 (defun dyalog-editor-sentinel (proc msg)
   (when (string= msg "connection broken by remote peer\n")
-    (message (format "client %s has quit" proc))))
+    (message (format "client %s has quit" proc))
+    (setq dyalog-connections (delq proc dyalog-connections))))
 
 (defun dyalog-editor-receive (process output)
   "Receive data from a Dyalog editor connection"
@@ -783,12 +793,12 @@ position where the defun ends."
         (backward-char)
         (let ((m (point)))
           (goto-char (point-min))
-          (dyalog-editor-munge-command (point) m)
+          (dyalog-editor-munge-command process (point) m)
           (with-current-buffer (process-buffer process)
             (set-marker (process-mark process) 1)))
         (sit-for 0.01)))))
 
-(defun dyalog-editor-munge-command (start end)
+(defun dyalog-editor-munge-command (process start end)
   "Parse and delete a Dyalog editor command in the currently active region.
 START is the start of the command and END is where it ends."
   (cond ((looking-at "edit \\([^ []+\\)\\(\\[\\([0-9]+\\)\\]\\)?\0\\([^\0]*\\)\0")
@@ -800,7 +810,7 @@ START is the start of the command and END is where it ends."
            (when linetext
              (set 'lineno (string-to-number linetext)))
            (delete-region start (1+ end))
-           (dyalog-open-edit-buffer name src lineno path)))
+           (dyalog-open-edit-buffer process name src lineno path)))
         ((looking-at "fxresult \\([^ ]+\\)\e")
          (let* ((result (match-string 1))
                 (num    (string-to-number result)))
@@ -813,11 +823,21 @@ START is the start of the command and END is where it ends."
                 (kind (match-string 2))
                 (src (buffer-substring-no-properties (match-end 0) end)))
            (delete-region start (1+ end))
-           (dyalog-open-edit-array name kind src)))
+           (dyalog-open-edit-array process name kind src)))
+        ((looking-at "dyaloghello \n")
+         (progn
+           (goto-char (match-end 0))
+           (while (looking-at "\\([a-z]+\\): \\([^\r\n]+\\)\n")
+             (let* ((key (match-string-no-properties 1))
+                   (val (match-string-no-properties 2))
+                   (propname (concat "dyalog-" key)))
+               (process-put process (intern propname) val)
+               (goto-char (match-end 0))))
+           (delete-region start (1+ end))))
         (t
          (error "Ivalid message received"))))
 
-(defun dyalog-open-edit-buffer (name src &optional lineno path)
+(defun dyalog-open-edit-buffer (process name src &optional lineno path)
   "Open a buffer to edit object NAME with source SRC"
   (let* ((file-name (if (and path (not (string= path "")))
                         path
@@ -836,6 +856,7 @@ START is the start of the command and END is where it ends."
         (set-visited-file-name file-name t)
         (set-buffer-modified-p nil))
       (dyalog-mode)
+      (setq dyalog-connection process)
       (font-lock-fontify-buffer)
       (if lineno
           (forward-line (- lineno 1))
@@ -843,7 +864,7 @@ START is the start of the command and END is where it ends."
       (setq buffer-undo-list nil)
       (select-frame-set-input-focus (window-frame (selected-window))))))
 
-(defun dyalog-open-edit-array (name kind src)
+(defun dyalog-open-edit-array (process name kind src)
   "Open a buffer to edit array NAME of type KIND with contents SRC.
 KIND is \"charvec\", \"charmat\", \"stringvec\" or \"array\"."
   (switch-to-buffer name)
@@ -857,6 +878,7 @@ KIND is \"charvec\", \"charmat\", \"stringvec\" or \"array\"."
       (delete-region (point) (mark))
       (insert src))
     (dyalog-array-mode)
+    (setq dyalog-connection process)
     (read-only-mode)
     (if lineno
         (forward-line (- lineno 1))
@@ -864,18 +886,48 @@ KIND is \"charvec\", \"charmat\", \"stringvec\" or \"array\"."
     (setq buffer-undo-list nil)
     (select-frame-set-input-focus (window-frame (selected-window)))))
 
+(defun dyalog-connection-desc (process)
+  "Return a string describing the given process."
+  (let ((version (process-get process 'dyalog-version))
+        (wsid    (process-get process 'dyalog-wsid))
+        (cwd     (process-get process 'dyalog-dir))
+        (host (process-contact process :host))
+        (port (process-contact process :service)))
+    (if (and version wsid cwd)
+        (let ((cwd-short (and (string-match "[^/\\]+\\'" cwd)
+                              (match-string 0 cwd)))
+              (wsid-short (and (string-match "[^/\\]+\\'" wsid)
+                               (match-string 0 wsid))))
+          (format "%s in %s v%s" wsid-short cwd-short version))
+      (format "%s:%s" host port))))
+
+(defun dyalog-connection-select (&optional prompt)
+  "Select one of the active connections to Dyalog processes."
+  (let ((p (or prompt "Select a Dyalog process:"))
+        (candidates (mapcar
+                     'dyalog-connection-desc dyalog-connections)))
+    (or (and (process-live-p dyalog-connection) dyalog-connection)
+        (and (equal 1 (length dyalog-connections))
+             (car dyalog-connections))
+        (nth (position (completing-read p candidates nil t)
+                       candidates :test 'string-equal)
+             dyalog-connections))))
+
 (defun dyalog-editor-fix (&optional arg)
   "Send the contents of the current buffer to the connected Dyalog process"
   (interactive)
-  (progn
-    (process-send-string "dyalog-edit" "fx ")
-    (process-send-region "dyalog-edit" (point-min) (point-max))
-    (process-send-string "dyalog-edit" "\e")))
+  (let ((process (dyalog-connection-select)))
+    (setq dyalog-connection process)
+    (process-send-string process "fx ")
+    (process-send-region process (point-min) (point-max))
+    (process-send-string process "\e")))
 
 (defun dyalog-editor-edit (name)
   "Ask the connected Dyalog process for the source of NAME and open it in an edit buffer"
   (interactive "s")
-  (process-send-string "dyalog-edit" (concat "src " name "\e")))
+  (let ((process (dyalog-connection-select)))
+    (setq dyalog-connection process)
+    (process-send-string process (concat "src " name "\e"))))
 
 (defun dyalog-editor-edit-symbol-at-point ()
   "Edit the source for the symbol at point."

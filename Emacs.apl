@@ -4,6 +4,7 @@
         eomraw←27
         eom←⎕UCS eomraw
         null←⎕UCS 0
+        nl←⎕UCS 10
         recvbuf←⍬
         state←'ready'
         ⍝ onMissing contains the name of a function to call when the name that
@@ -97,6 +98,7 @@
           socket←1⊃msg
           newname←socket,⍕?¯2+2*31
           newname ⎕WC'TCPSocket'('SocketNumber'(3⊃msg))('Event'(socket ⎕WG'Event'))
+          sendgreeting socket
           r←newname
         ∇
 
@@ -180,6 +182,14 @@
           fullname←##.bytes2text recvbuf,raw[⍳marker-1]
           name lineno←parsename fullname
           edit name lineno
+        ∇
+
+        ∇ {r}←sendgreeting socket;version;wsid;cwd;body
+          version←2⊃'.'⎕WG'AplVersion'
+          wsid←⎕WSID
+          cwd←##.getcurrentdir
+          body←nl ##.joinlines'version' 'wsid' 'dir' {⍺,': ',,⍕⍵}¨version wsid cwd
+          send socket ('dyaloghello ',nl,body,nl,eom)
         ∇
 
         ∇ {r}←close msg
@@ -423,5 +433,13 @@
     }
 
     slurp←{(+/∧\⍵∊⍺)⍺⍺ ⍵}
+
+    ∇ r←getcurrentdir;unix
+      :If unix←'W'≠⊃3⊃'.'⎕WG'AplVersion'
+          r←⊃⎕SH'pwd'
+      :Else
+          r←⊃⎕CMD'chcp 1252 && cd'
+      :EndIf
+    ∇
 
 :EndNamespace
