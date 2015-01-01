@@ -25,7 +25,7 @@
         boxing←0
 
         ∇ init
-          ⎕CY'DISPLAY'
+          ⎕CY'display'
           disp←DISPLAY
           ⎕EX'DISPLAY'
         ∇
