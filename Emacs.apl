@@ -89,7 +89,7 @@
           callbacks,←⊂('Event' 'TCPRecv' '#.Emacs.editor.receive')
           callbacks,←⊂('Event' 'TCPError' '#.Emacs.editor.error')
           callbacks,←⊂('Event' 'TCPClose' '#.Emacs.editor.close')
-          sockname ⎕WC'TCPSocket' ''(port)('Style' 'Raw'),callbacks ⍝⋄ _←⎕DQ'.'
+          sockname ⎕WC'TCPSocket' '127.0.0.1 '(port)('Style' 'Raw'),callbacks
           r←sockname
           #.⎕SE.Emacs∆socket←sockname
         ∇
