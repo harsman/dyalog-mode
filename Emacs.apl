@@ -192,7 +192,9 @@
         ∇
 
         ∇ path←getpath name
-          :If 3≠⎕NC'#.',getPath
+          :If 0≠#.⎕NC name,'.SALT_Data.SourceFile'
+              path←#.⍎name,'.SALT_Data.SourceFile'
+          :ElseIf 3≠⎕NC'#.',getPath
               path←''
           :Else
               path←(#.⍎'#.',getPath)name
