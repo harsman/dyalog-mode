@@ -4,10 +4,10 @@
 ;; Copyright (C) 2008, 2009, 2010, 2011 Joakim Hårsman
 
 ;; Author: Joakim Hårsman <joakim.harsman@gmail.com>
-;; Version: 0.32
+;; Version: 0.5
+;; Package-Requires ((cl-lib "1.0"))
 ;; Keywords: languages
-;; X-URL: http://bitbucket.org/harsman/dyalog-mode
-;; URL: https://bitbucket.org/harsman/dyalog-mode/raw/tip/dyalog-mode.el
+;; URL: https://bitbucket.org/harsman/dyalog-mode/
 
 ;; This file is not part of GNU Emacs.
 
@@ -28,13 +28,10 @@
 ;;
 ;; Dyalog-mode is a major mode for editing Dyalog APL source code.
 ;;
-;; It supports basic syntax highlighting and indentation. It relies on regex
-;; hacks for both indentation and syntax highlighting, so it sometimes gets
-;; confused.
-;;
-;; If you use ediff to diff Dyalog APL source code, you can set
-;; ediff-forward-word-function to dyalog-ediff-forward-word to get better
-;; diffs.
+;; It supports syntax highlighting, indentation and convenience function like
+;; toggling localization of variables. It can communicate with Dyalog
+;; processes over a socket, allowing Emacs to be used as the editor for a
+;; Dyalog session.
 ;;
 ;; Get the latest version at http://bitbucket.org/harsman/dyalog-mode
 
@@ -1011,6 +1008,12 @@ KIND is \"charvec\", \"charmat\", \"stringvec\" or \"array\"."
 \\{dyalog-array-mode-map\\}"
   :syntax-table dyalog-array-mode-syntax-table
   (setq-local require-final-newline nil))
+
+;;;###autoload
+(add-to-list 'auto-mode-alist '("\\.apl\\'" . dyalog-mode))
+;;;###autoload
+(add-to-list 'auto-mode-alist '("\\.dyalog$" . dyalog-mode))
+
 
 (provide 'dyalog-mode)
 
