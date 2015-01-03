@@ -876,7 +876,9 @@ KIND is \"charvec\", \"charmat\", \"stringvec\" or \"array\"."
       (insert src))
     (dyalog-array-mode)
     (setq dyalog-connection process)
-    (read-only-mode)
+    (if (fboundp 'read-only-mode)    ; Only available in 24.4 and later
+        (read-only-mode)
+      (setq buffer-read-only t))
     (if lineno
         (forward-line (- lineno 1))
       (goto-char (min pos (point-max))))
