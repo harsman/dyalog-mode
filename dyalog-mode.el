@@ -737,6 +737,9 @@ position where the defun ends."
 
 
 ;;; Socket connection
+(defvar dyalog-connection nil
+  "The connection to a Dyalog process used for this buffer, if any.")
+(make-variable-buffer-local dyalog-connection)
 
 (defvar dyalog-connections ()
   "A list of all connections to Dyalog processes.")
@@ -903,7 +906,7 @@ KIND is \"charvec\", \"charmat\", \"stringvec\" or \"array\"."
     (or (and (process-live-p dyalog-connection) dyalog-connection)
         (and (equal 1 (length dyalog-connections))
              (car dyalog-connections))
-        (nth (position (completing-read p candidates nil t)
+        (nth (cl-position (completing-read p candidates nil t)
                        candidates :test 'string-equal)
              dyalog-connections))))
 
@@ -991,7 +994,6 @@ KIND is \"charvec\", \"charmat\", \"stringvec\" or \"array\"."
   (setq-local indent-line-function 'dyalog-indent-line)
   ;; Misc
   (setq-local require-final-newline nil)
-  (setq-local dyalog-connection nil)
   ;; Imenu and which-func-mode
   (setq-local imenu-generic-expression
               dyalog-imenu-generic-expression)
