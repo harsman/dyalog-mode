@@ -82,6 +82,25 @@
           edit name lineno
         ∇
 
+        ∇ {r}←connect;socket;host;port;lispconnect;elisp;_
+          ⍝ Start listening, and have Emacs connect back to us.
+          socket←listen ⍬
+          host port←socket ⎕WG'LocalAddr' 'LocalPort'
+          lispconnect←'(dyalog-editor-connect \"',host,'\" ',(⍕port),')'
+
+          :If 0∊⍴r←⎕SH'emacsclient --no-wait -e "',lispconnect,'"'
+              ⍝ Emacs server not running, start Emacs in background
+              ⎕←'Emacs server not running, starting a new instance...'
+              elisp←'(progn ',lispconnect,'(iconify-frame nil))'
+              r←''
+              :If ##.isunix
+                  _←⎕SH 'emacs --eval "',elisp,'" &'
+              :Else
+                  ⎕CMD('runemacs --eval "',elisp,'"')''
+              :EndIf
+          :EndIf
+        ∇
+
         ∇ {r}←listen port;sockname;callbacks;_
           init
           sockname←'⎕SE.Emacs_socket',⍕port
@@ -434,12 +453,19 @@
 
     slurp←{(+/∧\⍵∊⍺)⍺⍺ ⍵}
 
-    ∇ r←getcurrentdir;unix
-      :If unix←'W'≠⊃3⊃'.'⎕WG'AplVersion'
+    ∇ r←getcurrentdir
+      :If isunix
           r←⊃⎕SH'pwd'
       :Else
+          ⍝ The chcp works around a Dyalog bug that incorrectly decodes
+          ⍝ strings from ⎕CMD if they aren't in Windows 1252. E.g. the default
+          ⍝ encoding for cmd on Swedish windows is CP850.
           r←⊃⎕CMD'chcp 1252 && cd'
       :EndIf
+    ∇
+
+    ∇ r←isunix
+      r←'W'≠⊃3⊃'.'⎕WG'AplVersion'
     ∇
 
 :EndNamespace
