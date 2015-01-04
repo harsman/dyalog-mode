@@ -737,9 +737,8 @@ position where the defun ends."
 
 
 ;;; Socket connection
-(defvar dyalog-connection nil
+(defvar dyalog-connection ()
   "The connection to a Dyalog process used for this buffer, if any.")
-(make-variable-buffer-local dyalog-connection)
 
 (defvar dyalog-connections ()
   "A list of all connections to Dyalog processes.")
@@ -996,6 +995,8 @@ KIND is \"charvec\", \"charmat\", \"stringvec\" or \"array\"."
   (setq-local indent-line-function 'dyalog-indent-line)
   ;; Misc
   (setq-local require-final-newline nil)
+  ;; Socket connection
+  (setq-local dyalog-connection nil)
   ;; Imenu and which-func-mode
   (setq-local imenu-generic-expression
               dyalog-imenu-generic-expression)
