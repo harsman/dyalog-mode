@@ -30,9 +30,16 @@
           ⎕EX'DISPLAY'
         ∇
 
-        ∇ {r}←edit rarg;name;lineno
+        ∇ {r}←edit rarg;name;lineno;_
           name lineno←rarg
-          :Select ⊃#.⎕NC name
+
+          :If 0=⊃#.⎕NC name
+              ⍝ Trigger loading of code if the name isn't established in the
+              ⍝ session
+              _←getsource name
+          :EndIf
+
+          :Select ⊃#.⎕NC name  ⍝ check again because it might have loaded now
           :CaseList 3 4 9
               editfun name lineno
           :Case 2
