@@ -214,6 +214,16 @@ together with AltGr produce the corresponding apl character in APLCHARS."
     st)
   "Syntax table for `dyalog-array-mode'.")
 
+(defface dyalog-local-name
+  '((t (:inherit font-lock-constant-face)))
+  "Face used for localized names inside APL functions."
+  :group 'dyalog)
+
+(defface dyalog-local-system-name
+  '((t (:inherit font-lock-variable-name-face)))
+  "Face used for localized system variables inside APL functions."
+  :group 'dyalog)
+
 ;;;###autoload
 (defun dyalog-ediff-forward-word ()
   "Move point forward one word."
@@ -595,7 +605,8 @@ position where the defun ends."
               (progn
                 (goto-char localstart)
                 (if (looking-at (concat dyalog-name "\\(;"
-                                        dyalog-name "\\)*"))
+                                        "\\(" "\\(" dyalog-name "\\)" "\\|" "\\(⎕[A-Za-z]+\\)\\)"
+                                        "\\)*"))
                     (setq end-of-header (match-end 0)
                           locals 
                           (split-string
@@ -669,17 +680,21 @@ position where the defun ends."
                          (state (syntax-ppss))
                          (context (syntax-ppss-context state))
                          (in-string (eq 'string context))
-                         (in-comment (eq 'comment context)))
+                         (in-comment (eq 'comment context))
+                         (sysvar (eq ?⎕ (char-after symbol-start)))
+                         (face (if sysvar
+                                   'dyalog-local-system-name
+                                 'dyalog-local-name)))
                     (unless (or in-string in-comment)
                       (put-text-property symbol-start symbol-end
                                          'face
-                                         font-lock-constant-face)
+                                         face)
                       (if (and (equal ?. (char-after symbol-end))
                                (looking-at (concat "\\." dyalog-name)))
                           (put-text-property (match-beginning 0)
                                              (match-end 0)
                                              'face
-                                             font-lock-constant-face)))))
+                                             face)))))
                 (goto-char limit)))))
         (set 'done (>= (point) end))
         (when (not done)
