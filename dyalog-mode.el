@@ -59,6 +59,7 @@
     map)
   "Keymap for Dyalog Array edit mode.")
 
+;;;###autoload
 (defun dyalog-fix-altgr-chars (keymap aplchars regularchars)
   "Fix up a key map so that if the Dyalog IME uses AltGr+char for an
 APL character, Emacs doesn't confuse it for C-M-char.
