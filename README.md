@@ -19,8 +19,8 @@ use Emacs 24.2 or newer.
 
 Dyalog mode itself works on all platforms supported by Emacs, but the
 integration with the Dyalog session requires functionality only present in the
-GUI version of the IDE, so that part only works on Windows. However, you can
-still connect Emacs and Dyalog when running on Linux, you just have to
+GUI version of the Dyalog IDE, so that part only works on Windows. However,
+you can still connect Emacs and Dyalog when running on Linux, you just have to
 manually invoke editing in Emacs by calling Emacs.editor.edit 'funcname'
 
 Installation
@@ -64,17 +64,17 @@ To install manually, clone the
 following to your init file:
 
 ```lisp
-(autoload 'dyalog-mode "/path/to/dyalog-mode" "Edit Dyalog APL" t)
-(autoload 'dyalog-editor-connect "/path/to/dyalog-mode" "Connect Emacs to Dyalog" t)
+(autoload 'dyalog-mode "/path/to/dyalog-mode.el" "Edit Dyalog APL" t)
+(autoload 'dyalog-editor-connect "/path/to/dyalog-mode.el" "Connect Emacs to Dyalog" t)
 (add-to-list 'auto-mode-alist '("\\.apl\\'" . dyalog-mode))
 (add-to-list 'auto-mode-alist '("\\.dyalog$" . dyalog-mode))
 ```
 
 #### Dependencies ####
 
-If you install Dyalog mode with `package.el` then dependencies are
-automatically installed. If you install manually, you have to install
-dependencies manually.
+If you install with `package.el` then dependencies are automatically
+installed. If you install manually, you have to install dependencies manually
+as well.
 
 * `cl-lib` is installed by default in Emacs 24.3 and newer. It provides
   various Common Lisp forms, but unlike the older `cl`library, it doen't
@@ -94,7 +94,6 @@ the Dyalog prompt:
 
 ```apl
       ]load /path/to/dyalog-mode/Emacs.apl
-#.Emacs
       Emacs.editor.setupmenu ⍬
       Emacs.editor.connect
 ```
