@@ -30,7 +30,7 @@
           ⎕EX'DISPLAY'
         ∇
 
-        ∇ {r}←edit rarg;name;lineno;_
+        ∇ {r}←edit rarg;name;lineno;_;src;path;shortname
           
           :If 1=≡rarg
               rarg←,⊂rarg
@@ -46,15 +46,21 @@
 
           :Select ⊃#.⎕NC name  ⍝ check again because it might have loaded now
           :CaseList 3 4 9
-              editfun name lineno
+              src path←getsource name
+              editfun name lineno src path
           :Case 2
               editarray name lineno
+          :Case 0
+              ⍝ Editing a name that doesn't exist, open an empty function
+              shortname←purename name
+              src←' ',shortname,nl
+              path←getpath shortname
+              editfun name 1 src path
           :EndSelect
         ∇
 
         ∇ {r}←editfun rarg;name;lineno;src;path;linespec;msg
-          name lineno←rarg
-          src path←getsource name
+          name lineno src path←rarg
           linespec←(⎕IO+¯1=lineno)⊃('[',(⍕lineno),']')''
           msg←'edit ',name,linespec,null,path,null,src
           r←send #.⎕SE.Emacs∆socket(msg,eom)
@@ -242,12 +248,16 @@
           :EndIf
         ∇
 
+        ∇ r←purename fullname
+          r←(∧\fullname≠'[')/fullname
+        ∇
+
         ∇ r←{noload}getsource fullname;name;src;path;_
           :If 0=⎕NC'noload'
               noload←0
           :EndIf
 
-          name←(∧\fullname≠'[')/fullname
+          name←purename fullname
 
           :Select ⊃#.⎕NC name
           :Case 0
