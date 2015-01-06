@@ -1033,6 +1033,9 @@ PROMPT is the prompt to show to the user."
   (defmacro setq-local (var val)
     `(set (make-local-variable ',var) ,val)))
 
+(eval-after-load "which-func"
+  '(add-to-list 'which-func-modes 'dyalog-mode))
+
 ;;;###autoload
 (define-derived-mode dyalog-mode prog-mode "Dyalog"
   "Major mode for editing Dyalog APL code.
@@ -1063,8 +1066,6 @@ PROMPT is the prompt to show to the user."
   ;; Imenu and which-func-mode
   (setq-local imenu-generic-expression
               dyalog-imenu-generic-expression)
-  (eval-after-load "which-func"
-    '(add-to-list 'which-func-modes 'dyalog-mode))
   (add-hook 'which-func-functions 'dyalog-current-defun nil 'make-it-local)
   ;; Hooks
   (add-hook 'before-save-hook
