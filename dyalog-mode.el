@@ -434,8 +434,7 @@ FUNCOUNT is the number of currently open function blocks."
       ;; or string literal
       (goto-char (point-min))
       (while (re-search-forward "  +\\([^⍝ \r\n]\\)" (point-max) t)
-        (let ((start (match-beginning 0))
-              (ws-start (match-beginning 1)))
+        (let ((ws-start (match-beginning 1)))
           (unless (dyalog-in-comment-or-string ws-start)
             (replace-match " \\1"))))
       ;; Remove spaces before punctuation
@@ -537,8 +536,7 @@ If supplied, ARG moves that many defuns back."
 If it is supplied, BOUND limits the search."
   ;; We can assume point is at the start of a defun when
   ;; this function is called.
-  (let ((defunstart (point))
-        (end (or bound (point-max)))
+  (let ((end (or bound (point-max)))
         (done nil)
         (in-dfun-p nil))
     (ignore-errors (forward-char)) ; skip past nabla
@@ -609,8 +607,7 @@ isn't inside a dynamic function, return nil"
 
 (defun dyalog-current-defun ()
   "Return the name of the defun point is in."
-  (let ((dfun-name (dyalog-dfun-name))
-        (start-pos (point)))
+  (let ((dfun-name (dyalog-dfun-name)))
     (or dfun-name (car (dyalog-tradfn-info)))))
 
 (defun dyalog-tradfn-info ()
@@ -695,7 +692,7 @@ START and END signify the region to fontify."
             (let ((dfunend end))
               ;; TODO add actually working code here. We should have a
               ;; dfun-info that returns extents as well
-              (search-forward "}" end t))
+              (search-forward "}" dfunend t))
           (let ((fname (car info)))
             (when (and fname (not (string-equal fname "")))
               (let* ((args (nth 1 info))
