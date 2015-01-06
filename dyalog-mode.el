@@ -1,5 +1,4 @@
-;;; dyalog-mode.el --- Major mode for editing Dyalog APL source code -*- coding: utf-8 -*-
-;;; -*- lexical-binding: t -*-
+;;; dyalog-mode.el --- Major mode for editing Dyalog APL source code -*- coding: utf-8 lexical-binding: t -*-
 
 ;; Copyright (C) 2008, 2009, 2010, 2011 Joakim Hårsman
 
