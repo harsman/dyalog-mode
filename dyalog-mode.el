@@ -61,8 +61,7 @@
 
 ;;;###autoload
 (defun dyalog-fix-altgr-chars (keymap aplchars regularchars)
-  "Fix up a key map so that if the Dyalog IME uses AltGr+char for an
-APL character, Emacs doesn't confuse it for C-M-char.
+  "Fix a key map so AltGr+char isn't confused with C-M-char.
 
 KEYMAP is an Emacs keymap.
 
@@ -94,14 +93,14 @@ together with AltGr produce the corresponding apl character in APLCHARS."
 
 (defvar dyalog-name  "[A-Za-z∆_]+[A-Za-z∆_0-9]*")
 
-(defvar dyalog-number 
+(defvar dyalog-number
   "[^A-Za-z_∆0-9]\\(¯?[0-9]+\\.?[0-9]*\\(E¯?[0-9]+\\.?[0-9]*\\)?\\)")
 
-(defconst dyalog-access-type 
+(defconst dyalog-access-type
   "^\\s-*:Access +\\(WebMethod\\|\\(?:\\(Public\\|Private\\)\\)?\\(?: +\\(Instance\\( +Override\\|Overridable\\)\\|Shared\\)\\)?\\)")
 
 (defconst dyalog-field-def
-  (concat "^\\s-*:Field" 
+  (concat "^\\s-*:Field"
           "\\(?: +\\(Public\\|Private\\)\\)?"
           "\\(?: +\\(Instance\\|Shared\\)\\)?"
           "\\(?: +\\(ReadOnly\\)\\)?"
@@ -278,8 +277,7 @@ together with AltGr produce the corresponding apl character in APLCHARS."
   :group 'dyalog)
 
 (defcustom dyalog-fix-whitespace-before-save nil
-  "True if buffers should be re-indented and have trailing
-whitespace removed before they are saved."
+  "If true, indent and delete redundant whitespace before saving."
   :type 'boolean
   :group 'dyalog)
 
@@ -298,6 +296,7 @@ whitespace removed before they are saved."
     (+ (current-indentation) tab-width)))
 
 (defun dyalog-get-indent ()
+  "Calculate the amount of indentation for the current line."
   (let ((indent 0))
     (save-excursion
       (move-beginning-of-line nil)
@@ -328,6 +327,13 @@ whitespace removed before they are saved."
         indent))))
 
 (defun dyalog-indent-cond-generic (at-pause indented blockcount funcount)
+  "Logic to use when searching for a point to calculate indent relative to.
+AT-PAUSE is t if we are currently at a pausing indentation
+keyword, i.e. a keyword that is indented at the same level as the
+parent block, such as :Case.
+INDENTED is always nil.
+BLOCKCOUNT is the number of currently open statement blocks.
+FUNCOUNT is the number of currently open function blocks."
   (cond ((looking-at dyalog-indent-stop)
          (if (and (eq blockcount 0) (eq funcount 0) (not at-pause))
              (set 'indented (current-indentation))
@@ -356,16 +362,41 @@ whitespace removed before they are saved."
   (list indented blockcount funcount))
 
 (defun dyalog-indent-cond-case (at-pause indented blockcount funcount)
+  "Logic to use when indenting a :Case keyword.
+When indenting a :Case, we should indent to any
+matching :Trap or :Select.
+AT-PAUSE is t if we are currently at a pausing indentation
+keyword, i.e. a keyword that is indented at the same level as the
+parent block, such as :Case.
+INDENTED is always nil.
+BLOCKCOUNT is the number of currently open statement blocks.
+FUNCOUNT is the number of currently open function blocks."
   (let ((dyalog-indent-start "^\\s-*:\\(Select\\|Trap\\)")
         (dyalog-indent-stop "^\\s-*:End\\(Select\\|Trap\\)"))
     (dyalog-indent-cond-generic at-pause indented blockcount funcount)))
 
 (defun dyalog-indent-cond-header (at-pause indented blockcount funcount)
+  "Logic to use when indenting a function header.
+When indenting a header, we should indent to any
+preceeding :Class or :Namespace.
+AT-PAUSE is t if we are currently at a pausing indentation
+keyword, i.e. a keyword that is indented at the same level as the
+parent block, such as :Case.
+INDENTED is always nil.
+BLOCKCOUNT is the number of currently open statement blocks.
+FUNCOUNT is the number of currently open function blocks."
   (let ((dyalog-indent-start "^\\s-*:\\(Class\\|Namespace\\)")
         (dyalog-indent-stop  "^\\s-*:End\\(Class\\|Namespace\\)"))
     (dyalog-indent-cond-generic at-pause indented blockcount funcount)))
 
 (defun dyalog-search-indent (at-pause cond-fun blockcount funcount)
+  "Search backwards for a point to calculate indentation relative to.
+AT-PAUSE is t if we are currently at a pausing indentation
+keyword, i.e. a keyword that is indented at the same level as the
+parent block, such as :Case.
+COND-FUN is a function to call to do the actual search.
+BLOCKCOUNT is the number of currently open statement blocks.
+FUNCOUNT is the number of currently open function blocks."
   (let ((ret nil)(indented nil))
     (save-excursion
       (while (not indented)
@@ -378,6 +409,7 @@ whitespace removed before they are saved."
       indented)))
 
 (defun dyalog-indent-line ()
+  "Indent the current line."
   (interactive)
   (let ((restorepos (> (current-column) (current-indentation)))
         (indent (max 0 (dyalog-get-indent))))
@@ -441,6 +473,7 @@ whitespace removed before they are saved."
       (dyalog-indent-buffer))))
 
 (defun dyalog-indent-buffer ()
+  "Indent the current buffer."
   (save-excursion
     (mark-whole-buffer)
     (indent-region (region-beginning) (region-end))))
@@ -476,6 +509,8 @@ whitespace removed before they are saved."
     (goto-char start)))
 
 (defun dyalog-next-defun (&optional limit)
+  "Move to the beginning of the next defun.
+If supplied, LIMIT limits the search."
   (let ((lim (or limit (point-max))))
     (when (looking-at dyalog-tradfn-header)
       (goto-char (match-end 0)))
@@ -486,7 +521,8 @@ whitespace removed before they are saved."
         (skip-chars-forward "^∇\r\n")))))
 
 (defun dyalog-beginning-of-defun (&optional arg)
-  "Move backward to the beginning of a function definition."
+  "Move backward to the beginning of a function definition.
+If supplied, ARG moves that many defuns back."
   (interactive "^p")
   (unless arg (setq arg 1))
   (if (< arg 0)
@@ -498,7 +534,8 @@ whitespace removed before they are saved."
       (cl-decf arg))))
 
 (defun dyalog-end-of-defun (&optional bound)
-  "Move forward to the end of a function definition."
+  "Move forward to the end of a function definition.
+If it is supplied, BOUND limits the search."
   ;; We can assume point is at the start of a defun when
   ;; this function is called.
   (let ((defunstart (point))
@@ -516,14 +553,14 @@ whitespace removed before they are saved."
           (if (looking-at dyalog-tradfn-header)
               (ignore-errors (backward-char 1))
               (ignore-errors (forward-char 1))))))))
-            
+
 
 
 (defun dyalog-dfun-name ()
-  (interactive)
   "If point is inside a dynamic function return the functions name.
 If point is inside an anonymous function, return \"\", and if it
 isn't inside a dynamic function, return nil"
+  (interactive)
   (save-excursion
     (let ((syn-table (copy-syntax-table dyalog-mode-syntax-table))
           (openbrace nil)
@@ -579,7 +616,7 @@ isn't inside a dynamic function, return nil"
 
 (defun dyalog-tradfn-info ()
   "Return a list of information on the tradfn defun point is in.
-This name is only valid if point isn't inside a dfn. The list
+This name is only valid if point isn't inside a dfn.  The list
 contains the name of the function a list containing the names of
 the arguments, a list containing localized names, the character
 position where the function header ends and the character
@@ -609,7 +646,7 @@ position where the defun ends."
                                         "\\(" "\\(" dyalog-name "\\)" "\\|" "\\(⎕[A-Za-z]+\\)\\)"
                                         "\\)*"))
                     (setq end-of-header (match-end 0)
-                          locals 
+                          locals
                           (split-string
                            (match-string-no-properties 0)
                            ";" 'omit-nulls)))
@@ -641,12 +678,9 @@ position where the defun ends."
 ;; allocations. Try just skipping matches that have already been fontified
 ;; instead, that way we could cheaply skip matches inside comments, strings
 ;; and keywords.
-(defun dyalog-string-set (strings)
-  (let ((hash (make-hash-table :test 'equal)))
-    (dolist (s strings hash) (puthash s t hash))))
-
 (defun dyalog-fontify-locals (start end)
-  "Fontify local names in tradfns."
+  "Fontify local names in tradfns.
+START and END signify the region to fontify."
   (save-excursion
     (let* ((beg-line (progn (goto-char start)(line-beginning-position)))
            (done nil)
@@ -656,7 +690,7 @@ position where the defun ends."
       ;; Remove old fontification here?
       (goto-char beg-line)
       (set 'info (dyalog-tradfn-info))
-      
+
       (while (not done)
         (if dfun-name
             (let ((dfunend end))
@@ -711,10 +745,11 @@ position where the defun ends."
 ;;; Syntax
 
 (defun dyalog-syntax-propertize-function (start end)
-  "Alter syntax table for escaped single quotes within strings."
+  "Alter syntax table for escaped single quotes within strings.
+START and END delimit the region to analyze."
   (save-excursion
     (goto-char start)
-      (while (and 
+      (while (and
               (search-forward "''" end 'no-error)
               (< (point) end))
         (goto-char (match-beginning 0))
@@ -761,20 +796,24 @@ position where the defun ends."
 
 ;;;###autoload
 (defun dyalog-session-connect (&optional host port)
-  "Connect to a Dyalog session"
+  "Connect to a Dyalog session.
+HOST (defaults to localhost) and PORT (defaults to 7979) give
+adress to connect to."
   (interactive (list (read-string "Host (default localhost):"
                                   "127.0.0.1")
                      (read-number "Port (default 7979):" 7979)))
   (make-comint "dyalog" (cons host port))
   (switch-to-buffer "*dyalog*")
-  (setq comint-scroll-show-maximum-output nil)
+  (setq-default comint-scroll-show-maximum-output nil)
   (define-key (current-local-map)
     (kbd"C-c C-e") 'dyalog-editor-edit-symbol-at-point)
   (run-hooks 'dyalog-session-connect-hook))
 
 ;;;###autoload
 (defun dyalog-editor-connect (&optional host port)
-  "Connect to a Dyalog process as an editor"
+  "Connect to a Dyalog process as an editor.
+HOST (defaults to localhost) and PORT (defaults to 8080) give
+adress to connect to."
   (interactive (list (read-string "Host (default localhost):"
                                   "127.0.0.1")
                      (read-number "Port (default 8080):" 8080)))
@@ -788,12 +827,15 @@ position where the defun ends."
        process))
 
 (defun dyalog-editor-sentinel (proc msg)
+  "Callback for socket errors.
+PROC is the socket/process and MSG is a string describing the event/error."
   (when (string= msg "connection broken by remote peer\n")
     (message (format "client %s has quit" proc))
     (setq dyalog-connections (delq proc dyalog-connections))))
 
 (defun dyalog-editor-receive (process output)
-  "Receive data from a Dyalog editor connection"
+  "Receive data from a Dyalog editor connection.
+PROCESS is the socket receiving data and OUTPUT is the data received."
   (with-current-buffer (process-buffer process)
     (save-excursion
       ;; Insert the text, advancing the process marker.
@@ -812,7 +854,8 @@ position where the defun ends."
 
 (defun dyalog-editor-munge-command (process start end)
   "Parse and delete a Dyalog editor command in the currently active region.
-START is the start of the command and END is where it ends."
+PROCESS is the socket receiving the command, START is the start
+of the command and END is where it ends."
   (cond ((looking-at "edit \\([^ []+\\)\\(\\[\\([0-9]+\\)\\]\\)?\0\\([^\0]*\\)\0")
          (let ((name (match-string 1))
                (linetext (match-string 3))
@@ -850,7 +893,11 @@ START is the start of the command and END is where it ends."
          (error "Ivalid message received"))))
 
 (defun dyalog-open-edit-buffer (process name src &optional lineno path)
-  "Open a buffer to edit object NAME with source SRC"
+  "Open a buffer to edit object from socket PROCESS named NAME with source SRC.
+PROCESS is the socket connection associated with the buffer.
+LINENO optionally moves point to the given line and PATH contains
+a string with the path to the source file associated with the
+edit buffer."
   (let* ((file-name (if (and path (not (string= path "")))
                         path
                       nil))
@@ -877,8 +924,11 @@ START is the start of the command and END is where it ends."
       (select-frame-set-input-focus (window-frame (selected-window))))))
 
 (defun dyalog-open-edit-array (process name kind src)
-  "Open a buffer to edit array NAME of type KIND with contents SRC.
-KIND is \"charvec\", \"charmat\", \"stringvec\" or \"array\"."
+  "Open a buffer to edit array.
+PROCESS is the socket connection associated with the buffer, NAME
+is the name of the array, KIND is the type of array and is
+\"charvec\", \"charmat\", \"stringvec\" or \"array\". SRC is the
+formatted contents of the array"
   (switch-to-buffer name)
   (setq buffer-undo-list t)
   (let ((pos (point))
@@ -901,7 +951,7 @@ KIND is \"charvec\", \"charmat\", \"stringvec\" or \"array\"."
     (select-frame-set-input-focus (window-frame (selected-window)))))
 
 (defun dyalog-connection-desc (process)
-  "Return a string describing the given process."
+  "Return a string describing PROCESS."
   (let ((version (process-get process 'dyalog-version))
         (wsid    (process-get process 'dyalog-wsid))
         (cwd     (process-get process 'dyalog-dir))
@@ -916,7 +966,8 @@ KIND is \"charvec\", \"charmat\", \"stringvec\" or \"array\"."
       (format "%s:%s" host port))))
 
 (defun dyalog-connection-select (&optional prompt)
-  "Select one of the active connections to Dyalog processes."
+  "Select one of the active connections to Dyalog processes.
+PROMPT is the prompt to show to the user."
   (let ((p (or prompt "Select a Dyalog process:"))
         (candidates (mapcar
                      'dyalog-connection-desc dyalog-connections)))
@@ -927,8 +978,8 @@ KIND is \"charvec\", \"charmat\", \"stringvec\" or \"array\"."
                        candidates :test 'string-equal)
              dyalog-connections))))
 
-(defun dyalog-editor-fix (&optional arg)
-  "Send the contents of the current buffer to the connected Dyalog process"
+(defun dyalog-editor-fix ()
+  "Send the contents of the current buffer to the connected Dyalog process."
   (interactive)
   (let ((process (dyalog-connection-select)))
     (setq dyalog-connection process)
@@ -937,7 +988,7 @@ KIND is \"charvec\", \"charmat\", \"stringvec\" or \"array\"."
     (process-send-string process "\e")))
 
 (defun dyalog-editor-edit (name)
-  "Ask the connected Dyalog process for the source of NAME and open it in an edit buffer"
+  "Open source of symbol NAME in an edit buffer."
   (interactive "s")
   (let ((process (dyalog-connection-select)))
     (setq dyalog-connection process)
