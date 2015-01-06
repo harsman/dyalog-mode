@@ -1029,10 +1029,6 @@ PROMPT is the prompt to show to the user."
             (insert str)
             (message "Made %s local in function %s" name fname)))))))
 
-(unless (fboundp 'setq-local)
-  (defmacro setq-local (var val)
-    `(set (make-local-variable ',var) ,val)))
-
 (eval-after-load "which-func"
   '(add-to-list 'which-func-modes 'dyalog-mode))
 
@@ -1043,28 +1039,29 @@ PROMPT is the prompt to show to the user."
 \\{dyalog-mode-map}"
   :group 'dyalog
   :syntax-table dyalog-mode-syntax-table
-  (setq-local syntax-propertize-function
-              #'dyalog-syntax-propertize-function)
-  (setq-local parse-sexp-ignore-comments t)
-  (setq-local parse-sexp-lookup-properties t)
-  (setq-local beginning-of-defun-function 'dyalog-beginning-of-defun)
-  (setq-local end-of-defun-function 'dyalog-end-of-defun)
+  (set (make-local-variable 'syntax-propertize-function)
+                            #'dyalog-syntax-propertize-function)
+  (set (make-local-variable 'parse-sexp-ignore-comments) t)
+  (set (make-local-variable 'parse-sexp-lookup-properties) t)
+  (set (make-local-variable 'beginning-of-defun-function)
+                            'dyalog-beginning-of-defun)
+  (set (make-local-variable 'end-of-defun-function) 'dyalog-end-of-defun)
   ;; Comments
-  (setq-local comment-start "⍝ ")
-  (setq-local comment-start-skip "⍝+\\s-*")
-  (setq-local comment-use-syntax t)
-  (setq-local comment-auto-fill-only-comments t)
-  (setq-local font-lock-defaults '(dyalog-font-lock-keywords))
+  (set (make-local-variable 'comment-start) "⍝ ")
+  (set (make-local-variable 'comment-start-skip) "⍝+\\s-*")
+  (set (make-local-variable 'comment-use-syntax) t)
+  (set (make-local-variable 'comment-auto-fill-only-comments) t)
+  (set (make-local-variable 'font-lock-defaults) '(dyalog-font-lock-keywords))
   (jit-lock-register #'dyalog-fontify-locals)
   ;; Dyalog always indents with spaces
-  (setq-local indent-tabs-mode nil)
-  (setq-local indent-line-function 'dyalog-indent-line)
+  (set (make-local-variable 'indent-tabs-mode) nil)
+  (set (make-local-variable 'indent-line-function) 'dyalog-indent-line)
   ;; Misc
-  (setq-local require-final-newline nil)
+  (set (make-local-variable 'require-final-newline) nil)
   ;; Socket connection
-  (setq-local dyalog-connection nil)
+  (set (make-local-variable 'dyalog-connection) nil)
   ;; Imenu and which-func-mode
-  (setq-local imenu-generic-expression
+  (set (make-local-variable 'imenu-generic-expression)
               dyalog-imenu-generic-expression)
   (add-hook 'which-func-functions 'dyalog-current-defun nil 'make-it-local)
   ;; Hooks
@@ -1076,7 +1073,7 @@ PROMPT is the prompt to show to the user."
 
 \\{dyalog-array-mode-map\\}"
   :syntax-table dyalog-array-mode-syntax-table
-  (setq-local require-final-newline nil))
+  (set (make-local-variable require-final-newline) nil))
 
 ;;;###autoload
 (add-to-list 'auto-mode-alist '("\\.apl\\'" . dyalog-mode))
