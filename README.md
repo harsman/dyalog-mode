@@ -86,7 +86,8 @@ as well.
 Getting started
 ---------------
 
-To get started, just open any text file with APL source code from Emacs.
+To get started, just open any text file with APL source code and a .dyalog
+extension in Emacs.
 
 You can also use Emacs as the editor inside a Dyalog APL session. First you
 need to load the code for this into Dyalog. Issue the following commands at

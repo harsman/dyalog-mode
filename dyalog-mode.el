@@ -1076,8 +1076,6 @@ PROMPT is the prompt to show to the user."
   (set (make-local-variable require-final-newline) nil))
 
 ;;;###autoload
-(add-to-list 'auto-mode-alist '("\\.apl\\'" . dyalog-mode))
-;;;###autoload
 (add-to-list 'auto-mode-alist '("\\.dyalog$" . dyalog-mode))
 
 
