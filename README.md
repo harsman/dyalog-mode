@@ -1,9 +1,9 @@
 Dyalog mode
 ===========
 
-Dyalog-mode is a major mode for editing Dyalog APL source code. It integrates
-with the Dyalog IDE so you can use Emacs instead of the built in Dyalog
-editor.
+Dyalog-mode is a GNU Emacs major mode for editing Dyalog APL source code. It
+integrates with the Dyalog IDE so you can use Emacs instead of the built in
+Dyalog editor.
 
 Features
 --------
