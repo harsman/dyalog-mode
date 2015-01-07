@@ -325,68 +325,66 @@ together with AltGr produce the corresponding apl character in APLCHARS."
           0
         indent))))
 
-(defun dyalog-indent-cond-generic (at-pause indented blockcount funcount)
+(defun dyalog-indent-cond-generic (at-pause blockcount funcount)
   "Logic to use when searching for a point to calculate indent relative to.
 AT-PAUSE is t if we are currently at a pausing indentation
 keyword, i.e. a keyword that is indented at the same level as the
 parent block, such as :Case.
-INDENTED is always nil.
 BLOCKCOUNT is the number of currently open statement blocks.
 FUNCOUNT is the number of currently open function blocks."
-  (cond ((looking-at dyalog-indent-stop)
-         (if (and (eq blockcount 0) (eq funcount 0) (not at-pause))
-             (set 'indented (current-indentation))
-           (set 'blockcount (+ 1 blockcount))))
+  (let ((indent nil))
+    (cond ((looking-at dyalog-indent-stop)
+           (if (and (eq blockcount 0) (eq funcount 0) (not at-pause))
+               (set 'indent (current-indentation))
+             (set 'blockcount (+ 1 blockcount))))
 
-        ((looking-at dyalog-indent-start)
-         (if (eq blockcount 0)
-             (set 'indented (if at-pause
-                                (current-indentation)
-                              (dyalog-indent 0)))
-           (set 'blockcount (- blockcount (if (looking-at
-                                               dyalog-block-start) 1 0)))))
+          ((looking-at dyalog-indent-start)
+           (if (eq blockcount 0)
+               (set 'indent (if at-pause
+                                  (current-indentation)
+                                (dyalog-indent 0)))
+             (set 'blockcount (- blockcount (if (looking-at
+                                                 dyalog-block-start) 1 0)))))
 
-        ((looking-at dyalog-naked-nabla)
+          ((looking-at dyalog-naked-nabla)
            (set 'funcount (+ 1 funcount)))
 
-        ((looking-at (concat "\\s-*" dyalog-tradfn-header))
-         (if (eq funcount 0)
-             (set 'indented (if at-pause
-                                (current-indentation)
-                              (skip-chars-forward "∇ ")))
-           (set 'funcount (- funcount 1))))
+          ((looking-at (concat "\\s-*" dyalog-tradfn-header))
+           (if (eq funcount 0)
+               (set 'indent (if at-pause
+                                  (current-indentation)
+                                (skip-chars-forward "∇ ")))
+             (set 'funcount (- funcount 1))))
 
-        ((bobp)
-         (set 'indented dyalog-leading-spaces)))
-  (list indented blockcount funcount))
+          ((bobp)
+           (set 'indent dyalog-leading-spaces)))
+    (list indent blockcount funcount)))
 
-(defun dyalog-indent-cond-case (at-pause indented blockcount funcount)
+(defun dyalog-indent-cond-case (at-pause blockcount funcount)
   "Logic to use when indenting a :Case keyword.
 When indenting a :Case, we should indent to any
 matching :Trap or :Select.
 AT-PAUSE is t if we are currently at a pausing indentation
 keyword, i.e. a keyword that is indented at the same level as the
 parent block, such as :Case.
-INDENTED is always nil.
 BLOCKCOUNT is the number of currently open statement blocks.
 FUNCOUNT is the number of currently open function blocks."
   (let ((dyalog-indent-start "^\\s-*:\\(Select\\|Trap\\)")
         (dyalog-indent-stop "^\\s-*:End\\(Select\\|Trap\\)"))
-    (dyalog-indent-cond-generic at-pause indented blockcount funcount)))
+    (dyalog-indent-cond-generic at-pause blockcount funcount)))
 
-(defun dyalog-indent-cond-header (at-pause indented blockcount funcount)
+(defun dyalog-indent-cond-header (at-pause blockcount funcount)
   "Logic to use when indenting a function header.
 When indenting a header, we should indent to any
 preceeding :Class or :Namespace.
 AT-PAUSE is t if we are currently at a pausing indentation
 keyword, i.e. a keyword that is indented at the same level as the
 parent block, such as :Case.
-INDENTED is always nil.
 BLOCKCOUNT is the number of currently open statement blocks.
 FUNCOUNT is the number of currently open function blocks."
   (let ((dyalog-indent-start "^\\s-*:\\(Class\\|Namespace\\)")
         (dyalog-indent-stop  "^\\s-*:End\\(Class\\|Namespace\\)"))
-    (dyalog-indent-cond-generic at-pause indented blockcount funcount)))
+    (dyalog-indent-cond-generic at-pause blockcount funcount)))
 
 (defun dyalog-search-indent (at-pause cond-fun blockcount funcount)
   "Search backwards for a point to calculate indentation relative to.
@@ -401,7 +399,7 @@ FUNCOUNT is the number of currently open function blocks."
       (while (not indented)
         (beginning-of-line)
         (forward-line -1)
-        (set 'ret (funcall cond-fun at-pause indented blockcount funcount))
+        (set 'ret (funcall cond-fun at-pause blockcount funcount))
         (set 'indented (car ret))
         (set 'blockcount (cadr ret))
         (set 'funcount (cl-caddr ret)))
