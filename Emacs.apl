@@ -443,7 +443,8 @@
     }
 
     splitlines←{
-        (⍵∊⎕UCS 10 13)split ⍵
+        s←⍵~⎕UCS 13
+        (s∊⎕UCS 10)split s
     }
 
     joinlines←{

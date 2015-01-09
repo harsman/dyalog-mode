@@ -816,7 +816,8 @@ adress to connect to."
                                        :buffer bufname
                                        :family 'ipv4 :host host :service port
                                        :sentinel 'dyalog-editor-sentinel
-                                       :filter 'dyalog-editor-receive)))
+                                       :filter 'dyalog-editor-receive
+                                       :coding 'utf-8-dos)))
        (push process dyalog-connections)
        process))
 
