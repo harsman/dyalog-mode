@@ -21,7 +21,7 @@ Dyalog mode itself works on all platforms supported by Emacs, but the
 integration with the Dyalog session requires functionality only present in the
 GUI version of the Dyalog IDE, so that part only works on Windows. However,
 you can still connect Emacs and Dyalog when running on Linux, you just have to
-manually invoke editing in Emacs by calling Emacs.editor.edit 'funcname'
+manually invoke editing in Emacs by calling `Emacs.editor.edit 'funcname'`.
 
 Installation
 ------------
@@ -77,7 +77,7 @@ installed. If you install manually, you have to install dependencies manually
 as well.
 
 * `cl-lib` is installed by default in Emacs 24.3 and newer. It provides
-  various Common Lisp forms, but unlike the older `cl`library, it doen't
+  various Common Lisp forms, but unlike the older `cl` library, it doen't
   pollute the global namespace. If you have an older Emacs version, without
   `cl-lib`, you can install it from the [GNU ELPA](http://elpa.gnu.org/)
   repository by using `package.el`, or you can get it manually
@@ -105,13 +105,13 @@ available, start Emacs and connect to it from the Dyalog session. The call to
 Emacs" with the keyboard shortcut `Ctrl+Alt+Enter`.
 
 To edit a function, class or namespace in Emacs, just place the cursor on a
-name and press Ctrl+Alt+Enter. Once you are happy with your changes, press `C-c
-C-c` in Emacs to fix the changes back in the Dyalog session. While you are
-editing in Emacs, you can press C-c C-e to edit the name at point. You can
-also open arrays in Emacs, although currently no arrays are editable, i.e.
-they are all read-only.
+name in the Dyalog session or editor and press `Ctrl+Alt+Enter`. Once you are
+happy with your changes, press `C-c C-c` in Emacs to fix the changes back in
+the Dyalog session. While you are editing in Emacs, you can press `C-c C-e` to
+edit the name at point. You can also open arrays in Emacs, although currently
+no arrays are editable, i.e. they are all read-only.
 
-If you edit a namespace or class that has been loaded with Dyalogs SALT
+If you edit a namespace or class that has been loaded with Dyalog's SALT
 toolkit (e.g. by using `]load` at the session prompt), the path to the source
 file will be sent to Emacs, so you can also save directly from there. If Emacs
 doesn't know the path to the source file, it will ask you to name a file when
@@ -151,16 +151,16 @@ keyboard shortcut. For more information, see the built in Dyalog help for the
 Accelerator property.
 
 If you use something other than SALT to load source code into the session, you
-can set Emacs.editor.getPath to the name of a function that given a name
+can set `Emacs.editor.getPath` to the name of a function that given a name
 (relative to root), will return the path to the corresponding source file.
 
-The variable Emacs.editor.onMissing is the name of a function to call when
+The variable `Emacs.editor.onMissing` is the name of a function to call when
 trying to edit a name that doesn't exist. It is called with the name as an
 argument and should try to establish the corresponding function, namespace or
 class. That way, you can press edit on names that haven't been established in
 the session yet.
 
-If Emacs.editor.boxing is true, arrays will be displayed with boxing inside
+If `Emacs.editor.boxing` is true, arrays will be displayed with boxing inside
 Emacs, using the DISPLAY function from the display workspace that comes with
 Dyalog.
 
@@ -182,3 +182,6 @@ Names inside dynamic functions are currently not highlighted as local names.
 
 You cannot invoke Emacs to edit the current function suspended in
 the debugger from inside the debugger.
+
+Traditional operators are currently not supported, they can be edited, but can
+cause errors in indentation and the defun navigation commands won't work.
