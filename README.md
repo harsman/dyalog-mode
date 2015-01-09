@@ -132,7 +132,7 @@ which you produce by pressing AltGr+x, isn't confused with C-M⊃, you would
 add the following to your init file:
 
 ```lisp
-(dyalog-fix-algr-chars (current-global-map) "⊃" "x")
+(dyalog-fix-altgr-chars (current-global-map) "⊃" "x")
 ```
 
 Configuration
