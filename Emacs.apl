@@ -10,9 +10,6 @@
         ⍝ onMissing contains the name of a function to call when the name that
         ⍝ is being edited doesn't exist. It recives the name being edited as
         ⍝ right argument and is expected to establish the name in the session.
-        ⍝ The return value should be the full path to the source file of the
-        ⍝ name. If the source file is unknown or missing, the function should
-        ⍝ return ''. The provided name is always relative to the root.
         onMissing←''
         ⍝ getPath contains the name of a function to call to get the path to
         ⍝ the source of a given name. It receives a name as right argument and
@@ -265,8 +262,8 @@
               :OrIf noload
                   src←path←''
               :Else
-                  path←(#.⍎'#.',onMissing)name
-                  src←⊃1 getsource name
+                  (#.⍎'#.',onMissing)name
+                  src path←1 getsource name
               :EndIf
           :CaseList 3 4
               src←##.joinlines ##.cm2v #.⎕CR name
