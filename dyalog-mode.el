@@ -819,8 +819,9 @@ adress to connect to."
                                        :sentinel 'dyalog-editor-sentinel
                                        :filter 'dyalog-editor-receive
                                        :coding 'utf-8-dos)))
-       (push process dyalog-connections)
-       process))
+    (push process dyalog-connections)
+    (set-process-query-on-exit-flag process nil)
+    process))
 
 (defun dyalog-editor-sentinel (proc msg)
   "Callback for socket errors.
