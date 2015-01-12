@@ -1072,7 +1072,8 @@ PROMPT is the prompt to show to the user."
 
 \\{dyalog-array-mode-map\\}"
   :syntax-table dyalog-array-mode-syntax-table
-  (set (make-local-variable require-final-newline) nil))
+  (set (make-local-variable 'require-final-newline) nil)
+  (set (make-local-variable 'dyalog-connection) nil))
 
 ;;;###autoload
 (add-to-list 'auto-mode-alist '("\\.dyalog$" . dyalog-mode))
