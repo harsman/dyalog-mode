@@ -183,6 +183,14 @@
                       recvbuf,←i↓raw
                       state←'src'
                   :EndIf
+              :Case 'focus'
+                  :If complete
+                      focus
+                      recvbuf←⍬
+                  :Else
+                      recvbuf,←i↓raw
+                      state←'focus'
+                  :EndIf
               :Else
                   ⎕←'Received invalid command: ',command
               :EndSelect
@@ -199,6 +207,13 @@
           :Case 'src'
               :If complete
                   sendsource socket(i↓raw)(marker-i)
+                  recvbuf←⍬
+              :Else
+                  recvbuf,←i↓raw
+              :EndIf
+          :Case 'focus'
+              :If complete
+                  focus
                   recvbuf←⍬
               :Else
                   recvbuf,←i↓raw
@@ -224,6 +239,31 @@
           fullname←##.bytes2text recvbuf,raw[⍳marker-1]
           name lineno←parsename fullname
           edit name lineno
+        ∇
+
+        ∇ {r}←focus;_;ShowWindow;GetWindowThreadProcessId;GetForegroundWindow;GetCurrentThreadId;tid1;tid2;SW_SHOWNORMAL;handle;AttachThreadInput;BringWindowToTop
+          :If ~##.isunix
+              ⎕NA'I user32|ShowWindow I I'
+              ⎕NA'I user32|GetWindowThreadProcessId I I'
+              ⎕NA'I kernel32|GetCurrentThreadId'
+              ⎕NA'I user32|GetForegroundWindow'
+              ⎕NA'I user32|AttachThreadInput I I I'
+              ⎕NA'I user32|BringWindowToTop I'
+              tid1←GetWindowThreadProcessId GetForegroundWindow 0
+              tid2←GetCurrentThreadId
+              SW_SHOWNORMAL←1
+              handle←'⎕SE'⎕WG'Handle'
+              :If tid1≠tid2
+                  _←AttachThreadInput tid1 tid2 1
+                  _←BringWindowToTop handle
+                  _←ShowWindow handle SW_SHOWNORMAL
+                  _←AttachThreadInput tid1 tid2 0
+              :Else
+                  _←BringWindowToTop handle
+                  _←ShowWindow handle SW_SHOWNORMAL
+              :EndIf
+              ⎕NQ'⎕SE' 'GotFocus'
+          :EndIf
         ∇
 
         ∇ {r}←sendgreeting socket;version;wsid;cwd;body

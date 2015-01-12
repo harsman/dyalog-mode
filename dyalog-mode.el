@@ -46,6 +46,7 @@
     (define-key map (kbd"M-RET") 'comment-indent-new-line)
     (define-key map (kbd"M-f") 'dyalog-ediff-forward-word)
     (define-key map (kbd"C-c C-c") 'dyalog-editor-fix)
+    (define-key map (kbd"C-c C-q") 'dyalog-editor-fix-and-quit)
     (define-key map (kbd"C-c C-e") 'dyalog-editor-edit-symbol-at-point)
     (define-key map (kbd"C-c C-l") 'dyalog-toggle-local)
     map)
@@ -973,14 +974,26 @@ PROMPT is the prompt to show to the user."
                        candidates :test 'string-equal)
              dyalog-connections))))
 
-(defun dyalog-editor-fix ()
+(defun dyalog-editor-fix (&optional process)
   "Send the contents of the current buffer to the connected Dyalog process."
   (interactive)
-  (let ((process (dyalog-connection-select)))
+  (let ((process (or process (dyalog-connection-select))))
     (setq dyalog-connection process)
     (process-send-string process "fx ")
     (process-send-region process (point-min) (point-max))
     (process-send-string process "\e")))
+
+(defun dyalog-editor-fix-and-quit ()
+  "Send the contents of the current buffer to the connected
+  Dyalog process, kill the buffer and move focus to the Dyalog
+  session."
+  (interactive)
+  (let ((process (dyalog-connection-select))
+        (kill-buffer-query-functions ()))
+    (dyalog-editor-fix process)
+    ;; TODO: We really should verify that the fix is successful here...
+    (when (kill-buffer)
+      (process-send-string process "focus \e"))))
 
 (defun dyalog-editor-edit (name)
   "Open source of symbol NAME in an edit buffer."
