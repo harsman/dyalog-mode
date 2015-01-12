@@ -46,11 +46,11 @@ first. Add the following to your
              '("melpa" . "http://melpa.org/packages/") t)
 ```
 
-Restart Emacs, and update the package cache, by running:
+Restart Emacs and update the package cache by running:
 
 `M-x package-refresh-contents RET`
 
-You can now install Dyalog mode, by running `M-x package-install`, as above.
+You can now install Dyalog mode by running `M-x package-install`, as above.
 
 #### Installing in older versions of Emacs ####
 
