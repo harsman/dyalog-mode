@@ -28,11 +28,11 @@
         ∇
 
         ∇ {r}←edit rarg;name;lineno;_;src;path;shortname
-          
+
           :If 1=≡rarg
               rarg←,⊂rarg
           :EndIf
-          
+
           name lineno←2↑rarg,¯1
 
           :If 0=⊃#.⎕NC name
@@ -77,16 +77,24 @@
           '⎕SE.popup.emacs'⎕WS'Accelerator'acc
         ∇
 
-        ∇ {msg}←sessionedit msg;name;pos;log;focus;line;symbolalphabet;lineno
+        ∇ {msg}←sessionedit msg;name;pos;log;focus;line;symbolalphabet;lineno;si
           name pos log←'⎕SE'⎕WG'CurObj' 'CurPos' 'Log'
           focus←2 ⎕NQ'.' 'GetFocus'
 
           :If '⎕SE'≡focus
-              line←(⊃pos)⊃log
-              ⍝ Below line is actually broken since symbols can contain
-              ⍝ diacritics, but I'm lazy
-              symbolalphabet←⎕A,⎕D,'abcdefghijklmnopqrstuvwxyz_∆'
-              lineno←{'['≠⊃⍵:¯1 ⋄ 1+⊃2⊃⎕VFI ⎕D↑##.slurp 1↓⍵}symbolalphabet↓##.slurp(1↓pos)↓line
+              :If 0∊⍴name
+              :AndIf 1<⍴si←⎕SI
+                  ⍝ We pressed edit on whitespace in the debugger, edit the
+                  ⍝ suspended function
+                  name←⊃1↓⎕SI
+                  lineno←¯1
+              :Else
+                  line←(⊃pos)⊃log
+                  ⍝ Below line is actually broken since symbols can contain
+                  ⍝ diacritics, but I'm lazy
+                  symbolalphabet←⎕A,⎕D,'abcdefghijklmnopqrstuvwxyz_∆'
+                  lineno←{'['≠⊃⍵:¯1 ⋄ 1+⊃2⊃⎕VFI ⎕D↑##.slurp 1↓⍵}symbolalphabet↓##.slurp(1↓pos)↓line
+              :EndIf
           :Else
               ⍝ Inside the editor we can't get the full text around the
               ⍝ cursor (including any line number within brackets), so we just
@@ -109,7 +117,7 @@
               elisp←'(progn ',lispconnect,'(iconify-frame nil))'
               r←''
               :If ##.isunix
-                  _←⎕SH 'emacs --eval "',elisp,'" &'
+                  _←⎕SH'emacs --eval "',elisp,'" &'
               :Else
                   ⎕CMD('runemacs --eval "',elisp,'"')''
               :EndIf
@@ -179,23 +187,23 @@
                   ⎕←'Received invalid command: ',command
               :EndSelect
 
-        :Case 'fx'
-            :If complete
-                fix socket raw marker
-                state←'ready'
-                recvbuf←⍬
-            :Else
-                recvbuf,←raw
-            :EndIf
+          :Case 'fx'
+              :If complete
+                  fix socket raw marker
+                  state←'ready'
+                  recvbuf←⍬
+              :Else
+                  recvbuf,←raw
+              :EndIf
 
-        :Case 'src'
-            :If complete
-                sendsource socket(i↓raw)(marker-i)
-                recvbuf←⍬
-            :Else
-                recvbuf,←i↓raw
-            :EndIf
-        :EndSelect
+          :Case 'src'
+              :If complete
+                  sendsource socket(i↓raw)(marker-i)
+                  recvbuf←⍬
+              :Else
+                  recvbuf,←i↓raw
+              :EndIf
+          :EndSelect
         ∇
 
         ∇ {r}←fix args;socket;raw;marker;src;header
@@ -222,8 +230,8 @@
           version←2⊃'.'⎕WG'AplVersion'
           wsid←⎕WSID
           cwd←##.getcurrentdir
-          body←nl ##.joinlines'version' 'wsid' 'dir' {⍺,': ',,⍕⍵}¨version wsid cwd
-          send socket ('dyaloghello ',nl,body,nl,eom)
+          body←nl ##.joinlines'version' 'wsid' 'dir'{⍺,': ',,⍕⍵}¨version wsid cwd
+          send socket('dyaloghello ',nl,body,nl,eom)
         ∇
 
         ∇ {r}←close msg
@@ -426,50 +434,50 @@
         ∇
     :EndNamespace
 
-    listen←{
-        sessionport editorport←2↑⍵,7979 8080
-        a←session.listen sessionport
-        a,editor.listen editorport
-    }
+      listen←{
+          sessionport editorport←2↑⍵,7979 8080
+          a←session.listen sessionport
+          a,editor.listen editorport
+      }
 
-    join←{
-        0=⍴,⍵:⍵
-        (-⍴,⍺)↓⊃,/⍵,¨⊂⍺
-    }
+      join←{
+          0=⍴,⍵:⍵
+          (-⍴,⍺)↓⊃,/⍵,¨⊂⍺
+      }
 
-    split←{
-        p←⊃1↑⍵
-        1↓¨(1,⍺)⊂p,⍵
-    }
+      split←{
+          p←⊃1↑⍵
+          1↓¨(1,⍺)⊂p,⍵
+      }
 
-    splitlines←{
-        s←⍵~⎕UCS 13
-        (s∊⎕UCS 10)split s
-    }
+      splitlines←{
+          s←⍵~⎕UCS 13
+          (s∊⎕UCS 10)split s
+      }
 
-    joinlines←{
-        (⎕UCS 13 10)join ⍵
-    }
+      joinlines←{
+          (⎕UCS 13 10)join ⍵
+      }
 
     cm2v←{(+/∨\' '≠⌽⍵)↑¨↓⍵}
 
-    tolower←{
-        s←⍵
-        i←⎕A⍳s
-        hits←i≤⊃⍴⎕A
-        s[hits/⍳⍴s]←'abcdefghijklmnopqrstuvwxyz'[hits/i]
-        s
-    }
+      tolower←{
+          s←⍵
+          i←⎕A⍳s
+          hits←i≤⊃⍴⎕A
+          s[hits/⍳⍴s]←'abcdefghijklmnopqrstuvwxyz'[hits/i]
+          s
+      }
 
-    text2bytes←{
-        ⎕AVU←transtable
-        'UTF-8'⎕UCS ⍵
-    }
+      text2bytes←{
+          ⎕AVU←transtable
+          'UTF-8'⎕UCS ⍵
+      }
 
-    bytes2text←{
-        ⎕AVU←transtable
-        'UTF-8'⎕UCS ⍵
-    }
+      bytes2text←{
+          ⎕AVU←transtable
+          'UTF-8'⎕UCS ⍵
+      }
 
     slurp←{(+/∧\⍵∊⍺)⍺⍺ ⍵}
 
