@@ -632,15 +632,13 @@ position where the defun ends."
                  (locals nil)
                  (end-of-defun 0))
             (dyalog-end-of-defun)
-            (set 'end-of-defun (point))
+            (setq end-of-defun (point))
             (if (< end-of-defun start-pos)
                 (list "" nil nil 0 0)
               (progn
                 (goto-char localstart)
-                (if (looking-at (concat dyalog-name "\\(;"
-                                        "\\(" "\\(" dyalog-name "\\)" "\\|" "\\(⎕[A-Za-z]+\\)\\)"
-                                        "\\)*"))
-                    (setq end-of-header (match-end 0)
+                (if (looking-at ".+$")
+                    (setq end-of-header (line-beginning-position)
                           locals
                           (split-string
                            (match-string-no-properties 0)
