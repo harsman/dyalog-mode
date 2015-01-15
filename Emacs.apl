@@ -7,6 +7,7 @@
         nl←⎕UCS 10
         recvbuf←⍬
         state←'ready'
+        saltdelim←⎕UCS 253⊃##.transtable
         ⍝ onMissing contains the name of a function to call when the name that
         ⍝ is being edited doesn't exist. It recives the name being edited as
         ⍝ right argument and is expected to establish the name in the session.
@@ -283,13 +284,26 @@
           ∘
         ∇
 
-        ∇ path←getpath name
-          :If 0≠#.⎕NC name,'.SALT_Data.SourceFile'
-              path←#.⍎name,'.SALT_Data.SourceFile'
+        ∇ path←getpath name;saltpath
+          :If ~0∊⍴saltpath←getSALTpath name
+              path←saltpath
           :ElseIf 3≠⎕NC'#.',getPath
               path←''
           :Else
               path←(#.⍎'#.',getPath)name
+          :EndIf
+        ∇
+
+        ∇ path←getSALTpath name;src;tagline
+
+          :If 0≠#.⎕NC name,'.SALT_Data.SourceFile'
+              path←#.⍎name,'.SALT_Data.SourceFile'
+          :ElseIf 3 4∊⍨#.⎕NC name
+              src←##.leftalign #.⎕CR name
+              tagline←⊃##.cm2v (src ##.startswith '⍝∇⍣')⌿src
+              path←{(∧\⍵≠saltdelim)/⍵}(1+⍴'⍝∇⍣')↓tagline
+          :Else
+              path←''
           :EndIf
         ∇
 
@@ -474,52 +488,60 @@
         ∇
     :EndNamespace
 
-      listen←{
-          sessionport editorport←2↑⍵,7979 8080
-          a←session.listen sessionport
-          a,editor.listen editorport
-      }
+    listen←{
+        sessionport editorport←2↑⍵,7979 8080
+        a←session.listen sessionport
+        a,editor.listen editorport
+    }
 
-      join←{
-          0=⍴,⍵:⍵
-          (-⍴,⍺)↓⊃,/⍵,¨⊂⍺
-      }
+    join←{
+        0=⍴,⍵:⍵
+        (-⍴,⍺)↓⊃,/⍵,¨⊂⍺
+    }
 
-      split←{
-          p←⊃1↑⍵
-          1↓¨(1,⍺)⊂p,⍵
-      }
+    split←{
+        p←⊃1↑⍵
+        1↓¨(1,⍺)⊂p,⍵
+    }
 
-      splitlines←{
-          s←⍵~⎕UCS 13
-          (s∊⎕UCS 10)split s
-      }
+    splitlines←{
+        s←⍵~⎕UCS 13
+        (s∊⎕UCS 10)split s
+    }
 
-      joinlines←{
-          (⎕UCS 13 10)join ⍵
-      }
+    joinlines←{
+        (⎕UCS 13 10)join ⍵
+    }
 
     cm2v←{(+/∨\' '≠⌽⍵)↑¨↓⍵}
 
-      tolower←{
-          s←⍵
-          i←⎕A⍳s
-          hits←i≤⊃⍴⎕A
-          s[hits/⍳⍴s]←'abcdefghijklmnopqrstuvwxyz'[hits/i]
-          s
-      }
+    tolower←{
+        s←⍵
+        i←⎕A⍳s
+        hits←i≤⊃⍴⎕A
+        s[hits/⍳⍴s]←'abcdefghijklmnopqrstuvwxyz'[hits/i]
+        s
+    }
 
-      text2bytes←{
-          ⎕AVU←transtable
-          'UTF-8'⎕UCS ⍵
-      }
+    text2bytes←{
+        ⎕AVU←transtable
+        'UTF-8'⎕UCS ⍵
+    }
 
-      bytes2text←{
-          ⎕AVU←transtable
-          'UTF-8'⎕UCS ⍵
-      }
+    bytes2text←{
+        ⎕AVU←transtable
+        'UTF-8'⎕UCS ⍵
+    }
 
     slurp←{(+/∧\⍵∊⍺)⍺⍺ ⍵}
+
+    leftalign←{(+/∧\⍵=' ')⌽⍵}
+
+    startswith←{
+        s←,⍵
+        2=⍴⍴⍺:(((1↑⍴⍺),⍴s)↑⍺)∧.=s
+        s≡(⍴s)↑⍺
+    }
 
     ∇ r←getcurrentdir
       :If isunix
