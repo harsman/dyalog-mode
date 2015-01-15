@@ -627,7 +627,7 @@ position where the defun ends."
                  (larg (match-string-no-properties 3))
                  (rarg (match-string-no-properties 4))
                  (localstart (match-end 5))
-                 (end-of-header (match-end 0))
+                 (end-of-header (line-end-position))
                  (args (remq nil (list retval larg rarg)))
                  (locals nil)
                  (end-of-defun 0))
@@ -636,13 +636,10 @@ position where the defun ends."
             (if (< end-of-defun start-pos)
                 (list "" nil nil 0 0)
               (progn
-                (goto-char localstart)
-                (if (looking-at ".+$")
-                    (setq end-of-header (line-beginning-position)
-                          locals
-                          (split-string
-                           (match-string-no-properties 0)
-                           ";" 'omit-nulls)))
+                (setq locals
+                      (split-string
+                       (buffer-substring-no-properties localstart end-of-header)
+                       ";" 'omit-nulls))
                 (list tradfn-name args locals end-of-header end-of-defun))))
         (list "" nil nil 0 0)))))
 
