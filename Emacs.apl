@@ -398,7 +398,7 @@
           callbacks,←⊂('Event' 'TCPRecv' '#.Emacs.session.receive')
           callbacks,←⊂('Event' 'TCPError' '#.Emacs.session.error')
           callbacks,←⊂('Event' 'TCPClose' '#.Emacs.session.close')
-          sockname ⎕WC'TCPSocket' ''(port)('Style' 'Raw'),callbacks ⍝⋄ _←⎕DQ'.'
+          sockname ⎕WC'TCPSocket' ''(port)('Style' 'Raw'),callbacks
           r←sockname
         ∇
 
