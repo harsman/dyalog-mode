@@ -568,13 +568,15 @@ isn't inside a dynamic function, return nil"
       (cond
        ((eq context 'string) (re-search-backward "\\s\""))
        ((eq context 'comment) (re-search-backward "\\s<")))
-      (set 'openbrace
+      (setq openbrace
            (with-syntax-table syn-table
              (condition-case err
                  (goto-char (scan-lists (point) -1 1))
                (scan-error nil))))
-      (let* ((ret-and-larg (concat "\\(?:[A-Za-z]+ *← *\\|\\(?1:{[a-zA-Z]+}\\) *← *\\)?"
-                                   "\\(?:[A-Za-z_]+ +\\|\\(?2:{[A-Za-z_]+}\\) *\\)"))
+      (let* ((ret-and-larg (concat "\\(?:" dyalog-name "\\|\\(?1:{"
+                                   dyalog-name "}\\) *← *\\)?"
+                                   "\\(?:" dyalog-name "\\|\\(?2:{"
+                                   dyalog-name "}\\) *\\)"))
              (in-dfun-p
               (and openbrace
                    (not
@@ -590,7 +592,7 @@ isn't inside a dynamic function, return nil"
             (progn
               (goto-char openbrace)
               (let ((dfun-name
-                     (if (looking-back (concat "\\(" dyalog-name "\\) *← *")
+                     (if (looking-back (concat "\\_<\\(" dyalog-name "\\) *← *")
                                        (line-beginning-position)
                                        t)
                          (match-string-no-properties 1)
