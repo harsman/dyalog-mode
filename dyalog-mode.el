@@ -797,6 +797,7 @@ adress to connect to."
                      (read-number "Port (default 7979):" 7979)))
   (make-comint "dyalog" (cons host port))
   (switch-to-buffer "*dyalog*")
+  (set-buffer-process-coding-system 'utf-8-dos 'utf-8-dos)
   (setq-default comint-scroll-show-maximum-output nil)
   (define-key (current-local-map)
     (kbd"C-c C-e") 'dyalog-editor-edit-symbol-at-point)
