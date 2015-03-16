@@ -470,7 +470,7 @@
               dm←⎕DM
               err←(('⍎'=⊃⊃dm)∧~'⍎'∊data)↓1⊃dm
               cursor←3⊃dm
-              :If 'receive[19] '≡12↑stack←2⊃dm
+              :If 'receive[25] '≡12↑stack←2⊃dm
                   stack←prompt,12↓stack
                   cursor←6↓cursor
               :EndIf
