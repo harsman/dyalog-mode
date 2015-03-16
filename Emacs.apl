@@ -440,6 +440,10 @@
               :AndIf 0=1⊃1⊃#.⎕AT data
                   #.⍎data
                   z←0 0⍴''
+              :ElseIf ∨/'⎕WC'⍷data
+              :OrIf ∨/'⎕WS'⍷data
+                  #.⍎data
+                  z←0 0⍴''
               :Else
                   z←#.⍎data
               :EndIf
