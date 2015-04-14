@@ -755,16 +755,27 @@ START and END delimit the region to analyze."
                                    (string-to-syntax ".")))
           (goto-char endpos)))))
 
-(defun dyalog-in-keyword (&optional pt)
-  "Return t if PT (defaults to point) is inside a keyword (e.g. :If)."
+(defun dyalog-current-keyword (&optional pt)
+  "Return the current keyword if PT is in a keyword (e.g. :If).
+PT is optional and defaults to point. If PT isn't in a keyword,
+return nil."
   (save-excursion
     (when pt
       (goto-char pt))
     (skip-chars-backward "A-Za-z:")
     (skip-syntax-backward "-")
-    (and (or (looking-at dyalog-keyword-regex)
-             (looking-at dyalog-middle-keyword-regex))
-         (not (dyalog-dfun-name)))))
+    (let ((keyword
+           (if (or (looking-at dyalog-keyword-regex)
+                   (looking-at dyalog-middle-keyword-regex))
+               (string-trim (match-string-no-properties 0))
+             nil)))
+      (if (dyalog-dfun-name)
+          nil
+        keyword))))
+
+(defun dyalog-in-keyword (&optional pt)
+  "Return t if PT (defaults to point) is inside a keyword (e.g. :If)."
+  (not (not (dyalog-current-keyword))))
 
 (defun dyalog-in-comment-or-string (&optional pt)
   "Return t if PT (defaults to point) is inside a string literal or a comment."
