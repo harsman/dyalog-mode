@@ -640,9 +640,8 @@ position where the defun ends."
               (progn
                 (setq locals
                       (split-string
-                       (string-trim
-                        (buffer-substring-no-properties localstart end-of-header))
-                       ";" 'omit-nulls))
+                       (buffer-substring-no-properties localstart end-of-header)
+                       ";" 'omit-nulls "[ \t\r\n]+"))
                 (list tradfn-name args locals end-of-header end-of-defun))))
         (list "" nil nil 0 0)))))
 
