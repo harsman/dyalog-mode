@@ -180,8 +180,9 @@ algorithm and is therefore very slow.
 
 Names inside dynamic functions are currently not highlighted as local names.
 
-You cannot invoke Emacs to edit the current function suspended in
-the debugger from inside the debugger.
+In versions of Dyalog before 14.0, if you invoke Emacs to edit the current
+function suspended in the debugger from inside the debugger and change that
+function, the debuggers display of the function's source code isn't updated.
 
 Traditional operators are currently not supported, they can be edited, but can
 cause errors in indentation and the defun navigation commands won't work.
