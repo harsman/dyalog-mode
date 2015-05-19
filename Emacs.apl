@@ -35,6 +35,8 @@
           :EndIf
 
           name lineno←2↑rarg,¯1
+          ⍝ Remove explicit reference to root, if any
+          name←(2×'#.'≡2↑name)↓name
 
           :If 0=⊃#.⎕NC name
               ⍝ Trigger loading of code if the name isn't established in the
