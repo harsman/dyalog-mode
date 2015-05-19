@@ -80,23 +80,32 @@
           '⎕SE.popup.emacs'⎕WS'Accelerator'acc
         ∇
 
-        ∇ {msg}←sessionedit msg;name;pos;log;focus;line;symbolalphabet;lineno;si
+        ∇ {msg}←sessionedit msg;name;pos;log;focus;line;aftercursor;symbolalphabet;lineno;si
           name pos log←'⎕SE'⎕WG'CurObj' 'CurPos' 'Log'
           focus←2 ⎕NQ'.' 'GetFocus'
 
           :If '⎕SE'≡focus
               :If 0∊⍴name
               :AndIf 1<⍴si←⎕SI
-                  ⍝ We pressed edit on whitespace in the debugger, edit the
+                  ⍝ We pressed edit on whitespace while suspended in the debugger, edit the
                   ⍝ suspended function
                   name←⊃1↓⎕SI
                   lineno←¯1
               :Else
-                  line←(⊃pos)⊃log
                   ⍝ Below line is actually broken since symbols can contain
                   ⍝ diacritics, but I'm lazy
                   symbolalphabet←⎕A,⎕D,'abcdefghijklmnopqrstuvwxyz_∆'
-                  lineno←{'['≠⊃⍵:¯1 ⋄ 1+⊃2⊃⎕VFI ⎕D↑##.slurp 1↓⍵}symbolalphabet↓##.slurp(1↓pos)↓line
+                  line←(⊃pos)⊃log
+                  aftercursor←(⎕IO⌈¯1+1↓pos)↓line
+
+                  :If 0∊⍴name
+                      ⍝ If we invoke edit while the cursor is before the first character of
+                      ⍝ a symbol, CurObj is '', but Dyalog invokes the editor on the symbol.
+                      ⍝ So for backwards compatability, we try to emulate this behaviour.
+                      name←symbolalphabet↑##.slurp aftercursor
+                  :EndIf
+
+                  lineno←{'['≠⊃⍵:¯1 ⋄ 1+⊃2⊃⎕VFI ⎕D↑##.slurp 1↓⍵}symbolalphabet↓##.slurp aftercursor
               :EndIf
           :Else
               ⍝ Inside the editor we can't get the full text around the
