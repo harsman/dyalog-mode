@@ -114,7 +114,7 @@ together with AltGr produce the corresponding apl character in APLCHARS."
 
 (defconst dyalog-func-larg "\\(?:\\(?3:[A-Za-z_]+\\) +\\|{\\(?3:[A-Za-z_]+\\)} *\\)")
 
-(defconst dyalog-func-name "\\(?1:[A-Za-z_]+[A-Za-z_0-9]*\\)")
+(defconst dyalog-func-name (concat "\\(?1:" dyalog-name "\\)"))
 
 (defconst dyalog-func-rarg "\\(?: +\\(?4:[A-Za-z_]+\\)\\)")
 
