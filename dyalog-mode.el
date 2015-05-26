@@ -214,6 +214,15 @@ together with AltGr produce the corresponding apl character in APLCHARS."
     st)
   "Syntax table for `dyalog-array-mode'.")
 
+(defconst dyalog-dfun-syntax-table
+  (let ((st (copy-syntax-table dyalog-mode-syntax-table)))
+    (modify-syntax-entry ?\( "." st)
+    (modify-syntax-entry ?\) "." st)
+    (modify-syntax-entry ?\[ "." st)
+    (modify-syntax-entry ?\] "." st)
+    st)
+  "Syntax table to only consider {} as parens.")
+
 (defface dyalog-local-name
   '((t (:inherit font-lock-constant-face)))
   "Face used for localized names inside APL functions."
@@ -559,36 +568,19 @@ If point is inside an anonymous function, return \"\", and if it
 isn't inside a dynamic function, return nil"
   (interactive)
   (save-excursion
-    (let ((syn-table (copy-syntax-table dyalog-mode-syntax-table))
+    (let ((syn-table dyalog-dfun-syntax-table)
           (openbrace nil)
           (context (syntax-ppss-context (syntax-ppss))))
-      (modify-syntax-entry ?\( "." syn-table)
-      (modify-syntax-entry ?\) "." syn-table)
-      (modify-syntax-entry ?\[ "." syn-table)
-      (modify-syntax-entry ?\] "." syn-table)
       (cond
        ((eq context 'string) (re-search-backward "\\s\""))
        ((eq context 'comment) (re-search-backward "\\s<")))
       (setq openbrace
-           (with-syntax-table syn-table
-             (condition-case err
-                 (goto-char (scan-lists (point) -1 1))
-               (scan-error nil))))
-      (let* ((ret-and-larg (concat "\\(?:" dyalog-name "\\|\\(?1:{"
-                                   dyalog-name "}\\) *← *\\)?"
-                                   "\\(?:" dyalog-name "\\|\\(?2:{"
-                                   dyalog-name "}\\) *\\)"))
-             (in-dfun-p
-              (and openbrace
-                   (not
-                    (progn
-                      (forward-line)
-                      (end-of-line)
-                      (and
-                       (re-search-backward dyalog-tradfn-header (point-min) t)
-                       (re-search-forward ret-and-larg (match-end 0) t)
-                       (memq openbrace (list (match-beginning 1)
-                                             (match-beginning 2)))))))))
+            (with-syntax-table syn-table
+              (condition-case err
+                  (goto-char (scan-lists (point) -1 1))
+                (scan-error nil))))
+      (let* ((in-dfun-p (and openbrace
+                             (not (dyalog-on-tradfn-header)))))
         (if in-dfun-p
             (progn
               (goto-char openbrace)
@@ -611,6 +603,19 @@ isn't inside a dynamic function, return nil"
   "Return the name of the defun point is in."
   (let ((dfun-name (dyalog-dfun-name)))
     (or dfun-name (car (dyalog-tradfn-info)))))
+
+(defun dyalog-on-tradfn-header ()
+  "Return t if point is on a tradfn header line, otherwise return nil."
+  (save-excursion
+    (let ((start (point))
+          (min (save-excursion (forward-line -1)(line-beginning-position))))
+      (forward-line)
+      (end-of-line)
+      (if (re-search-backward dyalog-tradfn-header min t)
+          (progn
+            (goto-char (match-end 0))
+            (and (>= start (match-beginning 0)) (<= start (line-end-position))))
+        nil))))
 
 (defun dyalog-tradfn-info ()
   "Return a list of information on the tradfn defun point is in.
