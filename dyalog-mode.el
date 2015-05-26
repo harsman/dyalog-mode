@@ -71,13 +71,13 @@ with some character.
 REGULARCHARS is a string of the characters that when pressed
 together with AltGr produce the corresponding apl character in APLCHARS."
   (dolist (pair (cl-mapcar #'cons aplchars regularchars))
-        (let* ((aplchar (car pair))
-               (char    (cdr pair))
-               (aplkey  (vector (list 'control 'meta aplchar)))
-               (regkey  (vector (list 'control 'meta char)))
-               (fun  (lookup-key (current-global-map) regkey)))
-          (when fun
-            (define-key keymap aplkey fun)))))
+    (let* ((aplchar (car pair))
+           (char    (cdr pair))
+           (aplkey  (vector (list 'control 'meta aplchar)))
+           (regkey  (vector (list 'control 'meta char)))
+           (fun  (lookup-key (current-global-map) regkey)))
+      (when fun
+        (define-key keymap aplkey fun)))))
 
 (defconst dyalog-keyword-regex
   "\\(^\\s-*:\\([A-Za-z]+\\)\\)\\|\\(⋄\\s-*:\\(?2:[A-Za-z]+\\)\\)")
@@ -121,7 +121,7 @@ together with AltGr produce the corresponding apl character in APLCHARS."
 (defconst dyalog-func-header-end "\\s-*\\(?5:;\\|$\\)")
 
 (defconst dyalog-func-niladic (concat "\\(?:" dyalog-func-name
-                                       dyalog-func-header-end "\\)"))
+                                      dyalog-func-header-end "\\)"))
 
 (defconst dyalog-func-monadic (concat "\\(?:" dyalog-func-name
                                       dyalog-func-rarg
@@ -342,8 +342,8 @@ FUNCOUNT is the number of currently open function blocks."
           ((looking-at dyalog-indent-start)
            (if (eq blockcount 0)
                (set 'indent (if at-pause
-                                  (current-indentation)
-                                (dyalog-indent 0)))
+                                (current-indentation)
+                              (dyalog-indent 0)))
              (set 'blockcount (- blockcount (if (looking-at
                                                  dyalog-block-start) 1 0)))))
 
@@ -353,8 +353,8 @@ FUNCOUNT is the number of currently open function blocks."
           ((looking-at (concat "\\s-*" dyalog-tradfn-header))
            (if (eq funcount 0)
                (set 'indent (if at-pause
-                                  (current-indentation)
-                                (skip-chars-forward "∇ ")))
+                                (current-indentation)
+                              (skip-chars-forward "∇ ")))
              (set 'funcount (- funcount 1))))
 
           ((bobp)
@@ -483,8 +483,8 @@ FUNCOUNT is the number of currently open function blocks."
     ("Classes"    "^\\s-*:Class *\\([A-Za-z_]+[A-Za-z_0-9]*\\)" 1)))
 
 (defun dyalog-previous-defun ()
-"Move backward to the start of a function definition."
-;; Point can be anywhere when this function is called
+  "Move backward to the start of a function definition."
+  ;; Point can be anywhere when this function is called
   (let ((pos (point))
         (start nil))
     (beginning-of-line)
@@ -537,20 +537,21 @@ If it is supplied, BOUND limits the search."
   ;; this function is called.
   (let ((end (or bound (point-max)))
         (done nil)
-        (in-dfun-p nil))
-    (ignore-errors (forward-char)) ; skip past nabla
-    (while (not done)
-      (if (not (re-search-forward "^ *∇" bound t))
-          (progn
-            (goto-char end)
-            (set 'done t))
-        (when (set 'done (not in-dfun-p))
-          (ignore-errors (backward-char 1))
-          (if (looking-at dyalog-tradfn-header)
-              (ignore-errors (backward-char 1))
-              (ignore-errors (forward-char 1))))))))
-
-
+        (in-dfun-p nil)
+        (dfun-mode (and (looking-at "{") (not (dyalog-on-tradfn-header)))))
+    (if dfun-mode
+        (forward-sexp)
+      (ignore-errors (forward-char)) ; skip past nabla
+      (while (not done)
+        (if (not (re-search-forward "^ *∇" bound t))
+            (progn
+              (goto-char end)
+              (set 'done t))
+          (when (setq done (not in-dfun-p))
+            (ignore-errors (backward-char 1))
+            (if (looking-at dyalog-tradfn-header)
+                (ignore-errors (backward-char 1))
+              (ignore-errors (forward-char 1)))))))))
 
 (defun dyalog-dfun-name ()
   "If point is inside a dynamic function return the functions name.
@@ -650,15 +651,15 @@ position where the defun ends."
 (defun dyalog-defun-info ()
   "Return information on the defun at point."
   (save-excursion
-  (beginning-of-line)
-  (skip-chars-forward "^∇\r\n")
-  ;; TODO: In the tradfn case we already have a match, so no need to call
-  ;; tradfn-info, just extract the match data directly.
-  (if (looking-at dyalog-tradfn-header)
-    (list 'tradfn (progn
-                    (forward-char)
-                    (dyalog-tradfn-info)))
-    (list 'dfun   (dyalog-dfun-name)))))
+    (beginning-of-line)
+    (skip-chars-forward "^∇\r\n")
+    ;; TODO: In the tradfn case we already have a match, so no need to call
+    ;; tradfn-info, just extract the match data directly.
+    (if (looking-at dyalog-tradfn-header)
+        (list 'tradfn (progn
+                        (forward-char)
+                        (dyalog-tradfn-info)))
+      (list 'dfun   (dyalog-dfun-name)))))
 
 
 ;; TODO: We need a separate function for getting info on the defun at point,
@@ -741,18 +742,18 @@ START and END signify the region to fontify."
 START and END delimit the region to analyze."
   (save-excursion
     (goto-char start)
-      (while (and
-              (search-forward "''" end 'no-error)
-              (< (point) end))
-        (goto-char (match-beginning 0))
-        (let* ((endpos (match-end 0))
-               (state (syntax-ppss))
-               (context (syntax-ppss-context state)))
-          (when (eq 'string context)
-                (put-text-property (point) (+ 2 (point))
-                                   'syntax-table
-                                   (string-to-syntax ".")))
-          (goto-char endpos)))))
+    (while (and
+            (search-forward "''" end 'no-error)
+            (< (point) end))
+      (goto-char (match-beginning 0))
+      (let* ((endpos (match-end 0))
+             (state (syntax-ppss))
+             (context (syntax-ppss-context state)))
+        (when (eq 'string context)
+          (put-text-property (point) (+ 2 (point))
+                             'syntax-table
+                             (string-to-syntax ".")))
+        (goto-char endpos)))))
 
 (defun dyalog-current-keyword (&optional pt)
   "Return the current keyword if PT is in a keyword (e.g. :If).
@@ -822,12 +823,12 @@ adress to connect to."
                                   "127.0.0.1")
                      (read-number "Port (default 8080):" 8080)))
   (let* ((bufname (generate-new-buffer-name " *dyalog-receive*"))
-        (process (make-network-process :name "dyalog-edit"
-                                       :buffer bufname
-                                       :family 'ipv4 :host host :service port
-                                       :sentinel 'dyalog-editor-sentinel
-                                       :filter 'dyalog-editor-receive
-                                       :coding 'utf-8-dos)))
+         (process (make-network-process :name "dyalog-edit"
+                                        :buffer bufname
+                                        :family 'ipv4 :host host :service port
+                                        :sentinel 'dyalog-editor-sentinel
+                                        :filter 'dyalog-editor-receive
+                                        :coding 'utf-8-dos)))
     (push process dyalog-connections)
     (set-process-query-on-exit-flag process nil)
     process))
@@ -890,8 +891,8 @@ of the command and END is where it ends."
            (goto-char (match-end 0))
            (while (looking-at "\\([a-z]+\\): \\([^\r\n]+\\)\n")
              (let* ((key (match-string-no-properties 1))
-                   (val (match-string-no-properties 2))
-                   (propname (concat "dyalog-" key)))
+                    (val (match-string-no-properties 2))
+                    (propname (concat "dyalog-" key)))
                (process-put process (intern propname) val)
                (goto-char (match-end 0))))
            (delete-region start (1+ end))))
@@ -981,7 +982,7 @@ PROMPT is the prompt to show to the user."
         (and (equal 1 (length dyalog-connections))
              (car dyalog-connections))
         (nth (cl-position (completing-read p candidates nil t)
-                       candidates :test 'string-equal)
+                          candidates :test 'string-equal)
              dyalog-connections))))
 
 (defun dyalog-editor-fix (&optional process)
@@ -1018,7 +1019,7 @@ PROMPT is the prompt to show to the user."
   (let ((sym (symbol-at-point))
         (linespec ""))
     (when (looking-at "[A-Za-z∆_0-9]+\\(\\[[0-9]+\\]\\)")
-        (setq linespec (match-string 1)))
+      (setq linespec (match-string 1)))
     (dyalog-editor-edit (concat (symbol-name sym) linespec))))
 
 (defun dyalog-toggle-local ()
@@ -1040,7 +1041,7 @@ PROMPT is the prompt to show to the user."
         (beginning-of-defun)
         (skip-chars-forward "∇ \r\n")
         (when (looking-at dyalog-naked-nabla)
-            (forward-line 1))
+          (forward-line 1))
         (if (search-forward str end-of-header t)
             (progn
               (goto-char (match-beginning 0))
@@ -1062,11 +1063,11 @@ PROMPT is the prompt to show to the user."
   :group 'dyalog
   :syntax-table dyalog-mode-syntax-table
   (set (make-local-variable 'syntax-propertize-function)
-                            #'dyalog-syntax-propertize-function)
+       #'dyalog-syntax-propertize-function)
   (set (make-local-variable 'parse-sexp-ignore-comments) t)
   (set (make-local-variable 'parse-sexp-lookup-properties) t)
   (set (make-local-variable 'beginning-of-defun-function)
-                            'dyalog-beginning-of-defun)
+       'dyalog-beginning-of-defun)
   (set (make-local-variable 'end-of-defun-function) 'dyalog-end-of-defun)
   ;; Comments
   (set (make-local-variable 'comment-start) "⍝ ")
@@ -1084,7 +1085,7 @@ PROMPT is the prompt to show to the user."
   (set (make-local-variable 'dyalog-connection) nil)
   ;; Imenu and which-func-mode
   (set (make-local-variable 'imenu-generic-expression)
-              dyalog-imenu-generic-expression)
+       dyalog-imenu-generic-expression)
   (add-hook 'which-func-functions 'dyalog-current-defun nil 'make-it-local)
   ;; Hooks
   (add-hook 'before-save-hook
