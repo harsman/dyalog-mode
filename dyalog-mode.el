@@ -552,7 +552,7 @@ If it is supplied, BOUND limits the search."
         (forward-sexp)
       (ignore-errors (forward-char)) ; skip past nabla
       (while (not done)
-        (if (not (re-search-forward "^ *∇" bound t))
+        (if (not (re-search-forward "^ *∇" end t))
             (progn
               (goto-char end)
               (set 'done t))
