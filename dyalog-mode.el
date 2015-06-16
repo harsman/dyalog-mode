@@ -491,40 +491,69 @@ FUNCOUNT is the number of currently open function blocks."
     ("Namespaces" "^\\s-*:Namespace *\\([A-Za-z_]+[A-Za-z_0-9]*\\)" 1)
     ("Classes"    "^\\s-*:Class *\\([A-Za-z_]+[A-Za-z_0-9]*\\)" 1)))
 
+(defun dyalog-beginning-of-dfun ()
+  "Move backward to the beginning of a dynamic function definition.
+Assumes that point is within a dynamic function definition."
+  (dyalog-skip-comment-or-string)
+  (with-syntax-table dyalog-dfun-syntax-table
+    (condition-case error
+        (goto-char (scan-lists (point) -1 1))
+      (scan-error nil))))
+
 (defun dyalog-previous-defun ()
   "Move backward to the start of a function definition."
   ;; Point can be anywhere when this function is called
-  (let ((pos (point))
-        (start nil))
-    (beginning-of-line)
-    (skip-chars-forward "^∇\r\n")
-    (if (and (looking-at dyalog-tradfn-header)
-             (> pos (match-beginning 0)))
-        (setq start (match-beginning 0))
-      (progn
-        (forward-line -1)
-        (if (and (looking-at dyalog-naked-nabla)
-                 (skip-chars-forward "^∇\r\n")
-                 (looking-at dyalog-tradfn-header))
-            (setq start (match-beginning 0))
-          (progn
-            (goto-char pos)
-            (if (re-search-backward dyalog-tradfn-header (point-min) t)
-                (setq start (match-beginning 0))
-              (setq start (point-min)))))))
-    (goto-char start)))
+  (let ((done nil))
+    (if (dyalog-dfun-name)
+        (dyalog-beginning-of-dfun)
+      (while (not done)
+        (skip-chars-backward "^∇{}")
+        (if (or (bobp) (not (dyalog-in-comment-or-string)))
+            (progn
+              (setq done t)
+              (if (dyalog-on-tradfn-header)
+                  (progn
+                    (skip-chars-backward "^∇")
+                    (ignore-errors (backward-char)))
+                (progn
+                  (cond
+                   ((looking-back "{")
+                    (backward-char)) ;; already at start, done
+                   ((looking-back "}")
+                    (backward-sexp))
+                   ((looking-back "∇")
+                    (backward-char)
+                    (setq done nil))
+                   ((looking-at "∇") ;; at naked nabla we started at
+                    (forward-line -1)
+                    (end-of-line)
+                    (setq done nil))))))
+          (ignore-errors (backward-char)))))))
 
 (defun dyalog-next-defun (&optional limit)
   "Move to the beginning of the next defun.
 If supplied, LIMIT limits the search."
-  (let ((lim (or limit (point-max))))
-    (when (looking-at dyalog-tradfn-header)
-      (goto-char (match-end 0)))
-    (if (not (re-search-forward dyalog-tradfn-header lim t))
-        (goto-char lim)
-      (progn
-        (goto-char (match-beginning 0))
-        (skip-chars-forward "^∇\r\n")))))
+  (let ((lim (or limit (point-max)))
+        (done nil))
+    (when (looking-at "{")
+      (ignore-errors (forward-char)))
+    (while (not done)
+      (skip-chars-forward "^∇{" lim)
+      (if (or (= (point) lim) (not (dyalog-in-comment-or-string)))
+            (progn
+              (setq done t)
+              (if (dyalog-on-tradfn-header)
+                  (progn
+                    (skip-chars-backward "^∇")
+                    (ignore-errors (backward-char)))
+                (progn
+                  (cond
+                   ((looking-at "{")
+                    (backward-char)) ;; already at start, done
+                   ((looking-at "∇")
+                    (forward-char)
+                    (setq done nil)))))))
+        (ignore-errors (forward-char)))))
 
 (defun dyalog-beginning-of-defun (&optional arg)
   "Move backward to the beginning of a function definition.
