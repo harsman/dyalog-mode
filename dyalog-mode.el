@@ -544,7 +544,7 @@ If supplied, LIMIT limits the search."
               (setq done t)
               (if (dyalog-on-tradfn-header)
                   (progn
-                    (skip-chars-backward "^∇")
+                    (skip-chars-backward "^∇" (line-beginning-position))
                     (ignore-errors (backward-char)))
                 (progn
                   (cond
