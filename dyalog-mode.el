@@ -555,7 +555,7 @@ If it is supplied, BOUND limits the search."
         (if (not (re-search-forward "^ *∇" end t))
             (progn
               (goto-char end)
-              (set 'done t))
+              (setq done t))
           (when (setq done (not in-dfun-p))
             (ignore-errors (backward-char 1))
             (if (looking-at dyalog-tradfn-header)
@@ -687,7 +687,9 @@ START and END signify the region to fontify."
            (info nil))
       ;; Remove old fontification here?
       (goto-char beg-line)
-      (set 'info (dyalog-tradfn-info))
+      (setq info (dyalog-tradfn-info))
+      ;; FIXME: If start is inside a dfun, this won't work. Call
+      ;; dyalog-defun-info instead?
 
       (while (not done)
         (if dfun-name
@@ -762,7 +764,7 @@ START and END delimit the region to analyze."
 
 (defun dyalog-current-keyword (&optional pt)
   "Return the current keyword if PT is in a keyword (e.g. :If).
-PT is optional and defaults to point. If PT isn't in a keyword,
+PT is optional and defaults to point.  If PT isn't in a keyword,
 return nil."
   (save-excursion
     (when pt
