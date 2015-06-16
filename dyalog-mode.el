@@ -562,6 +562,14 @@ If it is supplied, BOUND limits the search."
                 (ignore-errors (backward-char 1))
               (ignore-errors (forward-char 1)))))))))
 
+(defun dyalog-skip-comment-or-string (&optional context)
+  "If point is in a comment or string, move backward out of it.
+CONTEXT is the result of `syntax-ppss' at point, or nil."
+  (let ((ctx (syntax-ppss-context (or context (syntax-ppss)))))
+    (cond
+     ((eq ctx 'string) (re-search-backward "\\s\""))
+     ((eq ctx 'comment) (re-search-backward "\\s<")))))
+
 (defun dyalog-dfun-name ()
   "If point is inside a dynamic function return the functions name.
 If point is inside an anonymous function, return \"\", and if it
@@ -570,10 +578,8 @@ isn't inside a dynamic function, return nil"
   (save-excursion
     (let ((syn-table dyalog-dfun-syntax-table)
           (openbrace nil)
-          (context (syntax-ppss-context (syntax-ppss))))
-      (cond
-       ((eq context 'string) (re-search-backward "\\s\""))
-       ((eq context 'comment) (re-search-backward "\\s<")))
+          (context (syntax-ppss)))
+      (dyalog-skip-comment-or-string context)
       (setq openbrace
             (with-syntax-table syn-table
               (condition-case err
