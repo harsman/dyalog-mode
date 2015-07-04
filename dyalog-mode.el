@@ -812,7 +812,7 @@ return nil."
                    (looking-at dyalog-middle-keyword-regex))
                (string-trim (match-string-no-properties 0))
              nil)))
-      (if (dyalog-dfun-name)
+      (if (and keyword (dyalog-dfun-name))
           nil
         keyword))))
 
