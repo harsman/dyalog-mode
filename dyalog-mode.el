@@ -314,18 +314,6 @@ together with AltGr produce the corresponding apl character in APLCHARS."
 
 ;;; Indentation
 
-(defun dyalog-dedent (line)
-  "Dedent current line one level relative to LINE lines before."
-  (save-excursion
-    (forward-line line)
-    (- (current-indentation) tab-width)))
-
-(defun dyalog-indent (line)
-  "Indent current line one level relative to LINE lines before."
-  (save-excursion
-    (forward-line line)
-    (+ (current-indentation) tab-width)))
-
 (defun dyalog-matching-delimiter (delimiter)
   (car (gethash delimiter dyalog-delimiter-match nil)))
 
@@ -530,117 +518,6 @@ one extra space, to be consistent with separating multiple
 functions with ∇."
   ;; TODO: Return different amounts depending on buffer type
   dyalog-leading-spaces)
-
-(defun dyalog-get-indent ()
-  "Calculate the amount of indentation for the current line."
-  (let ((indent 0))
-    (save-excursion
-      (move-beginning-of-line nil)
-      (set 'indent
-           (cond
-            ((bobp)
-             (dyalog-leading-indentation))
-            ((looking-at dyalog-indent-stop)
-             (dyalog-search-indent t 'dyalog-indent-cond-generic 0 0))
-            ((looking-at dyalog-indent-case)
-             (dyalog-search-indent t 'dyalog-indent-cond-case 0 0))
-            ((looking-at dyalog-indent-pause)
-             (dyalog-search-indent t 'dyalog-indent-cond-generic 0 0))
-            ((looking-at "^\\s-*⍝")
-             (if dyalog-indent-comments
-                 (dyalog-search-indent nil 'dyalog-indent-cond-generic 0 0)
-               (skip-syntax-forward "-")))
-            ((looking-at "^[A-Za-z_]+[A-Za-z0-9_]*:")
-             0)
-            ((looking-at dyalog-naked-nabla)
-             (dyalog-search-indent t 'dyalog-indent-cond-generic 0 0))
-            ((looking-at (concat "\\s-*" dyalog-tradfn-header))
-             (dyalog-search-indent nil 'dyalog-indent-cond-header 0 0))
-            (t
-             (dyalog-search-indent nil 'dyalog-indent-cond-generic 0 0))))
-      (if (and (eq indent 1) (looking-at "\\s-*$"))
-          0
-        indent))))
-
-(defun dyalog-indent-cond-generic (at-pause blockcount funcount)
-  "Logic to use when searching for a point to calculate indent relative to.
-AT-PAUSE is t if we are currently at a pausing indentation
-keyword, i.e. a keyword that is indented at the same level as the
-parent block, such as :Case.
-BLOCKCOUNT is the number of currently open statement blocks.
-FUNCOUNT is the number of currently open function blocks."
-  (let ((indent nil))
-    (cond ((looking-at dyalog-indent-stop)
-           (if (and (eq blockcount 0) (eq funcount 0) (not at-pause))
-               (set 'indent (current-indentation))
-             (set 'blockcount (+ 1 blockcount))))
-
-          ((looking-at dyalog-indent-start)
-           (if (eq blockcount 0)
-               (set 'indent (if at-pause
-                                (current-indentation)
-                              (dyalog-indent 0)))
-             (set 'blockcount (- blockcount (if (looking-at
-                                                 dyalog-block-start) 1 0)))))
-
-          ((looking-at dyalog-naked-nabla)
-           (set 'funcount (+ 1 funcount)))
-
-          ((looking-at (concat "\\s-*" dyalog-tradfn-header))
-           (if (eq funcount 0)
-               (set 'indent (if at-pause
-                                (current-indentation)
-                              (skip-chars-forward "∇ ")))
-             (set 'funcount (- funcount 1))))
-
-          ((bobp)
-           (set 'indent (dyalog-leading-indentation))))
-    (list indent blockcount funcount)))
-
-(defun dyalog-indent-cond-case (at-pause blockcount funcount)
-  "Logic to use when indenting a :Case keyword.
-When indenting a :Case, we should indent to any
-matching :Trap or :Select.
-AT-PAUSE is t if we are currently at a pausing indentation
-keyword, i.e. a keyword that is indented at the same level as the
-parent block, such as :Case.
-BLOCKCOUNT is the number of currently open statement blocks.
-FUNCOUNT is the number of currently open function blocks."
-  (let ((dyalog-indent-start "^\\s-*:\\(Select\\|Trap\\)")
-        (dyalog-indent-stop "^\\s-*:End\\(Select\\|Trap\\)"))
-    (dyalog-indent-cond-generic at-pause blockcount funcount)))
-
-(defun dyalog-indent-cond-header (at-pause blockcount funcount)
-  "Logic to use when indenting a function header.
-When indenting a header, we should indent to any
-preceeding :Class or :Namespace.
-AT-PAUSE is t if we are currently at a pausing indentation
-keyword, i.e. a keyword that is indented at the same level as the
-parent block, such as :Case.
-BLOCKCOUNT is the number of currently open statement blocks.
-FUNCOUNT is the number of currently open function blocks."
-  (let ((dyalog-indent-start "^\\s-*:\\(Class\\|Namespace\\)")
-        (dyalog-indent-stop  "^\\s-*:End\\(Class\\|Namespace\\)"))
-    (dyalog-indent-cond-generic at-pause blockcount funcount)))
-
-(defun dyalog-search-indent (at-pause cond-fun blockcount funcount)
-  "Search backwards for a point to calculate indentation relative to.
-AT-PAUSE is t if we are currently at a pausing indentation
-keyword, i.e. a keyword that is indented at the same level as the
-parent block, such as :Case.
-COND-FUN is a function to call to do the actual search.
-BLOCKCOUNT is the number of currently open statement blocks.
-FUNCOUNT is the number of currently open function blocks."
-  (let ((ret nil)(indented nil))
-    (save-excursion
-      (while (not indented)
-        (beginning-of-line)
-        (forward-line -1)
-        (set 'ret (funcall cond-fun at-pause blockcount funcount))
-        (set 'indented (car ret))
-        (set 'blockcount (cadr ret))
-        (set 'funcount (cl-caddr ret)))
-      indented)))
 
 (defun dyalog-indent-line ()
   "Indent the current line."
