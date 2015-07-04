@@ -511,7 +511,7 @@ Assumes that point is within a dynamic function definition."
         (if (or (bobp) (not (dyalog-in-comment-or-string)))
             (progn
               (setq done t)
-              (if (dyalog-on-tradfn-header)
+              (if (dyalog-on-tradfn-header 'only-after-nabla)
                   (progn
                     (skip-chars-backward "^∇")
                     (ignore-errors (backward-char)))
@@ -542,7 +542,7 @@ If supplied, LIMIT limits the search."
       (if (or (= (point) lim) (not (dyalog-in-comment-or-string)))
             (progn
               (setq done t)
-              (if (dyalog-on-tradfn-header)
+              (if (dyalog-on-tradfn-header 'only-after-nabla)
                   (progn
                     (skip-chars-backward "^∇" (line-beginning-position))
                     (ignore-errors (backward-char)))
@@ -576,7 +576,7 @@ If it is supplied, BOUND limits the search."
   (let ((end (or bound (point-max)))
         (done nil)
         (in-dfun-p nil)
-        (dfun-mode (and (looking-at "{") (not (dyalog-on-tradfn-header)))))
+        (dfun-mode (and (looking-at "{") (not (dyalog-on-tradfn-header 'only-after-nabla)))))
     (if dfun-mode
         (forward-sexp)
       (ignore-errors (forward-char)) ; skip past nabla
@@ -615,7 +615,7 @@ isn't inside a dynamic function, return nil"
                   (goto-char (scan-lists (point) -1 1))
                 (scan-error nil))))
       (let* ((in-dfun-p (and openbrace
-                             (not (dyalog-on-tradfn-header)))))
+                             (not (dyalog-on-tradfn-header 'only-after-nabla)))))
         (if in-dfun-p
             (progn
               (goto-char openbrace)
@@ -639,8 +639,10 @@ isn't inside a dynamic function, return nil"
   (let ((dfun-name (dyalog-dfun-name)))
     (or dfun-name (car (dyalog-tradfn-info)))))
 
-(defun dyalog-on-tradfn-header ()
-  "Return t if point is on a tradfn header line, otherwise return nil."
+(defun dyalog-on-tradfn-header (&optional only-after-nabla)
+  "Return t if point is on a tradfn header line, otherwise return nil.
+If ONLY-AFTER-NABLA is t, only return t when point is after
+the nabla in the tradfn header."
   (save-excursion
     (let ((start (point))
           (min (save-excursion (forward-line -1)(line-beginning-position))))
@@ -649,7 +651,11 @@ isn't inside a dynamic function, return nil"
       (if (re-search-backward dyalog-tradfn-header min t)
           (progn
             (goto-char (match-end 0))
-            (and (>= start (match-beginning 0)) (<= start (line-end-position))))
+            (and (>= start (if only-after-nabla
+                               (match-beginning 0)
+                             (min (match-beginning 0)
+                                  (line-beginning-position))))
+                 (<= start (line-end-position))))
         nil))))
 
 (defun dyalog-tradfn-info ()
