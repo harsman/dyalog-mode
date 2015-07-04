@@ -312,7 +312,7 @@ together with AltGr produce the corresponding apl character in APLCHARS."
       (set 'indent
            (cond
             ((bobp)
-             dyalog-leading-spaces)
+             (dyalog-leading-indentation))
             ((looking-at dyalog-indent-stop)
              (dyalog-search-indent t 'dyalog-indent-cond-generic 0 0))
             ((looking-at dyalog-indent-case)
@@ -367,7 +367,7 @@ FUNCOUNT is the number of currently open function blocks."
              (set 'funcount (- funcount 1))))
 
           ((bobp)
-           (set 'indent dyalog-leading-spaces)))
+           (set 'indent (dyalog-leading-indentation))))
     (list indent blockcount funcount)))
 
 (defun dyalog-indent-cond-case (at-pause blockcount funcount)
