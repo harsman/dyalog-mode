@@ -931,7 +931,7 @@ return nil."
 
 (defun dyalog-in-keyword (&optional pt)
   "Return t if PT (defaults to point) is inside a keyword (e.g. :If)."
-  (not (not (dyalog-current-keyword))))
+  (not (not (dyalog-current-keyword (or pt (point))))))
 
 (defun dyalog-in-comment-or-string (&optional pt)
   "Return t if PT (defaults to point) is inside a string literal or a comment."
