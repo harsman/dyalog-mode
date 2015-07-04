@@ -768,13 +768,14 @@ START and END signify the region to fontify."
                 (goto-char limit)))))
         (set 'done (>= (point) end))
         (when (not done)
-          (dyalog-next-defun)
-          (let ((defuninfo (dyalog-defun-info)))
-            (pcase (car defuninfo)
-              (`dfun (setq dfun-name (nth 1 defuninfo)
-                           info (list "" nil nil)))
-              (`tradfn (setq dfun-name nil
-                             info (nth 1 defuninfo))))))))))
+          (dyalog-next-defun end)
+          (when (not (setq done (>= (point) end)))
+            (let ((defuninfo (dyalog-defun-info)))
+              (pcase (car defuninfo)
+                (`dfun (setq dfun-name (nth 1 defuninfo)
+                             info (list "" nil nil)))
+                (`tradfn (setq dfun-name nil
+                               info (nth 1 defuninfo)))))))))))
 
 
 ;;; Syntax
