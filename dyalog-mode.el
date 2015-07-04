@@ -259,6 +259,28 @@ together with AltGr produce the corresponding apl character in APLCHARS."
 (defvar dyalog-indent-pause
   "^\\s-*:\\(Else\\|AndIf\\|OrIf\\)[^⋄\r\n]*$")
 
+(defconst dyalog-delimiter-match
+  (let ((h (make-hash-table :test 'equal)))
+    (dolist (e '((":If" . ":EndIf")("{"."}")
+                 (":For" . ":EndFor")(":Repeat" ":Until")
+                 (":While" . ":EndWhile")(":Trap" . ":EndTrap")
+                 (":Hold" . ":EndHold")(":With" . ":EndWith")
+                 (":Namespace" . ":EndNamespace")(":Class" . ":EndClass")
+                 (":Select" . ":EndSelect")(":Interface" ":EndInterface")))
+      (puthash (car e) (list (cdr e) 'block-start) h)
+      (puthash (cdr e) (list (car e) 'block-end) h))
+    (dolist (e '((":AndIf". ":If")(":OrIf".":If")(":ElseIf".":If")))
+      (puthash (car e) (list (cdr e) 'block-pause) h))
+    (dolist (e '((":Else" . ":\\(If\\|Select\\|Trap\\|Hold\\)")
+                 (":Case" . ":\\(Select\\|Trap\\)")
+                 (":CaseList" . ":\\(Select\\|Trap\\)")))
+      (puthash (car e) (list (cdr e) 'block-pause) h))
+    (dolist (e '((":Field" . ":\\(Class\\|Interface\\)")))
+      (puthash (car e) (list (cdr e) 'block-indented) h))
+    (dolist (e '(":Access"))
+      (puthash e (list "" nil) h))
+    h))
+
 (defvar dyalog-indent-case
   "^\\s-*:Case")
 
@@ -303,6 +325,211 @@ together with AltGr produce the corresponding apl character in APLCHARS."
   (save-excursion
     (forward-line line)
     (+ (current-indentation) tab-width)))
+
+(defun dyalog-matching-delimiter (delimiter)
+  (car (gethash delimiter dyalog-delimiter-match nil)))
+
+(defun dyalog-keyword-indent-type (keyword)
+  (let ((d (gethash keyword dyalog-delimiter-match nil)))
+    (and d (nth 1 d))))
+
+(defun dyalog-specific-keyword-regex (keyword)
+  "Return a regex mathcing KEYWORD when point is at bol."
+  (concat "\\(^\\s-*" keyword "\\)\\|\\(⋄\\s-*" keyword "%s\\)"))
+
+(defun dyalog-relative-indent (n)
+  "Return the no spaces to indent N tabstops relative to the current line."
+  (max (+ (current-indentation) (* tab-width n))
+       (dyalog-leading-indentation)))
+
+(defun dyalog-previous-logical-line ()
+  "Move backwards to the start of the previous logical line.
+Assumes point is at the beginning of a logical line."
+  (let ((bol (line-beginning-position))
+        (done nil))
+    (if (eq (point) bol)
+        (progn
+          (forward-line -1)
+          (end-of-line))
+      (when (eq (char-before) ?⋄)
+        (backward-char)))
+    (while (not done)
+      (skip-chars-backward "^⋄\r\n")
+      (if (eq (char-before) ?⋄)
+          (progn
+            (setq done (not (dyalog-in-comment-or-string)))
+            (when (not done)
+              (backward-char)))
+        (setq done t)))))
+
+(defun dyalog-indent-stop-block-end (match blockstack indent-type funcount)
+  "Return whether we have found root for a block end, and amount of to indent.
+MATCH is the keyword that matches the block end (e.g. :For
+matches :EndFor), BLOCKSTACK is a stack of currently open blocks,
+INDENT-TYPE is the indentation type of the current keyword (if
+any), and funcount is the number of currently open tradfn
+definitions. "
+  (list (and (not blockstack)
+             (looking-at (dyalog-specific-keyword-regex match)))
+        (dyalog-relative-indent 0)))
+
+(defun dyalog-indent-stop-block-indented (match blockstack indent-type funcount)
+  "Return whether we have found root for an indented block, and chars to indent.
+MATCH is the keyword that matches the root (e.g. :Class is the
+root for :Field), BLOCKSTACK is a stack of currently open blocks,
+INDENT-TYPE is the indentation type of the current keyword (if
+any), and funcount is the number of currently open tradfn
+definitions. "
+  (list (and (not blockstack)
+             (looking-at (dyalog-specific-keyword-regex match)))
+        (dyalog-relative-indent 1)))
+
+(defun dyalog-indent-stop-tradfn (blockstack indent-type funcount)
+  "Return whether we have found root for an tradfn delimiter, and chars to indent.
+ BLOCKSTACK is a stack of currently open blocks, INDENT-TYPE is
+the indentation type of the current keyword (if any), and
+funcount is the number of currently open tradfn definitions. "
+  (list (and (not blockstack)
+             (looking-at (dyalog-specific-keyword-regex
+                          ":\\(Class\\|Namespace\\)")))
+        (dyalog-relative-indent 1)))
+
+(defun dyalog-indent-search-stop-function (keyword &optional match_ indent-type_)
+  "Given a KEYWORD, return a function that will return t when
+  point is at the indentation root for the keyword."
+  (let* ((match (or match_ (dyalog-matching-delimiter keyword)))
+         (indent-type (or indent-type_ (dyalog-keyword-indent-type keyword))))
+    (cond
+     ((eq 'block-start indent-type)
+        #'dyalog-indent-search-stop-generic)
+     ((memq indent-type '(block-end block-pause))
+      (apply-partially 'dyalog-indent-stop-block-end match))
+     ((eq 'block-indented indent-type)
+      (apply-partially 'dyalog-indent-stop-block-indented match))
+     (t
+      #'dyalog-indent-search-stop-generic))))
+
+(defun dyalog-indent-search-stop-generic (blockstack indent-type funcount)
+  "Return t when point is at a line to anchor indentation to (a root)."
+  (cond
+   ((and (eq indent-type 'block-start) (not blockstack) (eq funcount 0))
+    (list t (dyalog-relative-indent 1)))
+   ((and (eq indent-type 'block-end) (not blockstack) (eq funcount 0))
+    (list t (current-indentation)))
+   ((and (eq indent-type 'tradfn-start)
+         (eq funcount 0))
+    (list t (skip-chars-forward " ∇")))
+   ((bobp)
+    (list t (dyalog-leading-indentation)))
+   (t
+    (list nil 0))))
+
+(defun dyalog-indent-status ()
+  "Returns a list of information on the current indentation status.
+This includes whether we are at the start of a block, or the
+end (or at a pause inside a block), and the name of the delimiter
+that triggers the starting or ending of a block (e.g. \":If\" or
+\"∇\"."
+  (let* ((keyword (dyalog-current-keyword))
+         (indent-type (dyalog-keyword-indent-type keyword)))
+    (cond
+     ((dyalog-on-tradfn-header)
+      (list :indent-type 'tradfn-start :delimiter "∇"))
+     ((looking-at dyalog-naked-nabla)
+      (list :indent-type 'tradfn-end :delimiter "∇"))
+     (t
+      (list :indent-type indent-type :delimiter keyword)))))
+
+(defun dyalog-search-indent-root (at-root-function)
+  "Given function AT-ROOT-FUNCTION, search backwards for the root indent.
+AT-ROOT-FUNCTION assumes point is at the beginning of a logical
+line and returns t when point is at the line containing the
+indentation root. For example if we are indenting a :EndFor,
+AT-ROOT-FUNCTION returns t when we have reached the corresponding :For."
+  (let* ((indentation nil)
+         (blockstack ())
+         (funcount 0))
+    (save-excursion
+      (while (not indentation)
+        ;; TODO: We should probably skip past d-funs
+        (dyalog-previous-logical-line)
+        (let* ((status (dyalog-indent-status))
+               (keyword (plist-get status :delimiter))
+               (indent-type (plist-get status :indent-type))
+               (root (apply at-root-function
+                            (list blockstack indent-type funcount)))
+               (at-root (car root)))
+          (setq indentation
+                (cond
+                 ((bobp)
+                  (dyalog-leading-indentation))
+                 (at-root
+                  (nth 1 root))
+                 ((eq 'block-end indent-type)
+                  (progn
+                    (push (dyalog-matching-delimiter keyword)
+                          blockstack)
+                    nil))
+                 ((eq 'block-start indent-type)
+                  (progn
+                    (when (string-equal keyword (car blockstack))
+                      (pop blockstack))
+                    nil))
+                 ((eq 'tradfn-end indent-type)
+                  (setq funcount (1+ funcount))
+                  nil)
+                 ((eq 'tradfn-start indent-type)
+                  (setq funcount (1- funcount))
+                  nil)))))
+      indentation)))
+
+(defun dyalog-calculate-dfun-indent ()
+  (let* ((start (point))
+         (line-start (+ start (skip-syntax-forward "-"))))
+    (save-excursion
+      (let ((containing-brace (scan-lists start -1 1)))
+        (if (< containing-brace line-start)
+            (progn
+              (goto-char containing-brace)
+              (dyalog-relative-indent 
+                      (if (equal (char-after line-start) ?})
+                          0 1)))
+          (dyalog-leading-indentation))))))
+
+(defun dyalog-calculate-indent ()
+  "Calculate the amount of indentation for the current line."
+  (save-excursion
+    (move-beginning-of-line nil)
+    (let* ((dfun (dyalog-dfun-name))
+           (keyword (if dfun nil (dyalog-current-keyword))))
+      (cond
+       (dfun
+        (dyalog-calculate-dfun-indent))
+       (keyword
+        (dyalog-search-indent-root (dyalog-indent-search-stop-function keyword)))
+       ((bobp)
+        (dyalog-leading-indentation))
+       ((looking-at "^\\s-*⍝")
+        (if dyalog-indent-comments
+            (dyalog-search-indent-root 'dyalog-indent-search-stop-generic)
+          (current-indentation)))
+       ((and (looking-at "^[A-Za-z_]+[A-Za-z0-9_]*:") (not dfun))
+        0)
+       ((looking-at dyalog-naked-nabla)
+        (dyalog-search-indent-root #'dyalog-indent-stop-tradfn))
+       ((dyalog-on-tradfn-header)
+        (dyalog-search-indent-root #'dyalog-indent-stop-tradfn))
+       (t
+        (dyalog-search-indent-root #'dyalog-indent-search-stop-generic))))))
+
+(defun dyalog-leading-indentation ()
+  "Return the number of spaces to indent by in the current buffer.
+This varies depending of the type of object being edited,
+namespaces or classes have no extra leading indentation, but functions have
+one extra space, to be consistent with separating multiple
+functions with ∇."
+  ;; TODO: Return different amounts depending on buffer type
+  dyalog-leading-spaces)
 
 (defun dyalog-get-indent ()
   "Calculate the amount of indentation for the current line."
