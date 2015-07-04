@@ -356,7 +356,7 @@ MATCH is the keyword that matches the block end (e.g. :For
 matches :EndFor), BLOCKSTACK is a stack of currently open blocks,
 INDENT-TYPE is the indentation type of the current keyword (if
 any), and funcount is the number of currently open tradfn
-definitions. "
+definitions."
   (list (and (not blockstack)
              (looking-at (dyalog-specific-keyword-regex match)))
         (dyalog-relative-indent 0)))
@@ -367,16 +367,16 @@ MATCH is the keyword that matches the root (e.g. :Class is the
 root for :Field), BLOCKSTACK is a stack of currently open blocks,
 INDENT-TYPE is the indentation type of the current keyword (if
 any), and funcount is the number of currently open tradfn
-definitions. "
+definitions."
   (list (and (not blockstack)
              (looking-at (dyalog-specific-keyword-regex match)))
         (dyalog-relative-indent 1)))
 
 (defun dyalog-indent-stop-tradfn (blockstack indent-type funcount)
   "Return whether we have found root for an tradfn delimiter, and chars to indent.
- BLOCKSTACK is a stack of currently open blocks, INDENT-TYPE is
+BLOCKSTACK is a stack of currently open blocks, INDENT-TYPE is
 the indentation type of the current keyword (if any), and
-funcount is the number of currently open tradfn definitions. "
+funcount is the number of currently open tradfn definitions."
   (list (and (not blockstack)
              (looking-at (dyalog-specific-keyword-regex
                           ":\\(Class\\|Namespace\\)")))
@@ -384,7 +384,7 @@ funcount is the number of currently open tradfn definitions. "
 
 (defun dyalog-indent-search-stop-function (keyword &optional match_ indent-type_)
   "Given a KEYWORD, return a function that will return t when
-  point is at the indentation root for the keyword."
+point is at the indentation root for the keyword."
   (let* ((match (or match_ (dyalog-matching-delimiter keyword)))
          (indent-type (or indent-type_ (dyalog-keyword-indent-type keyword))))
     (cond
@@ -413,7 +413,7 @@ funcount is the number of currently open tradfn definitions. "
     (list nil 0))))
 
 (defun dyalog-indent-status ()
-  "Returns a list of information on the current indentation status.
+  "Return a list of information on the current indentation status.
 This includes whether we are at the start of a block, or the
 end (or at a pause inside a block), and the name of the delimiter
 that triggers the starting or ending of a block (e.g. \":If\" or
@@ -432,7 +432,7 @@ that triggers the starting or ending of a block (e.g. \":If\" or
   "Given function AT-ROOT-FUNCTION, search backwards for the root indent.
 AT-ROOT-FUNCTION assumes point is at the beginning of a logical
 line and returns t when point is at the line containing the
-indentation root. For example if we are indenting a :EndFor,
+indentation root.  For example if we are indenting a :EndFor,
 AT-ROOT-FUNCTION returns t when we have reached the corresponding :For."
   (let* ((indentation nil)
          (blockstack ())
@@ -472,6 +472,7 @@ AT-ROOT-FUNCTION returns t when we have reached the corresponding :For."
       indentation)))
 
 (defun dyalog-calculate-dfun-indent ()
+  "Calculate the indentation amount for a line in a dfun."
   (let* ((start (point))
          (line-start (+ start (skip-syntax-forward "-"))))
     (save-excursion
@@ -1141,7 +1142,7 @@ PROMPT is the prompt to show to the user."
              dyalog-connections))))
 
 (defun dyalog-editor-fix (&optional process)
-  "Send the contents of the current buffer to the connected Dyalog process."
+  "Send the contents of the current buffer to the connected Dyalog PROCESS."
   (interactive)
   (let ((process (or process (dyalog-connection-select))))
     (setq dyalog-connection process)
@@ -1150,9 +1151,7 @@ PROMPT is the prompt to show to the user."
     (process-send-string process "\e")))
 
 (defun dyalog-editor-fix-and-quit ()
-  "Send the contents of the current buffer to the connected
-  Dyalog process, kill the buffer and move focus to the Dyalog
-  session."
+  "Fix the current buffer, kill it, and move focus to Dyalog."
   (interactive)
   (let ((process (dyalog-connection-select))
         (kill-buffer-query-functions ()))
