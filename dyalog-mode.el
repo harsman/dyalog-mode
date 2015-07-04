@@ -449,8 +449,6 @@ AT-ROOT-FUNCTION returns t when we have reached the corresponding :For."
                (at-root (car root)))
           (setq indentation
                 (cond
-                 ((bobp)
-                  (dyalog-leading-indentation))
                  (at-root
                   (nth 1 root))
                  ((eq 'block-end indent-type)
@@ -468,7 +466,9 @@ AT-ROOT-FUNCTION returns t when we have reached the corresponding :For."
                   nil)
                  ((eq 'tradfn-start indent-type)
                   (setq funcount (1- funcount))
-                  nil)))))
+                  nil)))
+          (when (and (not indentation) (bobp))
+            (setq indentation (dyalog-leading-indentation)))))
       indentation)))
 
 (defun dyalog-calculate-dfun-indent ()
@@ -492,12 +492,12 @@ AT-ROOT-FUNCTION returns t when we have reached the corresponding :For."
     (let* ((dfun (dyalog-dfun-name))
            (keyword (if dfun nil (dyalog-current-keyword))))
       (cond
+       ((bobp)
+        (dyalog-leading-indentation))
        (dfun
         (dyalog-calculate-dfun-indent))
        (keyword
         (dyalog-search-indent-root (dyalog-indent-search-stop-function keyword)))
-       ((bobp)
-        (dyalog-leading-indentation))
        ((looking-at "^\\s-*⍝")
         (if dyalog-indent-comments
             (dyalog-search-indent-root 'dyalog-indent-search-stop-generic)
