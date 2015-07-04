@@ -419,7 +419,7 @@ FUNCOUNT is the number of currently open function blocks."
   "Indent the current line."
   (interactive)
   (let ((restorepos (> (current-column) (current-indentation)))
-        (indent (max 0 (dyalog-get-indent))))
+        (indent (max 0 (dyalog-calculate-indent))))
     (if restorepos
         (save-excursion (indent-line-to indent))
       (indent-line-to indent))))
@@ -813,10 +813,12 @@ return nil."
       (goto-char pt))
     (skip-chars-backward "A-Za-z:")
     (skip-syntax-backward "-")
+    (when (eq (char-before) ?⋄)
+      (backward-char))
     (let ((keyword
            (if (or (looking-at dyalog-keyword-regex)
                    (looking-at dyalog-middle-keyword-regex))
-               (string-trim (match-string-no-properties 0))
+               (concat ":" (match-string-no-properties 2))
              nil)))
       (if (and keyword (dyalog-dfun-name))
           nil
