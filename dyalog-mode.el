@@ -489,7 +489,7 @@ AT-ROOT-FUNCTION returns t when we have reached the corresponding :For."
   "Calculate the amount of indentation for the current line."
   (save-excursion
     (move-beginning-of-line nil)
-    (let* ((dfun (dyalog-dfun-name))
+    (let* ((dfun (dyalog-in-dfun))
            (keyword (if dfun nil (dyalog-current-keyword nil))))
       (cond
        ((bobp)
@@ -608,9 +608,10 @@ Assumes that point is within a dynamic function definition."
 (defun dyalog-previous-defun ()
   "Move backward to the start of a function definition."
   ;; Point can be anywhere when this function is called
-  (let ((done nil))
-    (if (dyalog-dfun-name)
-        (dyalog-beginning-of-dfun)
+  (let ((done nil)
+        (dfun-info (dyalog-in-dfun)))
+    (if dfun-info
+        (goto-char (plist-get dfun-info :start))
       (while (not done)
         (skip-chars-backward "^∇{}")
         (if (or (bobp) (not (dyalog-in-comment-or-string)))
@@ -738,6 +739,26 @@ isn't inside a dynamic function, return nil"
                         dfun-name))
                   (scan-error dfun-name))))
           nil)))))
+
+(defun dyalog-in-dfun ()
+  "If point is inside a dfun, return a plist with it's start and end position.
+If point isn't inside a dfun, return nil."
+  (with-syntax-table dyalog-dfun-syntax-table
+    (let* ((syntax-begin-function 'beginning-of-line)
+           (ppss (syntax-ppss))
+           (start-of-containing-parens (nth 1 ppss)))
+      (if start-of-containing-parens
+          (save-excursion
+            (goto-char start-of-containing-parens)
+            (if (not (dyalog-on-tradfn-header 'only-after-nabla))
+                (list :start start-of-containing-parens
+                      :end   (condition-case nil
+                                 (progn
+                                   (forward-sexp)
+                                   (point))
+                               (scan-error nil)))
+              nil))
+        nil))))
 
 (defun dyalog-current-defun ()
   "Return the name of the defun point is in."
@@ -927,7 +948,7 @@ time, so providing it is an optimization."
                    (looking-at dyalog-middle-keyword-regex))
                (concat ":" (match-string-no-properties 2))
              nil)))
-      (if (and keyword (or in-dfun (dyalog-dfun-name)))
+      (if (and keyword (or in-dfun (dyalog-in-dfun)))
           nil
         keyword))))
 
@@ -1192,7 +1213,7 @@ PROMPT is the prompt to show to the user."
                 (equal (length fname) 0)
                 (dyalog-in-comment-or-string)
                 (dyalog-in-keyword)
-                (dyalog-dfun-name))
+                (dyalog-in-dfun))
       (save-excursion
         (beginning-of-defun)
         (skip-chars-forward "∇ \r\n")
