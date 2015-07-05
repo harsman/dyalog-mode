@@ -500,7 +500,7 @@ AT-ROOT-FUNCTION returns t when we have reached the corresponding :For."
         (dyalog-search-indent-root (dyalog-indent-search-stop-function keyword)))
        ((looking-at "^\\s-*⍝")
         (if dyalog-indent-comments
-            (dyalog-search-indent-root 'dyalog-indent-search-stop-generic)
+            (dyalog-search-indent-root #'dyalog-indent-search-stop-generic)
           (current-indentation)))
        ((and (looking-at "^[A-Za-z_]+[A-Za-z0-9_]*:") (not dfun))
         0)
