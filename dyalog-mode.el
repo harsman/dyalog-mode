@@ -490,7 +490,7 @@ AT-ROOT-FUNCTION returns t when we have reached the corresponding :For."
   (save-excursion
     (move-beginning-of-line nil)
     (let* ((dfun (dyalog-dfun-name))
-           (keyword (if dfun nil (dyalog-current-keyword))))
+           (keyword (if dfun nil (dyalog-current-keyword nil))))
       (cond
        ((bobp)
         (dyalog-leading-indentation))
@@ -909,10 +909,12 @@ START and END delimit the region to analyze."
                              (string-to-syntax ".")))
         (goto-char endpos)))))
 
-(defun dyalog-current-keyword (&optional pt)
+(defun dyalog-current-keyword (&optional pt in-dfun)
   "Return the current keyword if PT is in a keyword (e.g. :If).
 PT is optional and defaults to point.  If PT isn't in a keyword,
-return nil."
+return nil.  If provided, IN-DFUN is t if PT is inside a dynamic
+function.  If it is not provided, it is computed, which takes some
+time, so providing it is an optimization."
   (save-excursion
     (when pt
       (goto-char pt))
@@ -925,7 +927,7 @@ return nil."
                    (looking-at dyalog-middle-keyword-regex))
                (concat ":" (match-string-no-properties 2))
              nil)))
-      (if (and keyword (dyalog-dfun-name))
+      (if (and keyword (or in-dfun (dyalog-dfun-name)))
           nil
         keyword))))
 
