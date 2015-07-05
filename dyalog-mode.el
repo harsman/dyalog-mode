@@ -601,7 +601,7 @@ functions with ∇."
 Assumes that point is within a dynamic function definition."
   (dyalog-skip-comment-or-string)
   (with-syntax-table dyalog-dfun-syntax-table
-    (condition-case error
+    (condition-case nil
         (goto-char (scan-lists (point) -1 1))
       (scan-error nil))))
 
@@ -717,7 +717,7 @@ isn't inside a dynamic function, return nil"
       (dyalog-skip-comment-or-string context)
       (setq openbrace
             (with-syntax-table syn-table
-              (condition-case err
+              (condition-case nil
                   (goto-char (scan-lists (point) -1 1))
                 (scan-error nil))))
       (let* ((in-dfun-p (and openbrace
@@ -731,7 +731,7 @@ isn't inside a dynamic function, return nil"
                                        t)
                          (match-string-no-properties 1)
                        "")))
-                (condition-case err
+                (condition-case nil
                     (progn
                       (forward-sexp)
                       (if (looking-at " *[^\r\n ⋄]")
