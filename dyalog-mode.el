@@ -276,7 +276,7 @@ together with AltGr produce the corresponding apl character in APLCHARS."
                  (":CaseList" . ":\\(Select\\|Trap\\)")))
       (puthash (car e) (list (cdr e) 'block-pause) h))
     (dolist (e '((":Field" . ":\\(Class\\|Interface\\)")))
-      (puthash (car e) (list (cdr e) 'block-indented) h))
+      (puthash (car e) (list (cdr e) nil) h))
     (dolist (e '(":Access"))
       (puthash e (list "" nil) h))
     h))
@@ -361,17 +361,6 @@ definitions."
              (looking-at (dyalog-specific-keyword-regex match)))
         (dyalog-relative-indent 0)))
 
-(defun dyalog-indent-stop-block-indented (match blockstack indent-type funcount)
-  "Return whether we have found root for an indented block, and chars to indent.
-MATCH is the keyword that matches the root (e.g. :Class is the
-root for :Field), BLOCKSTACK is a stack of currently open blocks,
-INDENT-TYPE is the indentation type of the current keyword (if
-any), and funcount is the number of currently open tradfn
-definitions."
-  (list (and (not blockstack)
-             (looking-at (dyalog-specific-keyword-regex match)))
-        (dyalog-relative-indent 1)))
-
 (defun dyalog-indent-stop-tradfn (blockstack indent-type funcount)
   "Return whether we have found root for an tradfn delimiter, and chars to indent.
 BLOCKSTACK is a stack of currently open blocks, INDENT-TYPE is
@@ -392,8 +381,6 @@ point is at the indentation root for the keyword."
         #'dyalog-indent-search-stop-generic)
      ((memq indent-type '(block-end block-pause))
       (apply-partially 'dyalog-indent-stop-block-end match))
-     ((eq 'block-indented indent-type)
-      (apply-partially 'dyalog-indent-stop-block-indented match))
      (t
       #'dyalog-indent-search-stop-generic))))
 
