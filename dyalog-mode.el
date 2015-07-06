@@ -315,9 +315,17 @@ together with AltGr produce the corresponding apl character in APLCHARS."
 ;;; Indentation
 
 (defun dyalog-matching-delimiter (delimiter)
+  "Return the match for the given DELIMITER.
+For example, if ':EndIf' is provided, return ':If' and vice versa."
   (car (gethash delimiter dyalog-delimiter-match nil)))
 
 (defun dyalog-keyword-indent-type (keyword)
+  "Return a symbol indicating how a KEYWORD affects indentation.
+If KEYWORD introduces a new block, (e.g :If), return
+'block-start.  If it ends a block (e.g. :EndIf), return
+'block-end.  If it ends a block and immediately starts a new
+block (e.g. :Else or :Case), return 'block-pause.  If the keyword
+should be indented the same way as everything else, return nil."
   (let ((d (gethash keyword dyalog-delimiter-match nil)))
     (and d (nth 1 d))))
 
@@ -355,25 +363,29 @@ Assumes point is at the beginning of a logical line."
 MATCH is the keyword that matches the block end (e.g. :For
 matches :EndFor), BLOCKSTACK is a stack of currently open blocks,
 INDENT-TYPE is the indentation type of the current keyword (if
-any), and funcount is the number of currently open tradfn
+any), and FUNCOUNT is the number of currently open tradfn
 definitions."
   (list (and (not blockstack)
              (looking-at (dyalog-specific-keyword-regex match)))
         (dyalog-relative-indent 0)))
 
 (defun dyalog-indent-stop-tradfn (blockstack indent-type funcount)
-  "Return whether we have found root for an tradfn delimiter, and chars to indent.
+  "Return whether we have found root for a tradfn, and chars to indent.
 BLOCKSTACK is a stack of currently open blocks, INDENT-TYPE is
 the indentation type of the current keyword (if any), and
-funcount is the number of currently open tradfn definitions."
+FUNCOUNT is the number of currently open tradfn definitions."
   (list (and (not blockstack)
              (looking-at (dyalog-specific-keyword-regex
                           ":\\(Class\\|Namespace\\)")))
         (dyalog-relative-indent 1)))
 
 (defun dyalog-indent-search-stop-function (keyword &optional match_ indent-type_)
-  "Given a KEYWORD, return a function that will return t when
-point is at the indentation root for the keyword."
+  "Given a KEYWORD, return a function to check for indentation root.
+Optional argument MATCH_ is the matching keyword (e.g. :If
+for :EndIf) and only needs to be supplied if it differs from the
+default.  INDENT-TYPE_ is also optional, and is the indentation
+type for the given keyword (see `dyalog-keyword-indent-type') and
+only needs to be supplied if it differs from the default."
   (let* ((match (or match_ (dyalog-matching-delimiter keyword)))
          (indent-type (or indent-type_ (dyalog-keyword-indent-type keyword))))
     (cond
@@ -385,7 +397,10 @@ point is at the indentation root for the keyword."
       #'dyalog-indent-search-stop-generic))))
 
 (defun dyalog-indent-search-stop-generic (blockstack indent-type funcount)
-  "Return t when point is at a line to anchor indentation to (a root)."
+  "Return if we have found an indentation root, and no chars to indent.
+BLOCKSTACK is a stack of currently open blocks, INDENT-TYPE is
+the indentation type of the current keyword (if any), and
+FUNCOUNT is the number of currently open tradfn definitions."
   (cond
    ((and (eq indent-type 'block-start) (not blockstack) (eq funcount 0))
     (list t (dyalog-relative-indent 1)))
