@@ -616,15 +616,16 @@ Assumes that point is within a dynamic function definition."
         (goto-char (scan-lists (point) -1 1))
       (scan-error nil))))
 
-(defun dyalog-previous-defun ()
-  "Move backward to the start of a function definition."
+(defun dyalog-previous-defun (&optional tradfn-only)
+  "Move backward to the start of a function definition.
+If TRADFN-ONLY is t, only consider traditional function definitions."
   ;; Point can be anywhere when this function is called
   (let ((done nil)
         (dfun-info (dyalog-in-dfun)))
     (if dfun-info
         (goto-char (plist-get dfun-info :start))
       (while (not done)
-        (skip-chars-backward "^∇{}")
+        (skip-chars-backward (if tradfn-only "^∇" "^∇{}"))
         (if (or (bobp) (not (dyalog-in-comment-or-string)))
             (progn
               (setq done t)
@@ -757,22 +758,33 @@ isn't inside a dynamic function, return nil"
 (defun dyalog-in-dfun ()
   "If point is inside a dfun, return a plist with it's start and end position.
 If point isn't inside a dfun, return nil."
-  (with-syntax-table dyalog-dfun-syntax-table
-    (let* ((syntax-begin-function 'beginning-of-line)
-           (ppss (syntax-ppss))
-           (start-of-containing-parens (nth 1 ppss)))
-      (if start-of-containing-parens
-          (save-excursion
-            (goto-char start-of-containing-parens)
-            (if (not (dyalog-on-tradfn-header 'only-after-nabla))
-                (list :start start-of-containing-parens
-                      :end   (condition-case nil
-                                 (progn
-                                   (forward-sexp)
-                                   (point))
-                               (scan-error nil)))
-              nil))
-        nil))))
+  (progn ;; with-syntax-table can't be at defun top-level apparently...
+    (with-syntax-table dyalog-dfun-syntax-table
+      (let* ((syntax-begin-function 'beginning-of-line)
+             (ppss (syntax-ppss))
+             (start-of-containing-parens (nth 1 ppss)))
+        (when (and start-of-containing-parens
+                   (not (eq (char-after start-of-containing-parens) ?{)))
+          ;; When syntax-pps is called during jit-lock, it sometimes ignores
+          ;; the syntax-table, and treats regular parens as syntactical
+          ;; parens. Calling (syntax-ppss-flush-cache) doesn't seem to help,
+          ;; so instead fall back on scan-lists, which seems to work. 
+          (setq start-of-containing-parens
+                (condition-case nil
+                    (goto-char (scan-lists (point) -1 1))
+                  (scan-error nil))))
+        (if start-of-containing-parens
+            (save-excursion
+              (goto-char start-of-containing-parens)
+              (if (not (dyalog-on-tradfn-header 'only-after-nabla))
+                  (list :start start-of-containing-parens
+                        :end   (condition-case nil
+                                   (progn
+                                     (forward-sexp)
+                                     (point))
+                                 (scan-error nil)))
+                nil))
+          nil)))))
 
 (defun dyalog-current-defun ()
   "Return the name of the defun point is in."
@@ -807,7 +819,7 @@ position where the function header ends and the character
 position where the defun ends."
   (save-excursion
     (let ((start-pos (point)))
-      (dyalog-previous-defun)
+      (dyalog-previous-defun 'tradfn-only)
       (when (not (looking-at "∇"))
         (forward-line -1))         ; Nabla is on its own line
       (if (re-search-forward dyalog-tradfn-header nil t)
@@ -889,7 +901,7 @@ START and END signify the region to fontify."
                      (rx (concat "\\_<\\("
                                  (mapconcat 'identity locals "\\|")
                                  "\\)\\_>")))
-                (goto-char end-of-header)
+                (goto-char (max end-of-header start))
                 (while (re-search-forward rx limit t)
                   (let* ((symbol-start (match-beginning 0))
                          (symbol-end (match-end 0))
@@ -912,7 +924,7 @@ START and END signify the region to fontify."
                                              'face
                                              face)))))
                 (goto-char limit)))))
-        (set 'done (>= (point) end))
+        (setq done (>= (point) end))
         (when (not done)
           (dyalog-next-defun end)
           (when (not (setq done (>= (point) end)))
