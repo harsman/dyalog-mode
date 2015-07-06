@@ -491,31 +491,41 @@ AT-ROOT-FUNCTION returns t when we have reached the corresponding :For."
           (dyalog-leading-indentation))))))
 
 (defun dyalog-calculate-indent ()
-  "Calculate the amount of indentation for the current line."
+  "Calculate the amount of indentation for the current line.
+Return a plist with the indent in spaces, and whether the current
+line has a label. Labels are always aligned to the leftmost column, so "
   (save-excursion
     (move-beginning-of-line nil)
     (let* ((dfun (dyalog-in-dfun))
-           (keyword (if dfun nil (dyalog-current-keyword nil))))
-      (cond
-       ((bobp)
-        (dyalog-leading-indentation))
-       (dfun
-        (dyalog-calculate-dfun-indent))
-       (keyword
-        (dyalog-search-indent-root
-         (dyalog-indent-search-stop-function keyword)))
-       ((looking-at "^\\s-*⍝")
-        (if dyalog-indent-comments
-            (dyalog-search-indent-root #'dyalog-indent-search-stop-generic)
-          (current-indentation)))
-       ((and (looking-at "^[A-Za-z_]+[A-Za-z0-9_]*:") (not dfun))
-        0)
-       ((looking-at dyalog-naked-nabla)
-        (dyalog-search-indent-root #'dyalog-indent-stop-tradfn))
-       ((dyalog-on-tradfn-header)
-        (dyalog-search-indent-root #'dyalog-indent-stop-tradfn))
-       (t
-        (dyalog-search-indent-root #'dyalog-indent-search-stop-generic))))))
+           (keyword (if dfun nil (dyalog-current-keyword nil)))
+           (has-label nil)
+           (indent 0))
+      (setq indent
+            (cond
+             ((bobp)
+              (dyalog-leading-indentation))
+             (dfun
+              (dyalog-calculate-dfun-indent))
+             (keyword
+              (dyalog-search-indent-root
+               (dyalog-indent-search-stop-function keyword)))
+             ((looking-at "^\\s-*⍝")
+              (if dyalog-indent-comments
+                  (dyalog-search-indent-root #'dyalog-indent-search-stop-generic)
+                (current-indentation)))
+             ((and (looking-at "^ *[A-Za-z_]+[A-Za-z0-9_]*:") (not dfun))
+              (setq has-label t)
+              (let ((oldlabel (dyalog-remove-label))
+                    (n (plist-get (dyalog-calculate-indent) :indent)))
+                (insert oldlabel)
+                n))
+             ((looking-at dyalog-naked-nabla)
+              (dyalog-search-indent-root #'dyalog-indent-stop-tradfn))
+             ((dyalog-on-tradfn-header)
+              (dyalog-search-indent-root #'dyalog-indent-stop-tradfn))
+             (t
+              (dyalog-search-indent-root #'dyalog-indent-search-stop-generic))))
+      (list :indent indent :has-label has-label))))
 
 (defun dyalog-leading-indentation ()
   "Return the number of spaces to indent by in the current buffer.
@@ -529,11 +539,31 @@ functions with ∇."
 (defun dyalog-indent-line ()
   "Indent the current line."
   (interactive)
-  (let ((restorepos (> (current-column) (current-indentation)))
-        (indent (max 0 (dyalog-calculate-indent))))
-    (if restorepos
-        (save-excursion (indent-line-to indent))
-      (indent-line-to indent))))
+  (let* ((restore-pos (> (current-column) (current-indentation)))
+         (indent-info (dyalog-calculate-indent))
+         (indent (plist-get indent-info :indent))
+         (has-label (plist-get indent-info :has-label))
+         (old-pos (point)))
+    (if has-label
+        (let ((old-label (dyalog-remove-label)))
+          (indent-line-to indent)
+          (beginning-of-line)
+          (delete-char (min (length old-label) (current-indentation)))
+          (insert old-label))
+      (indent-line-to indent))
+    (when restore-pos
+      (goto-char old-pos))))
+
+(defun dyalog-remove-label ()
+  "Remove the current label token at beginning of line, and return it."
+  (save-excursion
+    (beginning-of-line)
+    (skip-chars-forward " \t")
+    (let* ((start (point))
+           (end (+ start (skip-chars-forward "A-Za-z_0-9:")))
+           (label (buffer-substring-no-properties start end)))
+    (delete-region start end)
+    label)))
 
 (defun dyalog-fix-whitespace-before-save ()
   "Clean up whitespace in the current buffer before saving."
