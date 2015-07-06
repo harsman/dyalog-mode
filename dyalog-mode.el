@@ -110,9 +110,11 @@ together with AltGr produce the corresponding apl character in APLCHARS."
 
 (defconst dyalog-func-start "\\(?:\\`\\|∇[\r\n]*\\)\\s-*")
 
-(defconst dyalog-func-retval "\\(?:\\(?2:[A-Za-z_]+\\) *← *\\|{\\(?2:[a-zA-Z_]+\\)} *← *\\)?")
+(defconst dyalog-func-retval
+  "\\(?:\\(?2:[A-Za-z_]+\\) *← *\\|{\\(?2:[a-zA-Z_]+\\)} *← *\\)?")
 
-(defconst dyalog-func-larg "\\(?:\\(?3:[A-Za-z_]+\\) +\\|{\\(?3:[A-Za-z_]+\\)} *\\)")
+(defconst dyalog-func-larg
+  "\\(?:\\(?3:[A-Za-z_]+\\) +\\|{\\(?3:[A-Za-z_]+\\)} *\\)")
 
 (defconst dyalog-func-name (concat "\\(?1:" dyalog-name "\\)"))
 
@@ -237,7 +239,7 @@ together with AltGr produce the corresponding apl character in APLCHARS."
 (defun dyalog-ediff-forward-word ()
   "Move point forward one word."
   (interactive)
-  (or 	(> (skip-chars-forward "A-Za-z_∆0-9") 0)  ; name
+  (or   (> (skip-chars-forward "A-Za-z_∆0-9") 0)  ; name
         (> (skip-chars-forward "⎕:A-Za-z") 0)     ; sys name/keyword
         (> (skip-chars-forward "0-9E¯.") 0)       ; numbers
         (> (skip-chars-forward "⍺⍵∇") 0)          ; meta chars
@@ -379,7 +381,8 @@ FUNCOUNT is the number of currently open tradfn definitions."
                           ":\\(Class\\|Namespace\\)")))
         (dyalog-relative-indent 1)))
 
-(defun dyalog-indent-search-stop-function (keyword &optional match_ indent-type_)
+(defun dyalog-indent-search-stop-function (keyword
+                                           &optional match_ indent-type_)
   "Given a KEYWORD, return a function to check for indentation root.
 Optional argument MATCH_ is the matching keyword (e.g. :If
 for :EndIf) and only needs to be supplied if it differs from the
@@ -482,7 +485,7 @@ AT-ROOT-FUNCTION returns t when we have reached the corresponding :For."
         (if (< containing-brace line-start)
             (progn
               (goto-char containing-brace)
-              (dyalog-relative-indent 
+              (dyalog-relative-indent
                       (if (equal (char-after line-start) ?})
                           0 1)))
           (dyalog-leading-indentation))))))
@@ -499,7 +502,8 @@ AT-ROOT-FUNCTION returns t when we have reached the corresponding :For."
        (dfun
         (dyalog-calculate-dfun-indent))
        (keyword
-        (dyalog-search-indent-root (dyalog-indent-search-stop-function keyword)))
+        (dyalog-search-indent-root
+         (dyalog-indent-search-stop-function keyword)))
        ((looking-at "^\\s-*⍝")
         (if dyalog-indent-comments
             (dyalog-search-indent-root #'dyalog-indent-search-stop-generic)
@@ -684,7 +688,9 @@ If it is supplied, BOUND limits the search."
   (let ((end (or bound (point-max)))
         (done nil)
         (in-dfun-p nil)
-        (dfun-mode (and (looking-at "{") (not (dyalog-on-tradfn-header 'only-after-nabla)))))
+        (dfun-mode
+         (and (looking-at "{")
+              (not (dyalog-on-tradfn-header 'only-after-nabla)))))
     (if dfun-mode
         (forward-sexp)
       (ignore-errors (forward-char)) ; skip past nabla
@@ -722,8 +728,9 @@ isn't inside a dynamic function, return nil"
               (condition-case nil
                   (goto-char (scan-lists (point) -1 1))
                 (scan-error nil))))
-      (let* ((in-dfun-p (and openbrace
-                             (not (dyalog-on-tradfn-header 'only-after-nabla)))))
+      (let* ((in-dfun-p
+              (and openbrace
+                   (not (dyalog-on-tradfn-header 'only-after-nabla)))))
         (if in-dfun-p
             (progn
               (goto-char openbrace)
@@ -1044,7 +1051,8 @@ PROCESS is the socket receiving data and OUTPUT is the data received."
   "Parse and delete a Dyalog editor command in the currently active region.
 PROCESS is the socket receiving the command, START is the start
 of the command and END is where it ends."
-  (cond ((looking-at "edit \\([^ []+\\)\\(\\[\\([0-9]+\\)\\]\\)?\0\\([^\0]*\\)\0")
+  (cond ((looking-at
+          "edit \\([^ []+\\)\\(\\[\\([0-9]+\\)\\]\\)?\0\\([^\0]*\\)\0")
          (let ((name (match-string 1))
                (linetext (match-string 3))
                (lineno nil)
