@@ -543,19 +543,20 @@ functions with ∇."
 (defun dyalog-fix-whitespace ()
   "Clean up white space in the current buffer like Dyalog does."
   (interactive)
+  (message "Cleaning up whitespace...")
   (let ((dyalog-indent-comments nil)
         (punctuation-char "\\s.\\|\\s(\\|\\s)"))
 
     (save-excursion
       (delete-trailing-whitespace)
-      ;; Reduce all runs of whitespace to a single space, except
-      ;; when succeeded by a comment character, or if inside a comment
-      ;; or string literal
+      ;; Reduce all runs of whitespace to a single space, except when
+      ;; preceeded by a newline, succeeded by a comment character, or if
+      ;; inside a comment or string literal
       (goto-char (point-min))
-      (while (re-search-forward "  +\\([^⍝ \r\n]\\)" (point-max) t)
-        (let ((ws-start (match-beginning 1)))
+      (while (re-search-forward "\\([^ \r\n]\\)\\(  +\\)\\([^⍝ \r\n]\\)" (point-max) t)
+        (let ((ws-start (match-beginning 2)))
           (unless (dyalog-in-comment-or-string ws-start)
-            (replace-match " \\1"))))
+            (replace-match "\\1 \\3"))))
       ;; Remove spaces before punctuation
       (goto-char (point-min))
       (while (re-search-forward (concat "\\([^ \r\n]\\)" "\\( +\\)"
@@ -564,10 +565,12 @@ functions with ∇."
                                 t)
         (let ((start (match-beginning 0))
               (ws-start (match-beginning 2)))
-          (unless (or (dyalog-in-comment-or-string ws-start)
+          (unless (or (string-equal "⍝" (match-string 3))
+                      (dyalog-in-comment-or-string ws-start)
                       (string-match "[∇⋄⍬]" (match-string 3))
                       (string-match "[∇⋄⍬]" (match-string 1))
-                      (dyalog-in-keyword (match-beginning 3))
+                      (and (string-equal ":" (substring (match-string 3) 0 1))
+                           (dyalog-in-keyword (match-beginning 3)))
                       (dyalog-in-keyword (match-beginning 1)))
             (replace-match "\\1\\3")
             (goto-char start))))
@@ -581,10 +584,12 @@ functions with ∇."
                                 t)
         (let ((start (match-beginning 0))
               (ws-start (match-beginning 2)))
-          (unless (or (dyalog-in-comment-or-string ws-start)
+          (unless (or (string-equal "⍝" (match-string 1))
+                      (dyalog-in-comment-or-string ws-start)
                       (string-match "[∇⋄⍬]" (match-string 1))
                       (string-match "[∇⋄⍬]" (match-string 3))
-                      (dyalog-in-keyword (match-beginning 3)))
+                      (and (string-equal ":" (substring (match-string 3) 0 1))
+                           (dyalog-in-keyword (match-beginning 3))))
             (replace-match "\\1\\3")
             (goto-char start))))
       (dyalog-indent-buffer))))
