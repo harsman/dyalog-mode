@@ -780,7 +780,7 @@ If ONLY-AFTER-NABLA is t, only return t when point is after
 the nabla in the tradfn header."
   (save-excursion
     (let ((start (point))
-          (min (save-excursion (forward-line -1)(line-beginning-position))))
+          (min (line-beginning-position 0)))
       (forward-line)
       (end-of-line)
       (if (re-search-backward dyalog-tradfn-header min t)
