@@ -244,21 +244,6 @@ together with AltGr produce the corresponding apl character in APLCHARS."
         (> (skip-chars-forward " ") 0)            ; white space
         (forward-char)))                          ; fallback
 
-(defvar dyalog-indent-start
-  (concat
-   "\\(.*{[^{}\r\n]*$\\)" "\\|"
-   "\\(^\\s-*:\\(If\\|While\\|Repeat\\|Trap\\|Case"
-   "\\|For\\|Class\\|Hold\\|With\\|Namespace\\)[^⋄\r\n]*$\\)"))
-
-(defvar dyalog-block-start
-  (concat
-   "\\(.*{[^{}\r\n]*$\\)" "\\|"
-   "\\(^\\s-*:\\(If\\|While\\|Repeat\\|Trap\\|"
-   "For\\|Class\\|Hold\\|With\\|Namespace\\)[^⋄\r\n]*$\\)"))
-
-(defvar dyalog-indent-pause
-  "^\\s-*:\\(Else\\|AndIf\\|OrIf\\)[^⋄\r\n]*$")
-
 (defconst dyalog-delimiter-match
   (let ((h (make-hash-table :test 'equal)))
     (dolist (e '((":If" . ":EndIf")("{"."}")
@@ -280,12 +265,6 @@ together with AltGr produce the corresponding apl character in APLCHARS."
     (dolist (e '(":Access"))
       (puthash e (list "" nil) h))
     h))
-
-(defvar dyalog-indent-case
-  "^\\s-*:Case")
-
-(defvar dyalog-indent-stop
-  "\\([^{\n\r]*}[^{}\r\n]*$\\)\\|\\(^\\s-*:End[A-Za-z]+[^⋄\r\n]*$\\)")
 
 (defgroup dyalog nil
   "Major mode `dyalog-mode' for editing Dyalog APL code."
