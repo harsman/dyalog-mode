@@ -344,9 +344,13 @@ matches :EndFor), BLOCKSTACK is a stack of currently open blocks,
 INDENT-TYPE is the indentation type of the current keyword (if
 any), and FUNCOUNT is the number of currently open tradfn
 definitions."
-  (list (and (not blockstack)
-             (looking-at (dyalog-specific-keyword-regex match)))
-        (dyalog-relative-indent 0)))
+  (cond
+   ((and (not blockstack)
+         (looking-at (dyalog-specific-keyword-regex match)))
+    (list t (dyalog-relative-indent 0)))
+   ((and (memq indent-type '(tradfn-start tradfn-end))
+         (not (string-match ":\\(End\\)?\\(Namespace\\|Class\\)" match)))
+    (list t (skip-chars-forward " ∇")))))
 
 (defun dyalog-indent-stop-tradfn (blockstack indent-type funcount)
   "Return whether we have found root for a tradfn, and chars to indent.
