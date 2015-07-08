@@ -357,10 +357,12 @@ definitions."
 BLOCKSTACK is a stack of currently open blocks, INDENT-TYPE is
 the indentation type of the current keyword (if any), and
 FUNCOUNT is the number of currently open tradfn definitions."
-  (list (and (not blockstack)
-             (looking-at (dyalog-specific-keyword-regex
-                          ":\\(Class\\|Namespace\\)")))
-        (dyalog-relative-indent 1)))
+  (cond ((and (not blockstack)
+              (looking-at (dyalog-specific-keyword-regex
+                           ":\\(Class\\|Namespace\\)")))
+         (list t (dyalog-relative-indent 1)))
+        ((and (not blockstack) (memq indent-type '(tradfn-start tradfn-end)))
+         (list t (current-indentation)))))
 
 (defun dyalog-indent-search-stop-function (keyword
                                            &optional match_ indent-type_)
