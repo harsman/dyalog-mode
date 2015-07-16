@@ -1296,21 +1296,26 @@ PROMPT is the prompt to show to the user."
     (when (kill-buffer)
       (process-send-string process "focus \e"))))
 
-(defun dyalog-editor-edit (name)
-  "Open source of symbol NAME in an edit buffer."
+(defun dyalog-editor-edit (name &optional line)
+  "Open source of symbol NAME in an edit buffer.
+Optional argument LINE specifies which line to move point to."
   (interactive "s")
-  (let ((process (dyalog-connection-select)))
+  (let ((process (dyalog-connection-select))
+        (linespec (format "[%d]" line)))
     (setq dyalog-connection process)
-    (process-send-string process (concat "src " name "\e"))))
+    (process-send-string process (concat "src "
+                                         name
+                                         (when line linespec)
+                                         "\e"))))
 
 (defun dyalog-editor-edit-symbol-at-point ()
   "Edit the source for the symbol at point."
   (interactive)
   (let ((sym (symbol-at-point))
-        (linespec ""))
-    (when (looking-at "[A-Za-z∆_0-9]+\\(\\[[0-9]+\\]\\)")
-      (setq linespec (match-string 1)))
-    (dyalog-editor-edit (concat (symbol-name sym) linespec))))
+        (lineno nil))
+    (when (looking-at "[A-Za-z∆_0-9]+\\[\\([0-9]+\\)\\]")
+      (setq lineno (string-to-int (match-string 1))))
+    (dyalog-editor-edit (symbol-name sym) lineno)))
 
 (defun dyalog-toggle-local ()
   "Toggle localization for symbol at point."
