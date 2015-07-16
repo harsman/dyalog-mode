@@ -1270,12 +1270,17 @@ PROMPT is the prompt to show to the user."
   (let ((p (or prompt "Select a Dyalog process:"))
         (candidates (mapcar
                      'dyalog-connection-desc dyalog-connections)))
-    (or (and (process-live-p dyalog-connection) dyalog-connection)
+    (or (dyalog-editor-buffer-connected)
         (and (equal 1 (length dyalog-connections))
              (car dyalog-connections))
         (nth (cl-position (completing-read p candidates nil t)
                           candidates :test 'string-equal)
              dyalog-connections))))
+
+(defun dyalog-editor-buffer-connected ()
+  "When the current buffer is connected to Dyalog, return the connection.
+Otherwise return nil."
+  (and (process-live-p dyalog-connection) dyalog-connection))
 
 (defun dyalog-editor-fix (&optional process)
   "Send the contents of the current buffer to the connected Dyalog PROCESS."
