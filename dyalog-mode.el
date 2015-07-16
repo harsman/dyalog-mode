@@ -337,6 +337,19 @@ Assumes point is at the beginning of a logical line."
               (backward-char)))
         (setq done t)))))
 
+(defun dyalog-next-logical-line ()
+  "Move forward to the start of the next logical line.
+Assumes point is at the start of a logical line."
+  (let ((done nil))
+    (when (eq (char-after) ?⋄)
+      (forward-char))
+    (while (not done)
+      (skip-chars-forward "^⋄\r\n")
+      (if (eq (char-after) ?⋄)
+          (setq done (not (dyalog-in-comment-or-string)))
+        (setq done t))
+      (forward-char))))
+
 (defun dyalog-indent-stop-block-end (match blockstack indent-type funcount)
   "Return whether we have found root for a block end, and amount of to indent.
 MATCH is the keyword that matches the block end (e.g. :For
@@ -477,39 +490,47 @@ AT-ROOT-FUNCTION returns t when we have reached the corresponding :For."
 (defun dyalog-calculate-indent ()
   "Calculate the amount of indentation for the current line.
 Return a plist with the indent in spaces, and whether the current
-line has a label. Labels are always aligned to the leftmost column, so "
+line has a label."
   (save-excursion
     (move-beginning-of-line nil)
     (let* ((dfun (dyalog-in-dfun))
            (keyword (if dfun nil (dyalog-current-keyword nil)))
-           (has-label nil)
-           (indent 0))
-      (setq indent
+           (indent-info nil))
+      (setq indent-info
             (cond
              ((bobp)
-              (dyalog-leading-indentation))
+              (list :indent (dyalog-leading-indentation)
+                    :has-label nil
+                    :funcount 0
+                    :blockstack nil))
              (dfun
-              (dyalog-calculate-dfun-indent))
+              (list :indent (dyalog-calculate-dfun-indent)
+                    :has-label nil
+                    :funcount 0
+                    :blockstack (list "}")))
              (keyword
               (dyalog-search-indent-root
                (dyalog-indent-search-stop-function keyword)))
              ((looking-at "^\\s-*⍝")
               (if dyalog-indent-comments
                   (dyalog-search-indent-root #'dyalog-indent-search-stop-generic)
-                (current-indentation)))
+                (list :indent (current-indentation)
+                      :has-label nil
+                      :funcount 0
+                      :blockstack nil)))
              ((and (looking-at "^ *[A-Za-z_]+[A-Za-z0-9_]*:") (not dfun))
-              (setq has-label t)
               (let ((oldlabel (dyalog-remove-label))
-                    (n (plist-get (dyalog-calculate-indent) :indent)))
+                    (l (dyalog-calculate-indent)))
                 (insert oldlabel)
-                n))
+                (plist-put l :has-label t)
+                l))
              ((looking-at dyalog-naked-nabla)
               (dyalog-search-indent-root #'dyalog-indent-stop-tradfn))
              ((dyalog-on-tradfn-header)
               (dyalog-search-indent-root #'dyalog-indent-stop-tradfn))
              (t
               (dyalog-search-indent-root #'dyalog-indent-search-stop-generic))))
-      (list :indent indent :has-label has-label))))
+      indent-info)))
 
 (defun dyalog-leading-indentation ()
   "Return the number of spaces to indent by in the current buffer.
@@ -520,23 +541,69 @@ functions with ∇."
   ;; TODO: Return different amounts depending on buffer type
   dyalog-leading-spaces)
 
-(defun dyalog-indent-line ()
-  "Indent the current line."
-  (interactive)
-  (let* ((restore-pos (> (current-column) (current-indentation)))
-         (indent-info (dyalog-calculate-indent))
-         (indent (plist-get indent-info :indent))
-         (has-label (plist-get indent-info :has-label))
-         (old-pos (point)))
+(defun dyalog-indent-line-with (indent-info)
+  "Indent the current line according to INDENT-INFO.
+INDENT-INFO is the return value from `dyalog-calculate-indent'."
+  (let* ((indent (plist-get indent-info :indent))
+         (has-label (plist-get indent-info :has-label)))
     (if has-label
         (let ((old-label (dyalog-remove-label)))
           (indent-line-to indent)
           (beginning-of-line)
           (delete-char (min (length old-label) (current-indentation)))
           (insert old-label))
-      (indent-line-to indent))
+      (indent-line-to indent))))
+
+(defun dyalog-indent-line ()
+  "Indent the current line."
+  (interactive)
+  (let* ((restore-pos (> (current-column) (current-indentation)))
+         (old-pos (point))
+         (indent-info (dyalog-calculate-indent)))
+    (dyalog-indent-line-with indent-info)
     (when restore-pos
       (goto-char old-pos))))
+
+(defun dyalog-indent-region (start end)
+  "Indent every line in the current region.
+START and END specify the region to indent."
+  (interactive "r\nP")
+  (save-excursion
+    (goto-char start)
+    (let ((done nil)
+          (current-indent 0)
+          (indent-info nil))
+      (goto-char (line-beginning-position))
+      (setq indent-info    (dyalog-calculate-indent)
+            current-indent (plist-get indent-info :indent))
+      (dyalog-indent-line-with indent-info)
+      (while (not done)
+        (dyalog-next-logical-line)
+        (if (bolp)
+            (indent-line-to current-indent))
+        (setq current-indent (dyalog-indent-update indent-info)
+              done (>= (point) end))))))
+
+(defun dyalog-indent-update (indent-info)
+  "Calculate an updated indentation after the current logical line.
+INDENT-INFO is a plist of indentation information, on the same
+form as the return value from `dyalog-calculate-indent'. Return
+the updated amount of indentation, in characters."
+  ;; State we need:
+  ;;    blockstack     (initialized by calculate-indent)
+  ;;    in-dfun        (initialized by calculate-indent)
+  ;;    current-indent (initialized by calculate-indent)
+  ;;    funcount       (initialized by calculate-indent)
+  ;;    indent of open fun
+
+  ;; Then we loop and look at current logical line status
+  ;;   - what is the current delimiter?
+  ;;   - how does that affect the blockstack, funcount etc?
+  ;;   - update current indent according to blockstack, funcount
+  ;;     (blockstack has precedence, except if it's class/interface
+  ;;     then we rely on funcount, so we need an indent for last open
+  ;;     function as well).
+)
 
 (defun dyalog-remove-label ()
   "Remove the current label token at beginning of line, and return it."
