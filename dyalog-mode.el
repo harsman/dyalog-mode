@@ -1306,12 +1306,9 @@ Otherwise return nil."
 Optional argument LINE specifies which line to move point to."
   (interactive "s")
   (let ((process (dyalog-connection-select))
-        (linespec (format "[%d]" line)))
+        (linespec (if line (format "[%d]" line) nil )))
     (setq dyalog-connection process)
-    (process-send-string process (concat "src "
-                                         name
-                                         (when line linespec)
-                                         "\e"))))
+    (process-send-string process (concat "src " name linespec "\e"))))
 
 (defun dyalog-editor-edit-symbol-at-point ()
   "Edit the source for the symbol at point."
