@@ -169,12 +169,6 @@ Known issues and limitations
 
 Arrays are always read-only and cannot be edited.
 
-Indentation doesn't take line breaks with diamonds (⋄) into account, and will
-therefore be buggy if you use diamonds.
-
-Indentation for Select-statements inside other statements (e.g. a :While or a
-:Trap) is sometimes incorrect.
-
 Indenting large regions or large files all at once uses a very suboptimal
 algorithm and is therefore very slow.
 
