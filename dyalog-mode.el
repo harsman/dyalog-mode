@@ -85,6 +85,9 @@ together with AltGr produce the corresponding apl character in APLCHARS."
 (defconst dyalog-middle-keyword-regex
   "\\s-+\\(:\\(In\\|InEach\\)\\)\\s-+")
 
+(defconst dyalog-label-regex
+  "^ *[A-Za-z_]+[A-Za-z0-9_]*:")
+
 (defvar dyalog-ascii-chars "][<>+---=/¨~\\?*(){}&|.;"
   "APL symbols also present in ASCII.")
 
@@ -518,7 +521,7 @@ line has a label."
                       :has-label nil
                       :funcount 0
                       :blockstack nil)))
-             ((and (looking-at "^ *[A-Za-z_]+[A-Za-z0-9_]*:") (not dfun))
+             ((and (looking-at-p dyalog-label-regex) (not dfun))
               (let ((oldlabel (dyalog-remove-label))
                     (l (dyalog-calculate-indent)))
                 (insert oldlabel)
