@@ -611,7 +611,7 @@ the updated amount of indentation, in characters."
     (beginning-of-line)
     (skip-chars-forward " \t")
     (let* ((start (point))
-           (end (+ start (skip-chars-forward "A-Za-z_0-9:")))
+           (end (+ start 1 (skip-chars-forward "A-Za-z_0-9")))
            (label (buffer-substring-no-properties start end)))
     (delete-region start end)
     label)))
