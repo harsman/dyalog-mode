@@ -1441,7 +1441,7 @@ Optional argument LINE specifies which line to move point to."
   (let ((sym (symbol-at-point))
         (lineno nil))
     (when (looking-at "[A-Za-z∆_0-9]+\\[\\([0-9]+\\)\\]")
-      (setq lineno (string-to-int (match-string 1))))
+      (setq lineno (string-to-number (match-string 1))))
     (dyalog-editor-edit (symbol-name sym) lineno)))
 
 (defun dyalog-toggle-local ()
