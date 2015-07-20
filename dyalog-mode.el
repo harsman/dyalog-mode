@@ -79,14 +79,18 @@ together with AltGr produce the corresponding apl character in APLCHARS."
       (when fun
         (define-key keymap aplkey fun)))))
 
+(defconst dyalog-label-regex
+  "^ *[A-Za-z_]+[A-Za-z0-9_]*:")
+
 (defconst dyalog-keyword-regex
-  "\\(^\\s-*:\\([A-Za-z]+\\)\\)\\|\\(⋄\\s-*:\\(?2:[A-Za-z]+\\)\\)")
+  (concat "\\(\\(?:^\\s-*\\|\\(?5:" dyalog-label-regex " *\\)\\)"
+          ":\\(?2:[A-Za-z]+\\)\\)\\|\\(⋄\\s-*:\\(?2:[A-Za-z]+\\)\\)"))
 
 (defconst dyalog-middle-keyword-regex
   "\\s-+\\(:\\(In\\|InEach\\)\\)\\s-+")
 
-(defconst dyalog-label-regex
-  "^ *[A-Za-z_]+[A-Za-z0-9_]*:")
+(defconst dyalog-comment-regex
+  "^\\s-*⍝")
 
 (defvar dyalog-ascii-chars "][<>+---=/¨~\\?*(){}&|.;"
   "APL symbols also present in ASCII.")
@@ -313,7 +317,8 @@ should be indented the same way as everything else, return nil."
 
 (defun dyalog-specific-keyword-regex (keyword)
   "Return a regex mathcing KEYWORD when point is at bol."
-  (concat "\\(^\\s-*" keyword "\\)\\|\\(⋄\\s-*" keyword "%s\\)"))
+  (concat "\\(\\(?:^\\s-*\\|\\(?:" dyalog-label-regex " *\\)\\)"
+          keyword "\\)\\|\\(⋄\\s-*" keyword "\\)"))
 
 (defun dyalog-relative-indent (n)
   "Return the no spaces to indent N tabstops relative to the current line."
@@ -353,31 +358,35 @@ Assumes point is at the start of a logical line."
         (setq done t))
       (forward-char))))
 
-(defun dyalog-indent-stop-block-end (match blockstack indent-type funcount)
+(defun dyalog-indent-stop-block-end (match blockstack indent-status funcount)
   "Return whether we have found root for a block end, and amount of to indent.
 MATCH is the keyword that matches the block end (e.g. :For
 matches :EndFor), BLOCKSTACK is a stack of currently open blocks,
-INDENT-TYPE is the indentation type of the current keyword (if
-any), and FUNCOUNT is the number of currently open tradfn
-definitions."
+INDENT-STATUS is the indentation status of the current line (the
+return value from `dyalog-indent-status', and FUNCOUNT is the
+number of currently open tradfn definitions."
   (cond
    ((and (not blockstack)
          (looking-at (dyalog-specific-keyword-regex match)))
     (list t (dyalog-relative-indent 0)))
-   ((and (memq indent-type '(tradfn-start tradfn-end))
+   ((and (memq (plist-get indent-status :indent-type)
+               '(tradfn-start tradfn-end))
          (not (string-match ":\\(End\\)?\\(Namespace\\|Class\\)" match)))
     (list t (skip-chars-forward " ∇")))))
 
-(defun dyalog-indent-stop-tradfn (blockstack indent-type funcount)
+(defun dyalog-indent-stop-tradfn (blockstack indent-status funcount)
   "Return whether we have found root for a tradfn, and chars to indent.
-BLOCKSTACK is a stack of currently open blocks, INDENT-TYPE is
-the indentation type of the current keyword (if any), and
-FUNCOUNT is the number of currently open tradfn definitions."
+BLOCKSTACK is a stack of currently open blocks, INDENT-STATUS is
+the indentation status of the current line (the return value from
+`dyalog-indent-status', and FUNCOUNT is the number of currently
+open tradfn definitions."
   (cond ((and (not blockstack)
               (looking-at (dyalog-specific-keyword-regex
                            ":\\(Class\\|Namespace\\)")))
          (list t (dyalog-relative-indent 1)))
-        ((and (not blockstack) (memq indent-type '(tradfn-start tradfn-end)))
+        ((and (not blockstack)
+              (memq (plist-get indent-status :indent-type)
+                    '(tradfn-start tradfn-end)))
          (list t (current-indentation)))))
 
 (defun dyalog-indent-search-stop-function (keyword
@@ -398,23 +407,27 @@ only needs to be supplied if it differs from the default."
      (t
       #'dyalog-indent-search-stop-generic))))
 
-(defun dyalog-indent-search-stop-generic (blockstack indent-type funcount)
+(defun dyalog-indent-search-stop-generic (blockstack indent-status funcount)
   "Return if we have found an indentation root, and no chars to indent.
 BLOCKSTACK is a stack of currently open blocks, INDENT-TYPE is
 the indentation type of the current keyword (if any), and
 FUNCOUNT is the number of currently open tradfn definitions."
-  (cond
-   ((and (eq indent-type 'block-start) (not blockstack) (eq funcount 0))
-    (list t (dyalog-relative-indent 1)))
-   ((and (eq indent-type 'block-end) (not blockstack) (eq funcount 0))
-    (list t (current-indentation)))
-   ((and (eq indent-type 'tradfn-start)
-         (eq funcount 0))
-    (list t (skip-chars-forward " ∇")))
-   ((bobp)
-    (list t (dyalog-leading-indentation)))
-   (t
-    (list nil 0))))
+  (let ((indent-type  (plist-get indent-status :indent-type))
+        (label-at-bol (plist-get indent-status :label-at-bol)))
+    (cond
+     ((and (eq indent-type 'block-start) (not blockstack) (eq funcount 0))
+      (list t (+ (dyalog-relative-indent 1)
+                 (if label-at-bol 1 0))))
+     ((and (eq indent-type 'block-end) (not blockstack) (eq funcount 0))
+      (list t (+ (current-indentation)
+                 (if label-at-bol 1 0))))
+     ((and (eq indent-type 'tradfn-start)
+           (eq funcount 0))
+      (list t (skip-chars-forward " ∇")))
+     ((bobp)
+      (list t (dyalog-leading-indentation)))
+     (t
+      (list nil 0)))))
 
 (defun dyalog-indent-status ()
   "Return a list of information on the current indentation status.
@@ -422,15 +435,16 @@ This includes whether we are at the start of a block, or the
 end (or at a pause inside a block), and the name of the delimiter
 that triggers the starting or ending of a block (e.g. \":If\" or
 \"∇\"."
-  (let* ((keyword (dyalog-current-keyword))
-         (indent-type (dyalog-keyword-indent-type keyword)))
+  (pcase-let* ((`(,keyword ,label-at-bol) (dyalog-current-keyword))
+               (indent-type (dyalog-keyword-indent-type keyword)))
     (cond
      ((dyalog-on-tradfn-header)
-      (list :indent-type 'tradfn-start :delimiter "∇"))
+      (list :indent-type 'tradfn-start :delimiter "∇" :label-at-bol nil))
      ((looking-at dyalog-naked-nabla)
-      (list :indent-type 'tradfn-end :delimiter "∇"))
+      (list :indent-type 'tradfn-end :delimiter "∇"   :label-at-bol nil))
      (t
-      (list :indent-type indent-type :delimiter keyword)))))
+      (list :indent-type indent-type :delimiter keyword
+            :label-at-bol label-at-bol)))))
 
 (defun dyalog-search-indent-root (at-root-function)
   "Given function AT-ROOT-FUNCTION, search backwards for the root indent.
@@ -449,7 +463,7 @@ AT-ROOT-FUNCTION returns t when we have reached the corresponding :For."
                (keyword (plist-get status :delimiter))
                (indent-type (plist-get status :indent-type))
                (root (apply at-root-function
-                            (list blockstack indent-type funcount)))
+                            (list blockstack status funcount)))
                (at-root (car root)))
           (setq indentation
                 (cond
@@ -497,36 +511,55 @@ line has a label."
   (save-excursion
     (move-beginning-of-line nil)
     (let* ((dfun (dyalog-in-dfun))
-           (keyword (if dfun nil (dyalog-current-keyword nil)))
+           (keyword (if dfun nil (car (dyalog-current-keyword))))
            (indent-info nil))
       (setq indent-info
             (cond
              ((bobp)
               (list :indent (dyalog-leading-indentation)
                     :has-label nil
+                    :is-comment nil
                     :funcount 0
                     :blockstack nil))
              (dfun
               (list :indent (dyalog-calculate-dfun-indent)
                     :has-label nil
+                    :is-comment nil
                     :funcount 0
                     :blockstack (list "}")))
-             (keyword
-              (dyalog-search-indent-root
-               (dyalog-indent-search-stop-function keyword)))
-             ((looking-at "^\\s-*⍝")
+             ((looking-at dyalog-comment-regex)
               (if dyalog-indent-comments
-                  (dyalog-search-indent-root #'dyalog-indent-search-stop-generic)
+                  (let ((l (dyalog-search-indent-root
+                            #'dyalog-indent-search-stop-generic)))
+                    (plist-put l :is-comment t))
                 (list :indent (current-indentation)
                       :has-label nil
+                      :is-comment t
                       :funcount 0
                       :blockstack nil)))
              ((and (looking-at-p dyalog-label-regex) (not dfun))
-              (let ((oldlabel (dyalog-remove-label))
-                    (l (dyalog-calculate-indent)))
-                (insert oldlabel)
-                (plist-put l :has-label t)
-                l))
+              (let* ((label-indent-info (dyalog-search-indent-root
+                                         #'dyalog-indent-stop-tradfn))
+                     (label-indent      (plist-get label-indent-info :indent))
+                     (old-label         (dyalog-remove-label))
+                     (rest-indent-info  (dyalog-calculate-indent)))
+                ;; A label is always aligned 1 space to the left of the
+                ;; surrounding tradfn, and since we search for tradfn
+                ;; delimiters, we align to the nabla. So if we've reached the
+                ;; beginning of the buffer, we subtract one and if we've
+                ;; aligned to the nabla we add one.
+                (setq label-indent (max 0 (+ label-indent
+                                      (if (= label-indent
+                                             (dyalog-leading-indentation))
+                                          -1
+                                        1))))
+                (insert old-label)
+                (plist-put rest-indent-info :has-label t)
+                (plist-put rest-indent-info :label-indent label-indent)
+                rest-indent-info))
+             (keyword
+              (dyalog-search-indent-root
+               (dyalog-indent-search-stop-function keyword)))
              ((looking-at dyalog-naked-nabla)
               (dyalog-search-indent-root #'dyalog-indent-stop-tradfn))
              ((dyalog-on-tradfn-header)
@@ -547,16 +580,32 @@ functions with ∇."
 (defun dyalog-indent-line-with (indent-info)
   "Indent the current line according to INDENT-INFO.
 INDENT-INFO is the return value from `dyalog-calculate-indent'."
-  (let* ((indent (plist-get indent-info :indent))
-         (has-label (plist-get indent-info :has-label)))
-    (save-excursion
+  (let* ((indent     (plist-get indent-info :indent))
+         (has-label  (plist-get indent-info :has-label))
+         (is-comment (plist-get indent-info :is-comment)))
       (if has-label
-          (let ((old-label (dyalog-remove-label)))
+          (let* ((old-label    (dyalog-remove-label))
+                 (label-length (length old-label))
+                 (label-indent (plist-get indent-info :label-indent)))
+            (if (and (not dyalog-indent-comments) is-comment)
+                (setq indent (- indent label-indent))
+              (if (> label-length indent)
+                  ;; Label is longer than required indentation, so line
+                  ;; should be flush with label
+                  (setq indent 0)
+                (setq indent (max 0
+                                  (- indent (+ label-length label-indent))))))
+            ;; Keywords are never flush with the label, since they start with
+            ;; a colon, and the label ends with one
+            (beginning-of-line)
+            (when (looking-at-p "^ *:")
+              (setq indent (max 1 indent)))
             (indent-line-to indent)
             (beginning-of-line)
-            (delete-char (min (length old-label) (current-indentation)))
-            (insert old-label))
-        (indent-line-to indent)))))
+            (insert (make-string label-indent ? ))
+            (insert old-label)
+            (back-to-indentation))
+        (indent-line-to indent))))
 
 (defun dyalog-indent-line ()
   "Indent the current line."
@@ -566,7 +615,7 @@ INDENT-INFO is the return value from `dyalog-calculate-indent'."
          (indent-info (dyalog-calculate-indent)))
     (dyalog-indent-line-with indent-info)
     (when restore-pos
-      (goto-char old-pos))))
+      (goto-char (min old-pos (line-end-position))))))
 
 (defun dyalog-current-tradfn-indentation ()
   "Return the column 0 indentation of the tradfn point is in, otherwise nil."
@@ -618,6 +667,10 @@ the updated amount of indentation, in characters."
           (insert old-label)
           (beginning-of-line))
       (cond
+       ((looking-at-p dyalog-comment-regex)
+        (when (not dyalog-indent-comments)
+          (setq next-indent (- indent (current-indentation))
+                indent      (current-indentation))))
        ((eq 'block-end indent-type)
         (progn
           ;; (unless (string-equal (car blockstack)
@@ -1110,11 +1163,13 @@ START and END delimit the region to analyze."
         (goto-char endpos)))))
 
 (defun dyalog-current-keyword (&optional pt in-dfun)
-  "Return the current keyword if PT is in a keyword (e.g. :If).
-PT is optional and defaults to point.  If PT isn't in a keyword,
-return nil.  If provided, IN-DFUN is t if PT is inside a dynamic
-function.  If it is not provided, it is computed, which takes some
-time, so providing it is an optimization."
+  "Return the current keyword and if the keyword is preceded by a label.
+PT is optional and defaults to point and determines where to look
+for the keyword. If PT isn't in a keyword, return nil. If
+provided, IN-DFUN is t if PT is inside a dynamic function. If it
+is not provided, it is computed, which takes some time, so
+providing it is an optimization. Return a two element list with
+the keyword (or nil) and t if it is preceded by a label."
   (save-excursion
     (when pt
       (goto-char pt))
@@ -1122,18 +1177,21 @@ time, so providing it is an optimization."
     (skip-syntax-backward "-")
     (when (eq (char-before) ?⋄)
       (backward-char))
-    (let ((keyword
+    (when (looking-back dyalog-label-regex)
+      (beginning-of-line))
+    (pcase-let ((`(,keyword ,label-at-bol)
            (if (or (looking-at dyalog-keyword-regex)
                    (looking-at dyalog-middle-keyword-regex))
-               (concat ":" (match-string-no-properties 2))
+               (list (concat ":" (match-string-no-properties 2))
+                     (not (not (match-string 5))))
              nil)))
       (if (and keyword (or in-dfun (dyalog-in-dfun)))
-          nil
-        keyword))))
+          (list nil nil)
+        (list keyword label-at-bol)))))
 
 (defun dyalog-in-keyword (&optional pt)
   "Return t if PT (defaults to point) is inside a keyword (e.g. :If)."
-  (not (not (dyalog-current-keyword (or pt (point))))))
+  (not (not (car (dyalog-current-keyword (or pt (point)))))))
 
 (defun dyalog-in-comment-or-string (&optional pt)
   "Return t if PT (defaults to point) is inside a string literal or a comment."
