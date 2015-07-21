@@ -663,6 +663,7 @@ the updated amount of indentation, in characters."
          (indent        (+ (plist-get indent-info :indent)
                            next-indent))
          (tradfn-indent (plist-get indent-info :tradfn-indent)))
+    (plist-put indent-info :is-comment nil)
     (if (looking-at-p dyalog-label-regex)
         (let ((old-label (dyalog-remove-label)))
           (setq indent-info (dyalog-indent-update indent-info))
@@ -673,7 +674,8 @@ the updated amount of indentation, in characters."
        ((looking-at-p dyalog-comment-regex)
         (when (not dyalog-indent-comments)
           (setq next-indent (- indent (current-indentation))
-                indent      (current-indentation))))
+                indent      (current-indentation))
+          (plist-put indent-info :is-comment t)))
        ((eq 'block-end indent-type)
         (progn
           ;; (unless (string-equal (car blockstack)
@@ -703,7 +705,12 @@ the updated amount of indentation, in characters."
        ((looking-at "^[ \t]*$")
         (setq next-indent indent
               indent 0))
-       ;; TODO: dfuns, comments
+       ((looking-at-p dyalog-comment-regex)
+        (when (not dyalog-indent-comments)
+          (setq next-indent (- indent (current-indentation))
+                indent      (current-indentation))
+          (plist-put indent-info :is-comment t)))
+       ;; TODO: dfuns
        (t
         (setq next-indent 0)))
       (plist-put indent-info :blockstack blockstack)
