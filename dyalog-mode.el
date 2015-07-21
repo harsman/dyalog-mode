@@ -356,7 +356,9 @@ Assumes point is at the start of a logical line."
       (if (eq (char-after) ?⋄)
           (setq done (not (dyalog-in-comment-or-string)))
         (setq done t))
-      (forward-char))))
+      (if (eobp)
+          nil
+        (forward-char)))))
 
 (defun dyalog-indent-stop-block-end (match blockstack indent-status funcount)
   "Return whether we have found root for a block end, and amount of to indent.
