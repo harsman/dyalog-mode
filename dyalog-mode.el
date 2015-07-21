@@ -665,9 +665,11 @@ the updated amount of indentation, in characters."
          (tradfn-indent (plist-get indent-info :tradfn-indent)))
     (plist-put indent-info :is-comment nil)
     (if (looking-at-p dyalog-label-regex)
-        (let ((old-label (dyalog-remove-label)))
+        (let* ((old-label (dyalog-remove-label))
+               (label-indent (max 0 (1- tradfn-indent))))
           (setq indent-info (dyalog-indent-update indent-info))
           (plist-put indent-info :has-label t)
+          (plist-put indent-info :label-indent label-indent)
           (insert old-label)
           (beginning-of-line))
       (cond
