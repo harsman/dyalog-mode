@@ -682,7 +682,7 @@ the updated amount of indentation, in characters."
           ;;                       (dyalog-matching-delimiter delimiter))
           ;;   (error "Non matching delimiter"))
           ;; We assume delimiters match, since the region might cover
-          ;; part of matched delimiters
+          ;; only part of matched delimiters
           (when blockstack
             (pop blockstack))
           (setq indent      (- indent tab-width)
@@ -719,21 +719,6 @@ the updated amount of indentation, in characters."
       (plist-put indent-info :tradfn-indent tradfn-indent)
       (plist-put indent-info :has-label nil))
     indent-info))
-               
-  ;; State we need:
-  ;;    blockstack     (initialized by calculate-indent)
-  ;;    in-dfun        (initialized by calculate-indent)
-  ;;    current-indent (initialized by calculate-indent)
-  ;;    funcount       (initialized by calculate-indent)
-  ;;    indent of open fun
-
-  ;; Then we loop and look at current logical line status
-  ;;   - what is the current delimiter?
-  ;;   - how does that affect the blockstack, funcount etc?
-  ;;   - update current indent according to blockstack, funcount
-  ;;     (blockstack has precedence, except if it's class/interface
-  ;;     then we rely on funcount, so we need an indent for last open
-  ;;     function as well).
 
 (defun dyalog-remove-label ()
   "Remove the current label token at beginning of line, and return it."
