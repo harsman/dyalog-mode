@@ -642,6 +642,7 @@ START and END specify the region to indent."
       (plist-put indent-info :tradfn-indent
                  (dyalog-current-tradfn-indentation))
       (dyalog-indent-line-with indent-info)
+      (beginning-of-line)
       (while (< (point) end)
         (setq indent-info (dyalog-indent-update indent-info))
         (when (bolp)
