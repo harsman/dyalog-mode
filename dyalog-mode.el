@@ -1174,7 +1174,9 @@ the keyword (or nil) and t if it is preceded by a label."
     (skip-syntax-backward "-")
     (when (eq (char-before) ?⋄)
       (backward-char))
-    (when (looking-back dyalog-label-regex (line-beginning-position))
+    (when (and
+           (not (bolp))
+           (looking-back dyalog-label-regex (line-beginning-position)))
       (beginning-of-line))
     (pcase-let ((`(,keyword ,label-at-bol)
            (if (or (looking-at dyalog-keyword-regex)
