@@ -360,6 +360,80 @@ Assumes point is at the start of a logical line."
           nil
         (forward-char)))))
 
+(defun dyalog-indent-parse-line (in-dfun on-tradfn-header)
+  "Parse the current logical line for indentation purposes.
+IN-DFUN is t if the current line is inside a dynamic function.
+This affects the parsing of :. ON-TRADFN-HEADER is true if the
+line is a tradfn header, this affects the parsing of { and }.
+Return a plist with properties :keyword, the keyword at the head
+of the line, :label which is the label at the start of the line
+if any, :dfunstack which is a list of dfun delimiters open at end
+of line, and finally :nect-line which is the character position
+the next logical line starts at."
+  (let ((done nil)
+        (eol (line-end-position))
+        (dfunstack nil)
+        (label nil)
+        (keyword nil))
+    (save-excursion
+      (if (eq (char-after) ?⋄)
+          (forward-char)
+        (if (and (not in-dfun) (looking-at dyalog-label-regex))
+            (progn
+              (setq label (match-string 0))
+              (forward-char (length label)))))
+      (while (not done)
+        (skip-chars-forward "^⋄\r\n'{}⍝:")
+        (pcase (char-after)
+          (?'
+           (progn
+             (condition-case nil
+                 (forward-sexp)
+               (scan-error (goto-char eol)))
+             (when (> (point) eol)
+               (goto-char eol)
+               (setq done t))))
+          (?⍝
+           (progn
+             (goto-char eol)
+             (setq done t)))
+          (?{
+           (if on-tradfn-header
+               (forward-char)
+             (progn
+               (push "{" dfunstack)
+               (if (eobp)
+                   (setq done t)
+                 (forward-char))
+               (setq in-dfun t))))
+          (?}
+           (if on-tradfn-header
+               (forward-char)
+             (progn
+               (when dfunstack
+                 (pop dfunstack)
+                 (setq in-dfun (equal (car dfunstack) "{")))
+               (if (eobp)
+                   (setq done t)
+                 (forward-char)))))
+          (?:
+           (if (or in-dfun keyword)
+               (forward-char)
+             (progn
+               (setq keyword
+                     (buffer-substring-no-properties
+                      (point)
+                      (progn
+                        (skip-chars-forward ":A-Za-z")
+                        (point)))))))
+          (_
+           (setq done t))))
+      (if (eobp)
+          nil
+        (forward-char))
+      (list :label label :keyword keyword :dfunstack dfunstack
+            :next-line (when (not (eobp)) (point))))))
+
 (defun dyalog-indent-stop-block-end (match blockstack indent-status funcount)
   "Return whether we have found root for a block end, and amount of to indent.
 MATCH is the keyword that matches the block end (e.g. :For
@@ -431,22 +505,25 @@ FUNCOUNT is the number of currently open tradfn definitions."
      (t
       (list nil 0)))))
 
-(defun dyalog-indent-status ()
+(defun dyalog-indent-status (in-dfun)
   "Return a list of information on the current indentation status.
-This includes whether we are at the start of a block, or the
-end (or at a pause inside a block), and the name of the delimiter
-that triggers the starting or ending of a block (e.g. \":If\" or
-\"∇\"."
-  (pcase-let* ((`(,keyword ,label-at-bol) (dyalog-current-keyword))
-               (indent-type (dyalog-keyword-indent-type keyword)))
+IN-DFUN is t if point is inside a dynamic function. The list if
+information includes whether we are at the start of a block, or
+the end (or at a pause inside a block), and the name of the
+delimiter that triggers the starting or ending of a block (e.g.
+\":If\" or \"∇\"."
     (cond
      ((dyalog-on-tradfn-header)
       (list :indent-type 'tradfn-start :delimiter "∇" :label-at-bol nil))
      ((looking-at dyalog-naked-nabla)
       (list :indent-type 'tradfn-end :delimiter "∇"   :label-at-bol nil))
      (t
-      (list :indent-type indent-type :delimiter keyword
-            :label-at-bol label-at-bol)))))
+      (let* ((indent-parse (dyalog-indent-parse-line in-dfun nil))
+             (keyword      (plist-get indent-parse :keyword))
+             (indent-type  (dyalog-keyword-indent-type keyword))
+             (label        (plist-get indent-parse :label)))
+        (list :indent-type indent-type :delimiter keyword
+              :label-at-bol label)))))
 
 (defun dyalog-search-indent-root (at-root-function)
   "Given function AT-ROOT-FUNCTION, search backwards for the root indent.
@@ -461,7 +538,7 @@ AT-ROOT-FUNCTION returns t when we have reached the corresponding :For."
       (while (not indentation)
         ;; TODO: We should probably skip past d-funs
         (dyalog-previous-logical-line)
-        (let* ((status (dyalog-indent-status))
+        (let* ((status (dyalog-indent-status nil))
                (keyword (plist-get status :delimiter))
                (indent-type (plist-get status :indent-type))
                (root (apply at-root-function
@@ -655,7 +732,7 @@ START and END specify the region to indent."
 INDENT-INFO is a plist of indentation information, on the same
 form as the return value from `dyalog-calculate-indent'. Return
 the updated amount of indentation, in characters."
-  (let* ((indent-status (dyalog-indent-status))
+  (let* ((indent-status (dyalog-indent-status nil))
          (indent-type   (plist-get indent-status :indent-type))
          (delimiter     (plist-get indent-status :delimiter))
          (blockstack    (plist-get indent-info :blockstack))
