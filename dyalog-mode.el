@@ -715,9 +715,12 @@ INDENT-INFO is the return value from `dyalog-calculate-indent'."
 (defun dyalog-indent-region (start end)
   "Indent every line in the current region.
 START and END specify the region to indent."
-  (save-excursion
-    (goto-char start)
-    (let ((indent-info nil))
+  (let ((deactivate-mark nil)
+        (indent-info nil))
+    (save-excursion
+      (goto-char end)
+      (setq end (point-marker))
+      (goto-char start)
       (goto-char (line-beginning-position))
       (forward-line -1)
       (setq indent-info (dyalog-calculate-indent))
@@ -729,7 +732,9 @@ START and END specify the region to indent."
         (when (bolp)
           (save-excursion
             (dyalog-indent-line-with indent-info)))
-        (dyalog-next-logical-line)))))
+        (dyalog-next-logical-line))
+      (move-marker end nil))
+    nil))
 
 (defun dyalog-indent-update (indent-info)
   "Calculate an updated indentation after the current logical line.
