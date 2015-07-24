@@ -796,11 +796,6 @@ the updated amount of indentation, in characters."
        ((looking-at "^[ \t]*$")
         (setq next-indent indent
               indent 0))
-       ((looking-at-p dyalog-comment-regex)
-        (when (not dyalog-indent-comments)
-          (setq next-indent (- indent (current-indentation))
-                indent      (current-indentation))
-          (plist-put indent-info :is-comment t)))
        ;; TODO: dfuns
        (t
         (setq next-indent 0)))
