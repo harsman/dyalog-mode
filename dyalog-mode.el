@@ -717,8 +717,7 @@ INDENT-INFO is the return value from `dyalog-calculate-indent'."
 START and END specify the region to indent."
   (save-excursion
     (goto-char start)
-    (let ((indent-info nil)
-          (next-line nil))
+    (let ((indent-info nil))
       (goto-char (line-beginning-position))
       (forward-line -1)
       (setq indent-info (dyalog-calculate-indent))
@@ -727,12 +726,10 @@ START and END specify the region to indent."
       (goto-char start)
       (while (< (point) end)
         (setq indent-info (dyalog-indent-update indent-info))
-        (if (bolp)
+        (when (bolp)
           (save-excursion
-            (setq next-line (copy-marker (plist-get indent-info :next-line)))
-            (dyalog-indent-line-with indent-info))
-          (setq next-line (plist-get indent-info :next-line)))
-        (goto-char next-line)))))
+            (dyalog-indent-line-with indent-info)))
+        (dyalog-next-logical-line)))))
 
 (defun dyalog-indent-update (indent-info)
   "Calculate an updated indentation after the current logical line.
@@ -743,24 +740,20 @@ the updated amount of indentation, in characters."
          (indent-type   (plist-get indent-status :indent-type))
          (delimiter     (plist-get indent-status :delimiter))
          (label         (plist-get indent-status :label-at-bol))
-         (next-line     (plist-get indent-status :next-line))
          (blockstack    (plist-get indent-info :blockstack))
          (next-indent   (or (plist-get indent-info :next-indent) 0))
          (indent        (+ (plist-get indent-info :indent)
                            next-indent))
          (tradfn-indent (plist-get indent-info :tradfn-indent)))
     (plist-put indent-info :is-comment nil)
-    (plist-put indent-info :next-line next-line)
     (if label
-        (progn
-          (setq next-line (copy-marker next-line))
           (let* ((old-label (dyalog-remove-label))
                  (label-indent (max 0 (1- tradfn-indent))))
             (setq indent-info (dyalog-indent-update indent-info))
             (plist-put indent-info :has-label t)
             (plist-put indent-info :label-indent label-indent)
             (insert old-label)
-            (beginning-of-line)))
+            (beginning-of-line))
       (cond
        ((looking-at-p dyalog-comment-regex)
         (if (not dyalog-indent-comments)
