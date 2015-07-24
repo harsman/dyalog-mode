@@ -717,19 +717,22 @@ INDENT-INFO is the return value from `dyalog-calculate-indent'."
 START and END specify the region to indent."
   (save-excursion
     (goto-char start)
-    (let ((indent-info nil))
+    (let ((indent-info nil)
+          (next-line nil))
       (goto-char (line-beginning-position))
-      (setq indent-info    (dyalog-calculate-indent))
+      (forward-line -1)
+      (setq indent-info (dyalog-calculate-indent))
       (plist-put indent-info :tradfn-indent
                  (dyalog-current-tradfn-indentation))
-      (dyalog-indent-line-with indent-info)
-      (beginning-of-line)
+      (goto-char start)
       (while (< (point) end)
         (setq indent-info (dyalog-indent-update indent-info))
-        (when (bolp)
+        (if (bolp)
           (save-excursion
-            (dyalog-indent-line-with indent-info)))
-        (goto-char (plist-get indent-info :next-line))))))
+            (setq next-line (copy-marker (plist-get indent-info :next-line)))
+            (dyalog-indent-line-with indent-info))
+          (setq next-line (plist-get indent-info :next-line)))
+        (goto-char next-line)))))
 
 (defun dyalog-indent-update (indent-info)
   "Calculate an updated indentation after the current logical line.
