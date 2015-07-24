@@ -432,7 +432,7 @@ the next logical line starts at."
           nil
         (forward-char))
       (list :label label :keyword keyword :dfunstack dfunstack
-            :next-line (when (not (eobp)) (point))))))
+            :next-line (point)))))
 
 (defun dyalog-indent-stop-block-end (match blockstack indent-status funcount)
   "Return whether we have found root for a block end, and amount of to indent.
@@ -512,18 +512,22 @@ information includes whether we are at the start of a block, or
 the end (or at a pause inside a block), and the name of the
 delimiter that triggers the starting or ending of a block (e.g.
 \":If\" or \"∇\"."
+  (let ((next-line (min (point-max) (1+ (line-end-position)))))
     (cond
      ((dyalog-on-tradfn-header)
-      (list :indent-type 'tradfn-start :delimiter "∇" :label-at-bol nil))
+      (list :indent-type 'tradfn-start :delimiter "∇" :label-at-bol nil
+            :next-line next-line))
      ((looking-at dyalog-naked-nabla)
-      (list :indent-type 'tradfn-end :delimiter "∇"   :label-at-bol nil))
+      (list :indent-type 'tradfn-end :delimiter "∇"   :label-at-bol nil
+            :next-line next-line))
      (t
       (let* ((indent-parse (dyalog-indent-parse-line in-dfun nil))
              (keyword      (plist-get indent-parse :keyword))
              (indent-type  (dyalog-keyword-indent-type keyword))
-             (label        (plist-get indent-parse :label)))
+             (label        (plist-get indent-parse :label))
+             (next-line    (plist-get indent-parse :next-line)))
         (list :indent-type indent-type :delimiter keyword
-              :label-at-bol label)))))
+              :label-at-bol label :next-line next-line))))))
 
 (defun dyalog-search-indent-root (at-root-function)
   "Given function AT-ROOT-FUNCTION, search backwards for the root indent.
@@ -725,7 +729,7 @@ START and END specify the region to indent."
         (when (bolp)
           (save-excursion
             (dyalog-indent-line-with indent-info)))
-        (dyalog-next-logical-line)))))
+        (goto-char (plist-get indent-info :next-line))))))
 
 (defun dyalog-indent-update (indent-info)
   "Calculate an updated indentation after the current logical line.
@@ -735,20 +739,25 @@ the updated amount of indentation, in characters."
   (let* ((indent-status (dyalog-indent-status nil))
          (indent-type   (plist-get indent-status :indent-type))
          (delimiter     (plist-get indent-status :delimiter))
+         (label         (plist-get indent-status :label-at-bol))
+         (next-line     (plist-get indent-status :next-line))
          (blockstack    (plist-get indent-info :blockstack))
          (next-indent   (or (plist-get indent-info :next-indent) 0))
          (indent        (+ (plist-get indent-info :indent)
                            next-indent))
          (tradfn-indent (plist-get indent-info :tradfn-indent)))
     (plist-put indent-info :is-comment nil)
-    (if (looking-at-p dyalog-label-regex)
-        (let* ((old-label (dyalog-remove-label))
-               (label-indent (max 0 (1- tradfn-indent))))
-          (setq indent-info (dyalog-indent-update indent-info))
-          (plist-put indent-info :has-label t)
-          (plist-put indent-info :label-indent label-indent)
-          (insert old-label)
-          (beginning-of-line))
+    (plist-put indent-info :next-line next-line)
+    (if label
+        (progn
+          (setq next-line (copy-marker next-line))
+          (let* ((old-label (dyalog-remove-label))
+                 (label-indent (max 0 (1- tradfn-indent))))
+            (setq indent-info (dyalog-indent-update indent-info))
+            (plist-put indent-info :has-label t)
+            (plist-put indent-info :label-indent label-indent)
+            (insert old-label)
+            (beginning-of-line)))
       (cond
        ((looking-at-p dyalog-comment-regex)
         (when (not dyalog-indent-comments)
