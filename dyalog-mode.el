@@ -760,10 +760,12 @@ the updated amount of indentation, in characters."
             (beginning-of-line)))
       (cond
        ((looking-at-p dyalog-comment-regex)
-        (when (not dyalog-indent-comments)
-          (setq next-indent (- indent (current-indentation))
-                indent      (current-indentation))
-          (plist-put indent-info :is-comment t)))
+        (if (not dyalog-indent-comments)
+            (progn
+              (setq next-indent (- indent (current-indentation))
+                    indent      (current-indentation))
+              (plist-put indent-info :is-comment t))
+          (setq next-indent 0)))
        ((eq 'block-end indent-type)
         (progn
           ;; (unless (string-equal (car blockstack)
