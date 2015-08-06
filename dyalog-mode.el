@@ -1037,25 +1037,37 @@ CONTEXT is the result of `syntax-ppss' at point, or nil."
 If point is inside an anonymous function, return \"\", and if it
 isn't inside a dynamic function, return nil"
   (interactive)
+  (plist-get (dyalog-dfun-info) :name))
+
+  
+(defun dyalog-dfun-info ()
+  "Return the name, start and end position of the dfun at point, if any.
+The return value is a plist with :name, :start and :end
+properties.  If point isn't inside a dfun, return nil.  If the dfun
+is open (i.e. has no closing brace, :end is nil.  If the dfun is
+anonymous, :name is \"\"."
   (save-excursion
     (let ((in-dfun (dyalog-in-dfun))
           (dfun-name nil))
       (if in-dfun
           (progn
-              (goto-char (plist-get in-dfun :start))
-              (setq dfun-name
-                    (if (looking-back (concat "\\_<\\(" dyalog-name "\\) *← *")
-                                      (line-beginning-position)
-                                      t)
-                        (match-string-no-properties 1)
-                      ""))
-              (condition-case nil
-                    (progn
-                      (forward-sexp)
-                      (if (looking-at " *[^\r\n ⋄]")
-                          ""
-                        dfun-name))
-                  (scan-error dfun-name)))
+            (goto-char (plist-get in-dfun :start))
+            (setq dfun-name
+                  (if (looking-back (concat "\\_<\\(" dyalog-name "\\) *← *")
+                                    (line-beginning-position)
+                                    t)
+                      (match-string-no-properties 1)
+                    ""))
+            (setq dfun-name
+                  (condition-case nil
+                      (progn
+                        (forward-sexp)
+                        (if (looking-at " *[^\r\n ⋄]")
+                            ""
+                          dfun-name))
+                    (scan-error dfun-name)))
+            (plist-put in-dfun :name dfun-name)
+            in-dfun)
           nil))))
 
 (defun dyalog-in-dfun ()
@@ -1160,8 +1172,9 @@ position where the defun ends."
         (list 'tradfn (progn
                         (forward-char)
                         (dyalog-tradfn-info)))
-      (list 'dfun   (dyalog-dfun-name)))))
-
+      (let ((info (dyalog-dfun-info)))
+        (list 'dfun (list (plist-get info :name) nil nil
+              (plist-get info :start) (plist-get info :end)))))))
 
 ;; TODO: We need a separate function for getting info on the defun at point,
 ;; which is something we can use to get an initial state, and moving forward
@@ -1179,20 +1192,38 @@ START and END signify the region to fontify."
     (let* ((beg-line (progn (goto-char start)(line-beginning-position)))
            (done nil)
            (case-fold-search nil)
+           (dfun-info nil)
            (dfun-name nil)
            (info nil))
       ;; Remove old fontification here?
       (goto-char beg-line)
-      (setq info (dyalog-tradfn-info))
-      ;; FIXME: If start is inside a dfun, this won't work. Call
-      ;; dyalog-defun-info instead?
-
+      (setq dfun-info (dyalog-dfun-info))
+      (if dfun-info
+          (setq dfun-name (plist-get dfun-info :name)
+                info (list (plist-get info :name) nil nil
+                           (plist-get info :start) (plist-get info :end)))
+        (setq info (dyalog-tradfn-info)))
       (while (not done)
         (if dfun-name
-            (let ((dfunend end))
-              ;; TODO add actually working code here. We should have a
-              ;; dfun-info that returns extents as well
-              (search-forward "}" dfunend t))
+            (let* ((dfunend   (nth 4 info))
+                   (dfunstart (nth 3 info))
+                   (rx (concat "\\_<\\(" dyalog-name "\\)\\_>"))
+                   (limit (min (or dfunend end) end)))
+                (while (re-search-forward rx limit t)
+                  (let* ((symbol-start (match-beginning 0))
+                         (symbol-end (match-end 0))
+                         (state (syntax-ppss))
+                         (context (syntax-ppss-context state))
+                         (in-string (eq 'string context))
+                         (in-comment (eq 'comment context))
+                         (sysvar (eq ?⎕ (char-after symbol-start)))
+                         (face (if sysvar
+                                   'dyalog-local-system-name
+                                 'dyalog-local-name)))
+                    (unless (or in-string in-comment)
+                      (put-text-property symbol-start symbol-end
+                                         'face
+                                         face)))))
           (let ((fname (car info)))
             (when (and fname (not (string-equal fname "")))
               (let* ((args (nth 1 info))
@@ -1233,8 +1264,8 @@ START and END signify the region to fontify."
           (when (not (setq done (>= (point) end)))
             (let ((defuninfo (dyalog-defun-info)))
               (pcase (car defuninfo)
-                (`dfun (setq dfun-name (nth 1 defuninfo)
-                             info (list "" nil nil)))
+                (`dfun (setq dfun-name (nth 0 defuninfo)
+                             info      (nth 1 defuninfo)))
                 (`tradfn (setq dfun-name nil
                                info (nth 1 defuninfo)))))))))))
 
