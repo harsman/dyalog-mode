@@ -1038,35 +1038,25 @@ If point is inside an anonymous function, return \"\", and if it
 isn't inside a dynamic function, return nil"
   (interactive)
   (save-excursion
-    (let ((syn-table dyalog-dfun-syntax-table)
-          (openbrace nil)
-          (context (syntax-ppss)))
-      (dyalog-skip-comment-or-string context)
-      (setq openbrace
-            (with-syntax-table syn-table
+    (let ((in-dfun (dyalog-in-dfun))
+          (dfun-name nil))
+      (if in-dfun
+          (progn
+              (goto-char (plist-get in-dfun :start))
+              (setq dfun-name
+                    (if (looking-back (concat "\\_<\\(" dyalog-name "\\) *← *")
+                                      (line-beginning-position)
+                                      t)
+                        (match-string-no-properties 1)
+                      ""))
               (condition-case nil
-                  (goto-char (scan-lists (point) -1 1))
-                (scan-error nil))))
-      (let* ((in-dfun-p
-              (and openbrace
-                   (not (dyalog-on-tradfn-header 'only-after-nabla)))))
-        (if in-dfun-p
-            (progn
-              (goto-char openbrace)
-              (let ((dfun-name
-                     (if (looking-back (concat "\\_<\\(" dyalog-name "\\) *← *")
-                                       (line-beginning-position)
-                                       t)
-                         (match-string-no-properties 1)
-                       "")))
-                (condition-case nil
                     (progn
                       (forward-sexp)
                       (if (looking-at " *[^\r\n ⋄]")
                           ""
                         dfun-name))
-                  (scan-error dfun-name))))
-          nil)))))
+                  (scan-error dfun-name)))
+          nil))))
 
 (defun dyalog-in-dfun ()
   "If point is inside a dfun, return a plist with it's start and end position.
