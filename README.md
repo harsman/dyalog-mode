@@ -172,8 +172,6 @@ Arrays are always read-only and cannot be edited.
 Indenting large regions or large files all at once uses a very suboptimal
 algorithm and is therefore very slow.
 
-Names inside dynamic functions are currently not highlighted as local names.
-
 In versions of Dyalog before 14.0, if you invoke Emacs to edit the current
 function suspended in the debugger from inside the debugger and change that
 function, the debuggers display of the function's source code isn't updated.
