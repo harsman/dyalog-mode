@@ -783,8 +783,9 @@ the updated plist of indentation information."
     (plist-put indent-info :dfunstack (plist-get indent-status
                                                  :dfunstack))
     (if label
-        (let* ((label-indent (max 0 (1- (plist-get indent-info
-                                                   :tradfn-indent)))))
+        (let* ((label-indent (max 0 (1- (or (plist-get indent-info
+                                                       :tradfn-indent)
+                                            (dyalog-leading-indentation))))))
           (plist-put indent-info :has-label t)
           (plist-put indent-info :label-indent label-indent)
           (setq current-indent
