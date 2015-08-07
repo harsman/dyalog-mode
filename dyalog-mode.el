@@ -441,12 +441,14 @@ the next logical line starts at."
            (setq done t))))
       (cond
        ((and dfun-count (> dfun-count 0))
-        (setq indent-type 'block-start))
-       ((and dfun-count (< dfun-count 0)
-             (eq (char-before) ?})
-             (= (current-indentation)
-                (1- (- (point) (line-beginning-position)))))
-        (setq indent-type 'block-end)))
+        (setq indent-type 'dfun-start))
+       ((and dfun-count (< dfun-count 0))
+        (setq indent-type
+              (if (and (eq (char-before) ?})
+                       (= (current-indentation)
+                          (1- (- (point) (line-beginning-position)))))
+                  'dfun-end-and-dedent
+                'dfun-end))))
       (unless (eobp)
         (forward-char))
       (list :label label :keyword keyword :dfunstack dfunstack
@@ -826,6 +828,13 @@ updated plist of indentation information."
      ((eq 'block-pause indent-type)
       (setq indent      (- indent tab-width)
             next-indent tab-width))
+     ((eq 'dfun-start indent-type)
+      (setq next-indent tab-width))
+     ((eq 'dfun-end indent-type)
+      (setq next-indent (- tab-width)))
+     ((eq 'dfun-end-and-dedent indent-type)
+      (setq indent      (- indent tab-width)
+            next-indent indent))
      ((eq 'tradfn-end indent-type)
       (setq tradfn-indent nil
             indent current-indent
