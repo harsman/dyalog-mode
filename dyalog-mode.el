@@ -80,7 +80,7 @@ together with AltGr produce the corresponding apl character in APLCHARS."
         (define-key keymap aplkey fun)))))
 
 (defconst dyalog-label-regex
-  "^ *[A-Za-z_]+[A-Za-z0-9_]*:")
+  "^ *\\([A-Za-z_]+[A-Za-z0-9_]*:\\)")
 
 (defconst dyalog-keyword-regex
   (concat "\\(\\(?:^\\s-*\\|\\(?5:" dyalog-label-regex " *\\)\\)"
@@ -382,8 +382,8 @@ the next logical line starts at."
           (forward-char)
         (if (and (not in-dfun) (looking-at dyalog-label-regex))
             (progn
-              (setq label (match-string 0))
-              (forward-char (length label)))))
+              (setq label (match-string-no-properties 1))
+              (goto-char (match-end 0)))))
       (cond
        ((looking-at-p "[ \t]*$")
         (setq indent-type 'blank))
@@ -787,10 +787,14 @@ the updated plist of indentation information."
                                                    :tradfn-indent)))))
           (plist-put indent-info :has-label t)
           (plist-put indent-info :label-indent label-indent)
-          (setq current-indent (save-excursion
-                                 (skip-chars-forward "^:")
-                                 (skip-chars-forward ":")
-                                 (skip-chars-forward " \t"))))
+          (setq current-indent
+                (save-excursion
+                  (max
+                   (- (+ (skip-chars-forward "^:")
+                         (skip-chars-forward ":")
+                         (skip-chars-forward " \t"))
+                      (length label))
+                   0))))
       (progn
         (plist-put indent-info :has-label nil)
         (setq current-indent (current-indentation))))
@@ -871,14 +875,14 @@ updated plist of indentation information."
 
 (defun dyalog-remove-label ()
   "Remove the current label token at beginning of line, and return it."
-  (save-excursion
-    (beginning-of-line)
-    (skip-chars-forward " \t")
-    (let* ((start (point))
-           (end (+ start 1 (skip-chars-forward "A-Za-z_0-9")))
-           (label (buffer-substring-no-properties start end)))
+  (beginning-of-line)
+  (skip-chars-forward " \t")
+  (let* ((start (point))
+         (end (+ start 1 (skip-chars-forward "A-Za-z_0-9")))
+         (label (buffer-substring-no-properties start end)))
     (delete-region start end)
-    label)))
+    (goto-char start)
+    label))
 
 (defun dyalog-fix-whitespace-before-save ()
   "Clean up whitespace in the current buffer before saving."
