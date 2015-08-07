@@ -851,7 +851,7 @@ updated plist of indentation information."
       (setq next-indent (- tab-width)))
      ((eq 'dfun-end-and-dedent indent-type)
       (setq indent      (- indent tab-width)
-            next-indent indent))
+            next-indent 0))
      ((eq 'tradfn-end indent-type)
       (setq tradfn-indent nil
             indent current-indent
