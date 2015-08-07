@@ -733,6 +733,16 @@ INDENT-INFO is the return value from `dyalog-calculate-indent'."
         (skip-chars-forward " ∇")
         (current-column)))))
 
+(defun dyalog-current-dfun-stack ()
+  "Return a list of open dynamic functions delimiters."
+  (let ((in-dfun nil)
+        (dfunstack ()))
+    (save-excursion
+      (while (setq in-dfun (dyalog-in-dfun))
+        (push "{" dfunstack)
+        (goto-char (plist-get in-dfun :start)))
+      dfunstack)))
+
 (defun dyalog-indent-region (start end)
   "Indent every line in the current region.
 START and END specify the region to indent."
@@ -747,6 +757,9 @@ START and END specify the region to indent."
       (setq indent-info (dyalog-calculate-indent))
       (plist-put indent-info :tradfn-indent
                  (dyalog-current-tradfn-indentation))
+      (when (plist-get indent-info :dfunstack)
+        (plist-put indent-info :dfunstack
+                   (dyalog-current-dfun-stack)))
       (goto-char start)
       (while (< (point) end)
         (setq indent-info (dyalog-indent-update indent-info))
