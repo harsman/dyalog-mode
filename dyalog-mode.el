@@ -858,8 +858,7 @@ updated plist of indentation information."
             next-indent 0))
      ((eq 'tradfn-start indent-type)
       (setq tradfn-indent (save-excursion (skip-chars-forward " ∇"))
-            indent        tradfn-indent
-            next-indent   0))
+            next-indent   (- tradfn-indent indent)))
      ((eq 'blank indent-type)
       (setq next-indent indent
             indent 0))
