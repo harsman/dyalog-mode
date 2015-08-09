@@ -1292,12 +1292,14 @@ START and END signify the region to fontify."
                       (put-text-property symbol-start symbol-end
                                          'face
                                          face)
-                      (if (and (equal ?. (char-after symbol-end))
-                               (looking-at (concat "\\." dyalog-name)))
-                          (put-text-property (match-beginning 0)
-                                             (match-end 0)
-                                             'face
-                                             face)))))
+                      (while (and (equal ?. (char-after symbol-end))
+                                  (looking-at (concat "\\." dyalog-name)))
+                        (put-text-property (match-beginning 0)
+                                           (match-end 0)
+                                           'face
+                                           face)
+                        (goto-char (match-end 0))
+                        (setq symbol-end (point))))))
                 (goto-char limit)))))
         (setq done (>= (point) end))
         (when (not done)
