@@ -1674,6 +1674,7 @@ Optional argument LINE specifies which line to move point to."
   ;; Dyalog always indents with spaces
   (set (make-local-variable 'indent-tabs-mode) nil)
   (set (make-local-variable 'indent-line-function) 'dyalog-indent-line)
+  (set (make-local-variable 'indent-region-function) 'dyalog-indent-region)
   ;; Misc
   (set (make-local-variable 'require-final-newline) nil)
   ;; Socket connection
