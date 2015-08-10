@@ -284,7 +284,10 @@ together with AltGr produce the corresponding apl character in APLCHARS."
   :group 'dyalog)
 
 (defcustom dyalog-leading-spaces 1
-  "The number of leading spaces to use in the left margin."
+  "The number of leading spaces to use for unknown buffer types.
+Namespaces, classes and interfaces have 0 leading spaces in the left margin, and
+functions have 1, but for buffers that cannot be qualified into one of these types,
+the number of leading spaces defined here is used."
   :type 'integer
   :group 'dyalog)
 
@@ -678,8 +681,10 @@ This varies depending of the type of object being edited,
 namespaces or classes have no extra leading indentation, but functions have
 one extra space, to be consistent with separating multiple
 functions with ∇."
-  ;; TODO: Return different amounts depending on buffer type
-  dyalog-leading-spaces)
+  (pcase (or dyalog-buffer-type (dyalog-guess-buffer-type))
+    (`space-or-class 0)
+    (`function 1)
+    (`unknown dyalog-leading-spaces)))
 
 (defun dyalog-indent-line-with (indent-info)
   "Indent the current line according to INDENT-INFO.
@@ -883,6 +888,21 @@ updated plist of indentation information."
     (delete-region start end)
     (goto-char start)
     label))
+
+(defun dyalog-guess-buffer-type ()
+  "Guess whether the current buffer is a function or namespace/class.
+Return 'space-or-class if it looks like a namespace or class, 'unkown if the buffer
+type is unknown and 'function if it looks like a function definition."
+  (save-excursion
+    (goto-char (point-min))
+    (cond
+     ((looking-at-p " *:")
+      'space-or-class)
+     ((or (dyalog-on-tradfn-header)
+          (looking-at-p (concat " *" dyalog-name " *← *{")))
+      'function)
+     (t
+      'unknown))))
 
 (defun dyalog-fix-whitespace-before-save ()
   "Clean up whitespace in the current buffer before saving."
@@ -1675,6 +1695,7 @@ Optional argument LINE specifies which line to move point to."
   (set (make-local-variable 'indent-tabs-mode) nil)
   (set (make-local-variable 'indent-line-function) 'dyalog-indent-line)
   (set (make-local-variable 'indent-region-function) 'dyalog-indent-region)
+  (set (make-local-variable 'dyalog-buffer-type) (dyalog-guess-buffer-type))
   ;; Misc
   (set (make-local-variable 'require-final-newline) nil)
   ;; Socket connection
