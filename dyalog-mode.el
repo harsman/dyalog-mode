@@ -379,7 +379,8 @@ the next logical line starts at."
         (dfun-count nil)
         (label nil)
         (keyword nil)
-        (indent-type nil))
+        (indent-type nil)
+        (start nil))
     (save-excursion
       (if (eq (char-after) ?⋄)
           (forward-char)
@@ -387,6 +388,7 @@ the next logical line starts at."
             (progn
               (setq label (match-string-no-properties 1))
               (goto-char (match-end 0)))))
+      (setq start (point))
       (cond
        ((looking-at-p "[ \t]*$")
         (setq indent-type 'blank))
@@ -447,9 +449,11 @@ the next logical line starts at."
         (setq indent-type 'dfun-start))
        ((and dfun-count (< dfun-count 0))
         (setq indent-type
-              (if (and (eq (char-before) ?})
-                       (= (current-indentation)
-                          (1- (- (point) (line-beginning-position)))))
+              (if (eq (save-excursion
+                        (goto-char start)
+                        (skip-syntax-forward " ")
+                        (char-after))
+                      ?})
                   'dfun-end-and-dedent
                 'dfun-end))))
       (unless (eobp)
