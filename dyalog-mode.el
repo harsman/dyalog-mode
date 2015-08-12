@@ -1216,7 +1216,8 @@ position where the defun ends."
       (when (not (looking-at "∇"))
         (forward-line -1))         ; Nabla is on its own line
       (if (re-search-forward dyalog-tradfn-header nil t)
-          (let* ((tradfn-name (match-string-no-properties 1))
+          (let* ((start-of-defun (match-beginning 0))
+                 (tradfn-name (match-string-no-properties 1))
                  (retval (match-string-no-properties 2))
                  (larg (match-string-no-properties 3))
                  (rarg (match-string-no-properties 4))
@@ -1227,7 +1228,7 @@ position where the defun ends."
                  (end-of-defun 0))
             (dyalog-end-of-defun)
             (setq end-of-defun (point))
-            (if (< end-of-defun start-pos)
+            (if (or (< end-of-defun start-pos) (< start-pos start-of-defun))
                 (list "" nil nil 0 0)
               (progn
                 (setq locals
