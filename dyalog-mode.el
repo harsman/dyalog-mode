@@ -621,9 +621,13 @@ Return a plist with the indent in spaces, and whether the current
 line has a label."
   (save-excursion
     (move-beginning-of-line nil)
-    (let* ((dfun (dyalog-in-dfun))
-           (keyword (if dfun nil (car (dyalog-current-keyword))))
-           (indent-info nil))
+    (let* ((dfunstack (dyalog-current-dfun-stack))
+           (indent-status (dyalog-indent-status dfunstack))
+           (indent-type (plist-get indent-status :indent-type))
+           (label (plist-get indent-status :label-at-bol))
+           (keyword (plist-get indent-status :delimiter))
+           (indent-info nil)
+           (current-line-indent-info nil))
       (setq indent-info
             (cond
              ((bobp)
@@ -632,23 +636,13 @@ line has a label."
                     :is-comment nil
                     :funcount 0
                     :blockstack nil))
-             (dfun
+             (dfunstack
               (list :indent (dyalog-calculate-dfun-indent)
                     :has-label nil
                     :is-comment nil
                     :funcount 0
-                    :dfunstack (list "}")))
-             ((looking-at dyalog-comment-regex)
-              (if dyalog-indent-comments
-                  (let ((l (dyalog-search-indent-root
-                            #'dyalog-indent-search-stop-generic)))
-                    (plist-put l :is-comment t))
-                (list :indent (current-indentation)
-                      :has-label nil
-                      :is-comment t
-                      :funcount 0
-                      :blockstack nil)))
-             ((and (looking-at-p dyalog-label-regex) (not dfun))
+                    :dfunstack dfunstack))
+             (label
               (let* ((label-indent-info (dyalog-search-indent-root
                                          #'dyalog-indent-stop-tradfn))
                      (label-indent      (plist-get label-indent-info :indent))
@@ -668,15 +662,31 @@ line has a label."
                 (plist-put rest-indent-info :has-label t)
                 (plist-put rest-indent-info :label-indent label-indent)
                 rest-indent-info))
+             ((eq indent-type 'comment)
+              (if dyalog-indent-comments
+                  (let ((l (dyalog-search-indent-root
+                            #'dyalog-indent-search-stop-generic)))
+                    (plist-put l :is-comment t))
+                (list :indent (current-indentation)
+                      :has-label nil
+                      :is-comment t
+                      :funcount 0
+                      :blockstack nil)))
              (keyword
               (dyalog-search-indent-root
                (dyalog-indent-search-stop-function keyword)))
-             ((looking-at dyalog-naked-nabla)
+             ((eq 'tradfn-end indent-type)
               (dyalog-search-indent-root #'dyalog-indent-stop-tradfn))
-             ((dyalog-on-tradfn-header)
+             ((eq 'tradfn-start indent-type)
               (dyalog-search-indent-root #'dyalog-indent-stop-tradfn))
              (t
               (dyalog-search-indent-root #'dyalog-indent-search-stop-generic))))
+      (setq current-line-indent-info
+            (dyalog-indent-from-indent-type indent-status indent-info
+                                            (current-indentation)))
+      (unless (eq 'blank indent-type)
+        (plist-put indent-info :next-indent
+                   (plist-get current-line-indent-info :next-indent)))
       indent-info)))
 
 (defun dyalog-leading-indentation ()
@@ -761,14 +771,16 @@ START and END specify the region to indent."
       (goto-char end)
       (setq end (point-marker))
       (goto-char start)
-      (goto-char (line-beginning-position))
+      (goto-char (setq start (line-beginning-position)))
       (forward-line -1)
       (setq indent-info (dyalog-calculate-indent))
       (plist-put indent-info :tradfn-indent
                  (dyalog-current-tradfn-indentation))
-      (when (plist-get indent-info :dfunstack)
-        (plist-put indent-info :dfunstack
-                   (dyalog-current-dfun-stack)))
+      (when (= (point) start)
+        ;; if start is on the first line of the buffer, we zero
+        ;; next-indent, since we haven't actually initialized indent-info
+        ;; with values from a previous line.
+        (plist-put indent-info :next-indent 0))
       (goto-char start)
       (while (< (point) end)
         (setq indent-info (dyalog-indent-update indent-info))
@@ -828,14 +840,15 @@ updated plist of indentation information."
          (next-indent   (or (plist-get indent-info :next-indent) 0))
          (indent        (+ (plist-get indent-info :indent)
                            next-indent))
-         (tradfn-indent (plist-get indent-info :tradfn-indent)))
+         (tradfn-indent (plist-get indent-info :tradfn-indent))
+         (ret (copy-sequence indent-info)))
     (cond
      ((eq 'comment indent-type)
       (if (not dyalog-indent-comments)
           (progn
             (setq next-indent (- indent current-indent)
                   indent      current-indent)
-            (plist-put indent-info :is-comment t))
+            (plist-put ret :is-comment t))
         (setq next-indent 0)))
      ((eq 'block-end indent-type)
       (progn
@@ -875,12 +888,12 @@ updated plist of indentation information."
      ;; TODO: dfuns
      (t
       (setq next-indent 0)))
-    (plist-put indent-info :blockstack blockstack)
-    (plist-put indent-info :indent indent)
-    (plist-put indent-info :next-indent next-indent)
-    (plist-put indent-info :tradfn-indent tradfn-indent)
-    indent-info))
-  
+    (plist-put ret :blockstack blockstack)
+    (plist-put ret :indent indent)
+    (plist-put ret :next-indent next-indent)
+    (plist-put ret :tradfn-indent tradfn-indent)
+    ret))
+
 
 (defun dyalog-remove-label ()
   "Remove the current label token at beginning of line, and return it."
