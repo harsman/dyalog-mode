@@ -1425,6 +1425,13 @@ the keyword (or nil) and t if it is preceded by a label."
 (defvar dyalog-connections ()
   "A list of all connections to Dyalog processes.")
 
+(defvar dyalog-buffer-type nil
+  "Whether a buffer contains a function, namespace or something else.
+This affects indentation, functions have a leading space on each
+line, but namespaces don't. Valid values are 'space-or-class
+'function and 'unknown.")
+
+
 ;;;###autoload
 (defun dyalog-session-connect (&optional host port)
   "Connect to a Dyalog session.
