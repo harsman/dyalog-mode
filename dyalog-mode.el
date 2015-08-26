@@ -1243,11 +1243,11 @@ position where the defun ends."
 (defun dyalog-defun-info ()
   "Return information on the defun at point."
   (save-excursion
-    (beginning-of-line)
-    (skip-chars-forward "^∇\r\n")
-    ;; TODO: In the tradfn case we already have a match, so no need to call
-    ;; tradfn-info, just extract the match data directly.
-    (if (looking-at dyalog-tradfn-header)
+    (when (looking-at-p "{")
+      (forward-char))
+    (let ((dfun-info (dyalog-dfun-info)))
+      (if dfun-info
+          (list 'dfun dfun-info)
         (list 'tradfn (progn
                         (forward-char)
                         (dyalog-tradfn-info)))
