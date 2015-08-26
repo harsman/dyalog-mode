@@ -1247,11 +1247,95 @@ position where the defun ends."
       (if dfun-info
           (list 'dfun dfun-info)
         (list 'tradfn (progn
-                        (forward-char)
-                        (dyalog-tradfn-info)))
-      (let ((info (dyalog-dfun-info)))
-        (list 'dfun (list (plist-get info :name) nil nil
-              (plist-get info :start) (plist-get info :end)))))))
+                        (ignore-errors (forward-char))
+                        (let* ((info (dyalog-tradfn-info))
+                               (start (match-beginning 0))
+                               (name (car info))
+                               (args (nth 1 info))
+                               (locals (nth 2 info))
+                               (end-of-header (nth 3 info))
+                               (end (nth 4 info)))
+                          (list :start start :name name :args args
+                                :locals locals :end-of-header end-of-header
+                                :end end))))))))
+
+(defun dyalog-fontify-dfun (dfun-info start end)
+  "Fontify the dynamic function defined by DFUN-INFO.
+START and END delimit the region to fontify."
+  (when dfun-info
+    (let* ((dfunstart (plist-get dfun-info :start))
+           (dfunend   (plist-get dfun-info :end))
+           (rx (concat "\\_<\\(" dyalog-name "\\)\\_>"))
+           (limit (min (or dfunend end) end)))
+      (goto-char (max dfunstart start))
+      (while (re-search-forward rx limit t)
+        (let* ((symbol-start (match-beginning 0))
+               (symbol-end (match-end 0))
+               (state (syntax-ppss))
+               (context (syntax-ppss-context state))
+               (in-string (eq 'string context))
+               (in-comment (eq 'comment context))
+               (sysvar (eq ?⎕ (char-after symbol-start)))
+               (face (if sysvar
+                         'dyalog-local-system-name
+                       'dyalog-local-name)))
+          (unless (or in-string in-comment)
+            (put-text-property symbol-start symbol-end
+                               'face
+                               face))))
+      (goto-char (min dfunend end)))))
+
+(defun dyalog-fontify-tradfn (info start end)
+  "Fontify the traditional function defined by INFO.
+START and END delimit the region to fontify."
+  (let ((fname (plist-get info :name)))
+    (when (and fname (not (equal fname "")))
+      (let* ((args (plist-get info :args))
+             (localizations (plist-get info :locals))
+             (locals (append args localizations))
+             (end-of-header (plist-get info :end-of-header))
+             (end-of-defun (plist-get info :end))
+             (limit (min end-of-defun end))
+             (rx (concat "\\_<\\("
+                         (mapconcat 'identity locals "\\|")
+                         "\\)\\_>"))
+             (fontify-start (max end-of-header start)))
+        (goto-char fontify-start)
+        (while (re-search-forward rx limit t)
+          (let* ((symbol-start (match-beginning 0))
+                 (symbol-end (match-end 0))
+                 (state (syntax-ppss))
+                 (context (syntax-ppss-context state))
+                 (in-string (eq 'string context))
+                 (in-comment (eq 'comment context))
+                 (sysvar (eq ?⎕ (char-after symbol-start)))
+                 (face (if sysvar
+                           'dyalog-local-system-name
+                         'dyalog-local-name)))
+            (unless (or in-string in-comment)
+              (put-text-property symbol-start symbol-end
+                                 'face
+                                 face)
+              (while (and (equal ?. (char-after symbol-end))
+                          (looking-at (concat "\\." dyalog-name)))
+                (put-text-property (match-beginning 0)
+                                   (match-end 0)
+                                   'face
+                                   face)
+                (goto-char (match-end 0))
+                (setq symbol-end (point))))))
+        ;; Now we need to fontify any names inside dfns defined inside this
+        ;; tradfn
+        (goto-char fontify-start)
+        (while (< (point) limit)
+          (dyalog-next-defun limit)
+          (let* ((all-info (dyalog-defun-info))
+                 (type     (car all-info))
+                 (info     (cadr all-info)))
+            (when (eq 'dfun type)
+              (dyalog-fontify-dfun info start limit))))
+        (goto-char limit)))))
+
 
 ;; TODO: We need a separate function for getting info on the defun at point,
 ;; which is something we can use to get an initial state, and moving forward
@@ -1269,85 +1353,20 @@ START and END signify the region to fontify."
     (let* ((beg-line (progn (goto-char start)(line-beginning-position)))
            (done nil)
            (case-fold-search nil)
-           (dfun-info nil)
-           (dfun-name nil)
+           (all-info nil)
+           (type nil)
            (info nil))
-      ;; Remove old fontification here?
       (goto-char beg-line)
-      (setq dfun-info (dyalog-dfun-info))
-      (if dfun-info
-          (setq dfun-name (plist-get dfun-info :name)
-                info (list (plist-get info :name) nil nil
-                           (plist-get info :start) (plist-get info :end)))
-        (setq info (dyalog-tradfn-info)))
-      (while (not done)
-        (if dfun-name
-            (let* ((dfunend   (nth 4 info))
-                   (dfunstart (nth 3 info))
-                   (rx (concat "\\_<\\(" dyalog-name "\\)\\_>"))
-                   (limit (min (or dfunend end) end)))
-                (while (re-search-forward rx limit t)
-                  (let* ((symbol-start (match-beginning 0))
-                         (symbol-end (match-end 0))
-                         (state (syntax-ppss))
-                         (context (syntax-ppss-context state))
-                         (in-string (eq 'string context))
-                         (in-comment (eq 'comment context))
-                         (sysvar (eq ?⎕ (char-after symbol-start)))
-                         (face (if sysvar
-                                   'dyalog-local-system-name
-                                 'dyalog-local-name)))
-                    (unless (or in-string in-comment)
-                      (put-text-property symbol-start symbol-end
-                                         'face
-                                         face)))))
-          (let ((fname (car info)))
-            (when (and fname (not (string-equal fname "")))
-              (let* ((args (nth 1 info))
-                     (localizations (nth 2 info))
-                     (locals (append args localizations))
-                     (end-of-header (nth 3 info))
-                     (end-of-defun (nth 4 info))
-                     (limit (min end-of-defun end))
-                     (rx (concat "\\_<\\("
-                                 (mapconcat 'identity locals "\\|")
-                                 "\\)\\_>")))
-                (goto-char (max end-of-header start))
-                (while (re-search-forward rx limit t)
-                  (let* ((symbol-start (match-beginning 0))
-                         (symbol-end (match-end 0))
-                         (state (syntax-ppss))
-                         (context (syntax-ppss-context state))
-                         (in-string (eq 'string context))
-                         (in-comment (eq 'comment context))
-                         (sysvar (eq ?⎕ (char-after symbol-start)))
-                         (face (if sysvar
-                                   'dyalog-local-system-name
-                                 'dyalog-local-name)))
-                    (unless (or in-string in-comment)
-                      (put-text-property symbol-start symbol-end
-                                         'face
-                                         face)
-                      (while (and (equal ?. (char-after symbol-end))
-                                  (looking-at (concat "\\." dyalog-name)))
-                        (put-text-property (match-beginning 0)
-                                           (match-end 0)
-                                           'face
-                                           face)
-                        (goto-char (match-end 0))
-                        (setq symbol-end (point))))))
-                (goto-char limit)))))
-        (setq done (>= (point) end))
-        (when (not done)
-          (dyalog-next-defun end)
-          (when (not (setq done (>= (point) end)))
-            (let ((defuninfo (dyalog-defun-info)))
-              (pcase (car defuninfo)
-                (`dfun (setq dfun-name (nth 0 defuninfo)
-                             info      (nth 1 defuninfo)))
-                (`tradfn (setq dfun-name nil
-                               info (nth 1 defuninfo)))))))))))
-
+      (while (< (point) end)
+        (setq all-info (dyalog-defun-info)
+              type     (car all-info)
+              info     (cadr all-info))
+        (if (eq type 'dfun)
+            (dyalog-fontify-dfun info start end)
+          (if (equal "" (plist-get info :name))
+              ;; We are between tradfn definitions, skip to next function
+              (dyalog-next-defun)
+            (dyalog-fontify-tradfn info start end)))))))
 
 ;;; Syntax
 
