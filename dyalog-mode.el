@@ -1434,6 +1434,62 @@ the keyword (or nil) and t if it is preceded by a label."
         (set-match-data match)
         res))))
 
+(defun dyalog-symbol-forward ()
+  "Move point forward over a symbol, including namespace qualifications.
+For example move over the entire string ns1.ns2.symbol, no matter
+where point is on the symbol."
+  (skip-syntax-forward " ")
+  (let* ((bounds (bounds-of-thing-at-point 'symbol))
+         (start  (car bounds))
+         (end    (cdr bounds))
+         (end-of-line (line-end-position)))
+    (when (and start end)
+      (goto-char end)
+      (while (and (eq (char-after (point)) ?.)
+                  (<= end end-of-line)
+                  (not  (zerop (progn
+                                 (forward-char)
+                                 (skip-syntax-forward "_w")))))))))
+
+(defun dyalog-symbol-backward ()
+  "Move point backward over a symbol, including namespace qualifications.
+For example move over the entire string ns1.ns2.symbol, no matter
+where point is on the symbol."
+  (skip-syntax-backward " ")
+  (let* ((bounds (bounds-of-thing-at-point 'symbol))
+         (start  (car bounds))
+         (end    (cdr bounds))
+         (start-of-line (line-beginning-position)))
+    (when (and start end)
+      (goto-char start)
+      (while (and (eq (char-before (point)) ?.)
+                  (>= start start-of-line)
+                  (> 0 (progn
+                         (backward-char)
+                         (skip-syntax-backward "_w"))))))))
+  
+(defun dyalog-current-symbol ()
+  "Return the full symbol at point, including namespace qualifications."
+  (let* ((start (save-excursion
+                  (dyalog-symbol-backward)
+                  (point)))
+         (end   (save-excursion
+                  (dyalog-symbol-forward)
+                  (point))))
+    (when (looking-at-p "\\(\\s_\\|\\sw\\|\\.\\)")
+      (buffer-substring-no-properties start end))))
+
+(defun dyalog-symbol-parts (symbol-name)
+  "Return a list of all the parts of a symbol name.
+For example, for \"ns1.ns2.name\", return '(\"ns1\" \"ns2\" \"name\").
+If there are no parts, just return the name as given."
+  (split-string symbol-name "\\." 'omit-nulls))
+
+(defun dyalog-symbol-root (symbol-name)
+  "Return the root namespace of the symbol name, or nil if there is none."
+  (let ((parts (dyalog-symbol-parts symbol-name)))
+    (when (< 1 (length parts))
+      (car parts))))
 
 ;;; Socket connection
 (defvar dyalog-connection ()
