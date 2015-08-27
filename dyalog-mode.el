@@ -1351,7 +1351,6 @@ START and END delimit the region to fontify."
 START and END signify the region to fontify."
   (save-excursion
     (let* ((beg-line (progn (goto-char start)(line-beginning-position)))
-           (done nil)
            (case-fold-search nil)
            (all-info nil)
            (type nil)
