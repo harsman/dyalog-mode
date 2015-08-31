@@ -146,6 +146,21 @@ together with AltGr produce the corresponding apl character in APLCHARS."
                                        dyalog-func-monadic "\\|"
                                        dyalog-func-dyadic "\\)"))
 
+(defface dyalog-apl-char
+  '((t (:inherit font-lock-keyword-face)))
+  "Face used for APL characters and punctuation."
+  :group 'dyalog)
+
+(defface dyalog-local-name
+  '((t (:inherit font-lock-constant-face)))
+  "Face used for localized names inside APL functions."
+  :group 'dyalog)
+
+(defface dyalog-local-system-name
+  '((t (:inherit font-lock-variable-name-face)))
+  "Face used for localized system variables inside APL functions."
+  :group 'dyalog)
+
 (defvar dyalog-font-lock-keywords
   (list
    ;; See emacs help for `font-lock-keywords' for a description of how the
@@ -157,14 +172,14 @@ together with AltGr produce the corresponding apl character in APLCHARS."
      . (2 font-lock-keyword-face nil))
    `(,dyalog-middle-keyword-regex . (2 font-lock-keyword-face nil))
    ;; Guards
-   '(":" . font-lock-keyword-face)
+   '(":" . 'dyalog-apl-char)
    ;; Labels
    '("^\\s-*\\([A-Za-z_][A-Za-z0-9_]*:\\)" . (1 font-lock-keyword-face t))
    ;; Numerical constans
    `(,dyalog-number (1 font-lock-constant-face nil))
    ;; APL chars
-   (cons (concat "[" dyalog-ascii-chars "]") 'font-lock-keyword-face)
-   (cons (concat "[" dyalog-keyword-chars "]") 'font-lock-keyword-face)
+   (cons (concat "[" dyalog-ascii-chars "]") ''dyalog-apl-char)
+   (cons (concat "[" dyalog-keyword-chars "]") ''dyalog-apl-char)
    ;; Localizations
    '(";\\([A-Za-z0-9_∆]+\\)" (1 font-lock-constant-face nil))
    ;; Illegal chars (and del/nabla)
@@ -229,16 +244,6 @@ together with AltGr produce the corresponding apl character in APLCHARS."
     (modify-syntax-entry ?\] "." st)
     st)
   "Syntax table to only consider {} as parens.")
-
-(defface dyalog-local-name
-  '((t (:inherit font-lock-constant-face)))
-  "Face used for localized names inside APL functions."
-  :group 'dyalog)
-
-(defface dyalog-local-system-name
-  '((t (:inherit font-lock-variable-name-face)))
-  "Face used for localized system variables inside APL functions."
-  :group 'dyalog)
 
 ;;;###autoload
 (defun dyalog-ediff-forward-word ()
