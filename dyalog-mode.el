@@ -84,10 +84,10 @@ together with AltGr produce the corresponding apl character in APLCHARS."
 
 (defconst dyalog-keyword-regex
   (concat "\\(\\(?:^\\s-*\\|\\(?5:" dyalog-label-regex " *\\)\\)"
-          ":\\(?2:[A-Za-z]+\\)\\)\\|\\(⋄\\s-*:\\(?2:[A-Za-z]+\\)\\)"))
+          "\\(?2::[A-Za-z]+\\)\\)\\|\\(⋄\\s-*\\(?2::[A-Za-z]+\\)\\)"))
 
 (defconst dyalog-middle-keyword-regex
-  "\\s-+\\(:\\(In\\|InEach\\)\\)\\s-+")
+  "\\s-+\\(\\(:\\(In\\|InEach\\)\\)\\)\\s-+")
 
 (defconst dyalog-comment-regex
   "^\\s-*⍝")
@@ -1414,7 +1414,7 @@ the keyword (or nil) and t if it is preceded by a label."
     (pcase-let ((`(,keyword ,label-at-bol)
            (if (or (looking-at dyalog-keyword-regex)
                    (looking-at dyalog-middle-keyword-regex))
-               (list (concat ":" (match-string-no-properties 2))
+               (list (match-string-no-properties 2)
                      (not (not (match-string 5))))
              nil)))
       (if (and keyword (or in-dfun (dyalog-in-dfun)))
