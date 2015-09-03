@@ -547,10 +547,10 @@ block (e.g. \":If\" or \"∇\"."
   (let ((next-line (min (point-max) (1+ (line-end-position)))))
     (cond
      ((dyalog-on-tradfn-header)
-      (list :indent-type 'tradfn-start :delimiter "∇" :label-at-bol nil
+      (list :indent-type 'tradfn-start :delimiter nil :label-at-bol nil
             :next-line next-line))
      ((looking-at dyalog-naked-nabla)
-      (list :indent-type 'tradfn-end :delimiter "∇"   :label-at-bol nil
+      (list :indent-type 'tradfn-end :delimiter nil :label-at-bol nil
             :next-line next-line))
      (t
       (let* ((indent-parse (dyalog-indent-parse-line dfunstack nil))
