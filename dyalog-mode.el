@@ -781,6 +781,8 @@ START and END specify the region to indent."
       (setq indent-info (dyalog-calculate-indent))
       (plist-put indent-info :tradfn-indent
                  (dyalog-current-tradfn-indentation))
+      (plist-put indent-info :nabla-indent
+                 (dyalog-current-nabla-indent))
       (when (= (point) start)
         ;; if start is on the first line of the buffer, we zero
         ;; next-indent, since we haven't actually initialized indent-info
@@ -846,6 +848,7 @@ updated plist of indentation information."
          (indent        (+ (plist-get indent-info :indent)
                            next-indent))
          (tradfn-indent (plist-get indent-info :tradfn-indent))
+         (nabla-indent  (plist-get indent-info :nabla-indent))
          (ret (copy-sequence indent-info)))
     (cond
      ((eq 'comment indent-type)
@@ -882,11 +885,13 @@ updated plist of indentation information."
             next-indent 0))
      ((eq 'tradfn-end indent-type)
       (setq tradfn-indent nil
-            indent current-indent
-            next-indent 0))
+            indent nabla-indent
+            next-indent 0
+            nabla-indent 0))
      ((eq 'tradfn-start indent-type)
       (setq tradfn-indent (save-excursion (skip-chars-forward " ∇"))
-            next-indent   (- tradfn-indent indent)))
+            next-indent   (- tradfn-indent indent)
+            nabla-indent  (dyalog-nabla-indent)))
      ((eq 'blank indent-type)
       (setq next-indent indent
             indent 0))
@@ -897,8 +902,28 @@ updated plist of indentation information."
     (plist-put ret :indent indent)
     (plist-put ret :next-indent next-indent)
     (plist-put ret :tradfn-indent tradfn-indent)
+    (plist-put ret :nabla-indent nabla-indent)
     ret))
 
+(defun dyalog-nabla-indent ()
+  "Return the current indentation of the nabla preceding a tradfn definition.
+Assumes point is at the start of a line with a tradfn header."
+  (save-excursion
+    (if (looking-at-p "^ *∇")
+        (skip-chars-forward " ")
+      (forward-line -1)
+      (skip-chars-forward " "))))
+
+(defun dyalog-current-nabla-indent ()
+  "Return the indentation of the nabla preceding the tradfn defun point is in."
+  (let* ((info  (dyalog-tradfn-info))
+         (name  (nth 0 info))
+         (end-of-header (nth 3 info)))
+    (when (and name (not (equal "" name)))
+      (save-excursion
+        (goto-char end-of-header)
+        (beginning-of-line)
+        (dyalog-nabla-indent)))))
 
 (defun dyalog-remove-label ()
   "Remove the current label token at beginning of line, and return it."
