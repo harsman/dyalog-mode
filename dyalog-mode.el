@@ -1749,10 +1749,8 @@ Optional argument LINE specifies which line to move point to."
                 (dyalog-in-keyword)
                 (dyalog-in-dfun))
       (save-excursion
-        (beginning-of-defun)
-        (skip-chars-forward "∇ \r\n")
-        (when (looking-at dyalog-naked-nabla)
-          (forward-line 1))
+        (goto-char end-of-header)
+        (beginning-of-line)
         (if (search-forward str end-of-header t)
             (progn
               (goto-char (match-beginning 0))
