@@ -1394,11 +1394,11 @@ START and END signify the region to fontify."
               type     (car all-info)
               info     (cadr all-info))
         (if (eq type 'dfun)
-            (dyalog-fontify-dfun info start end)
+            (dyalog-fontify-dfun info (point) end)
           (if (equal "" (plist-get info :name))
               ;; We are between tradfn definitions, skip to next function
               (dyalog-next-defun)
-            (dyalog-fontify-tradfn info start end)))))))
+            (dyalog-fontify-tradfn info (point) end)))))))
 
 ;;; Syntax
 
