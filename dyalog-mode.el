@@ -258,23 +258,23 @@ together with AltGr produce the corresponding apl character in APLCHARS."
 
 (defconst dyalog-delimiter-match
   (let ((h (make-hash-table :test 'equal)))
-    (dolist (e '((":If" . ":EndIf")("{"."}")
-                 (":For" . ":EndFor")(":Repeat" ":Until")
-                 (":While" . ":EndWhile")(":Trap" . ":EndTrap")
-                 (":Hold" . ":EndHold")(":With" . ":EndWith")
-                 (":Namespace" . ":EndNamespace")(":Class" . ":EndClass")
-                 (":Select" . ":EndSelect")(":Interface" ":EndInterface")))
+    (dolist (e '((":if" . ":endif")("{"."}")
+                 (":for" . ":endfor")(":repeat" ":until")
+                 (":while" . ":endwhile")(":trap" . ":endtrap")
+                 (":hold" . ":endhold")(":with" . ":endwith")
+                 (":namespace" . ":endnamespace")(":class" . ":endclass")
+                 (":select" . ":endselect")(":interface" ":endinterface")))
       (puthash (car e) (list (cdr e) 'block-start) h)
       (puthash (cdr e) (list (car e) 'block-end) h))
-    (dolist (e '((":AndIf". ":If")(":OrIf".":If")(":ElseIf".":If")))
+    (dolist (e '((":andif". ":if")(":orif".":if")(":elseif".":if")))
       (puthash (car e) (list (cdr e) 'block-pause) h))
-    (dolist (e '((":Else" . ":\\(If\\|Select\\|Trap\\|Hold\\)")
-                 (":Case" . ":\\(Select\\|Trap\\)")
-                 (":CaseList" . ":\\(Select\\|Trap\\)")))
+    (dolist (e '((":else" . ":\\(if\\|select\\|trap\\|hold\\)")
+                 (":case" . ":\\(select\\|trap\\)")
+                 (":caselist" . ":\\(select\\|trap\\)")))
       (puthash (car e) (list (cdr e) 'block-pause) h))
-    (dolist (e '((":Field" . ":\\(Class\\|Interface\\)")))
+    (dolist (e '((":field" . ":\\(class\\|interface\\)")))
       (puthash (car e) (list (cdr e) nil) h))
-    (dolist (e '(":Access"))
+    (dolist (e '(":access"))
       (puthash e (list "" nil) h))
     h))
 
@@ -311,7 +311,7 @@ the number of leading spaces defined here is used."
 (defun dyalog-matching-delimiter (delimiter)
   "Return the match for the given DELIMITER.
 For example, if ':EndIf' is provided, return ':If' and vice versa."
-  (car (gethash delimiter dyalog-delimiter-match nil)))
+  (car (gethash (downcase delimiter) dyalog-delimiter-match nil)))
 
 (defun dyalog-keyword-indent-type (keyword)
   "Return a symbol indicating how a KEYWORD affects indentation.
@@ -320,7 +320,7 @@ If KEYWORD introduces a new block, (e.g :If), return
 'block-end.  If it ends a block and immediately starts a new
 block (e.g. :Else or :Case), return 'block-pause.  If the keyword
 should be indented the same way as everything else, return nil."
-  (let ((d (gethash keyword dyalog-delimiter-match nil)))
+  (let ((d (gethash (downcase keyword) dyalog-delimiter-match nil)))
     (and d (nth 1 d))))
 
 (defun dyalog-specific-keyword-regex (keyword)
@@ -440,12 +440,11 @@ the next logical line starts at."
                (forward-char)
              (progn
                (setq keyword
-                     (capitalize
                       (buffer-substring-no-properties
                        (point)
                        (progn
                          (skip-chars-forward ":A-Za-z")
-                         (point))))
+                         (point)))
                      indent-type
                      (dyalog-keyword-indent-type keyword)))))
           (_
@@ -593,7 +592,10 @@ AT-ROOT-FUNCTION returns t when we have reached the corresponding :For."
                     nil))
                  ((eq 'block-start indent-type)
                   (progn
-                    (when (string-equal keyword (car blockstack))
+                    (when (eq t
+                              (compare-strings keyword  nil nil
+                                               (car blockstack) nil nil
+                                               'ignore-case))
                       (pop blockstack))
                     nil))
                  ((eq 'tradfn-end indent-type)
@@ -1440,7 +1442,7 @@ the keyword (or nil) and t if it is preceded by a label."
     (pcase-let ((`(,keyword ,label-at-bol)
            (if (or (looking-at dyalog-keyword-regex)
                    (looking-at dyalog-middle-keyword-regex))
-               (list (capitalize (match-string-no-properties 2))
+               (list (match-string-no-properties 2)
                      (not (not (match-string 5))))
              nil)))
       (if (and keyword (or in-dfun (dyalog-in-dfun)))
