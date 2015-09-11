@@ -440,11 +440,12 @@ the next logical line starts at."
                (forward-char)
              (progn
                (setq keyword
-                     (buffer-substring-no-properties
-                      (point)
-                      (progn
-                        (skip-chars-forward ":A-Za-z")
-                        (point)))
+                     (capitalize
+                      (buffer-substring-no-properties
+                       (point)
+                       (progn
+                         (skip-chars-forward ":A-Za-z")
+                         (point))))
                      indent-type
                      (dyalog-keyword-indent-type keyword)))))
           (_
@@ -475,7 +476,7 @@ return value from `dyalog-indent-status', and FUNCOUNT is the
 number of currently open tradfn definitions."
   (cond
    ((and (not blockstack)
-         (looking-at (dyalog-specific-keyword-regex match)))
+         (looking-at-p (dyalog-specific-keyword-regex match)))
     (list t (dyalog-relative-indent 0)))
    ((and (memq (plist-get indent-status :indent-type)
                '(tradfn-start tradfn-end))
@@ -489,8 +490,8 @@ the indentation status of the current line (the return value from
 `dyalog-indent-status', and FUNCOUNT is the number of currently
 open tradfn definitions."
   (cond ((and (not blockstack)
-              (looking-at (dyalog-specific-keyword-regex
-                           ":\\(Class\\|Namespace\\)")))
+              (looking-at-p (dyalog-specific-keyword-regex
+                             ":\\(Class\\|Namespace\\)")))
          (list t (dyalog-relative-indent 1)))
         ((and (not blockstack)
               (memq (plist-get indent-status :indent-type)
@@ -1439,7 +1440,7 @@ the keyword (or nil) and t if it is preceded by a label."
     (pcase-let ((`(,keyword ,label-at-bol)
            (if (or (looking-at dyalog-keyword-regex)
                    (looking-at dyalog-middle-keyword-regex))
-               (list (match-string-no-properties 2)
+               (list (capitalize (match-string-no-properties 2))
                      (not (not (match-string 5))))
              nil)))
       (if (and keyword (or in-dfun (dyalog-in-dfun)))
