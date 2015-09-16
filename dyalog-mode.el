@@ -259,11 +259,11 @@ together with AltGr produce the corresponding apl character in APLCHARS."
 (defconst dyalog-delimiter-match
   (let ((h (make-hash-table :test 'equal)))
     (dolist (e '((":if" . ":endif")("{"."}")
-                 (":for" . ":endfor")(":repeat" ":until")
+                 (":for" . ":endfor")(":repeat" . ":until")
                  (":while" . ":endwhile")(":trap" . ":endtrap")
                  (":hold" . ":endhold")(":with" . ":endwith")
                  (":namespace" . ":endnamespace")(":class" . ":endclass")
-                 (":select" . ":endselect")(":interface" ":endinterface")))
+                 (":select" . ":endselect")(":interface" . ":endinterface")))
       (puthash (car e) (list (cdr e) 'block-start) h)
       (puthash (cdr e) (list (car e) 'block-end) h))
     (dolist (e '((":andif". ":if")(":orif".":if")(":elseif".":if")))
