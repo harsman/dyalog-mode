@@ -1115,7 +1115,6 @@ If it is supplied, BOUND limits the search."
   ;; this function is called.
   (let ((end (or bound (point-max)))
         (done nil)
-        (in-dfun-p nil)
         (dfun-mode
          (and (looking-at "{")
               (not (dyalog-on-tradfn-header 'only-after-nabla)))))
@@ -1127,7 +1126,7 @@ If it is supplied, BOUND limits the search."
             (progn
               (goto-char end)
               (setq done t))
-          (when (setq done (not in-dfun-p))
+          (when (setq done (not (dyalog-in-dfun)))
             (ignore-errors (backward-char 1))
             (if (looking-at dyalog-tradfn-header)
                 (ignore-errors (backward-char 1))
