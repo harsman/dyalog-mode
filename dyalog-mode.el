@@ -1183,8 +1183,7 @@ anonymous, :name is \"\"."
 If point isn't inside a dfun, return nil."
   (progn ;; with-syntax-table can't be at defun top-level apparently...
     (with-syntax-table dyalog-dfun-syntax-table
-      (let* ((syntax-begin-function 'beginning-of-line)
-             (ppss (syntax-ppss))
+      (let* ((ppss (syntax-ppss))
              (start-of-containing-parens (nth 1 ppss)))
         (when (and start-of-containing-parens
                    (not (eq (char-after start-of-containing-parens) ?{)))
