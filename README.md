@@ -77,10 +77,11 @@ installed. If you install manually, you have to install dependencies manually
 as well.
 
 * `cl-lib` is installed by default in Emacs 24.3 and newer. It provides
-  various Common Lisp forms, but unlike the older `cl` library, it doen't
+  various Common Lisp forms, but unlike the older `cl` library, it doesn't
   pollute the global namespace. If you have an older Emacs version, without
   `cl-lib`, you can install it from the [GNU ELPA](http://elpa.gnu.org/)
-  repository by using `package.el`, or you can get it manually
+  repository by using `package.el` (by doing `M-x package-install RET cl-lib
+  RET`), or you can get it manually
   [here](http://elpa.gnu.org/packages/cl-lib.html).
 
 Getting started
@@ -169,12 +170,14 @@ Known issues and limitations
 
 Arrays are always read-only and cannot be edited.
 
-Indenting large regions or large files all at once uses a very suboptimal
-algorithm and is therefore very slow.
-
 In versions of Dyalog before 14.0, if you invoke Emacs to edit the current
-function suspended in the debugger from inside the debugger and change that
+function suspended in the debugger from inside the debugger and fix that
 function, the debuggers display of the function's source code isn't updated.
 
 Traditional operators are currently not supported, they can be edited, but can
 cause errors in indentation and the defun navigation commands won't work.
+
+If you invoke Emacs to edit the name under the cursor in the Dyalog editor,
+any line number specified is ignored, e.g. even if you edit FUNC[3] Emacs
+won't open with the cursor on line 3. This is a Dyalog limitation, the
+required information isn't available from within the editor.
