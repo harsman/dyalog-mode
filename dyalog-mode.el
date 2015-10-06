@@ -1740,7 +1740,7 @@ Optional argument LINE specifies which line to move point to."
   (let* ((sym   (symbol-at-point))
          (symname  (symbol-name sym))
          (name (substring-no-properties symname))
-         (str   (concat ";" name))
+         (regex   (concat ";" name "\\_>"))
          (info (dyalog-tradfn-info))
          (fname (nth 0 info))
          (end-of-header (nth 3 info)))
@@ -1752,14 +1752,14 @@ Optional argument LINE specifies which line to move point to."
       (save-excursion
         (goto-char end-of-header)
         (beginning-of-line)
-        (if (search-forward str end-of-header t)
+        (if (re-search-forward regex end-of-header t)
             (progn
               (goto-char (match-beginning 0))
-              (delete-char (length str))
+              (delete-char (length (match-string 0)))
               (message "Made %s non-local in function %s" name fname))
           (progn
             (move-end-of-line nil)
-            (insert str)
+            (insert (concat ";" name))
             (message "Made %s local in function %s" name fname)))))))
 
 (eval-after-load "which-func"
