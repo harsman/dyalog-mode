@@ -276,6 +276,7 @@ together with AltGr produce the corresponding apl character in APLCHARS."
       (puthash (car e) (list (cdr e) nil) h))
     (dolist (e '(":access"))
       (puthash e (list "" nil) h))
+    (puthash ":endrepeat" (list ":repeat" 'block-end) h)
     h))
 
 (defgroup dyalog nil
