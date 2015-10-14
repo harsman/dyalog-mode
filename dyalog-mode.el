@@ -849,7 +849,8 @@ updated plist of indentation information."
          (delimiter     (plist-get indent-status :delimiter))
          (blockstack    (plist-get indent-info :blockstack))
          (next-indent   (or (plist-get indent-info :next-indent) 0))
-         (indent        (+ (plist-get indent-info :indent)
+         (previous-indent (plist-get indent-info :indent))
+         (indent        (+ previous-indent
                            next-indent))
          (tradfn-indent (plist-get indent-info :tradfn-indent))
          (nabla-indent  (plist-get indent-info :nabla-indent))
@@ -893,9 +894,17 @@ updated plist of indentation information."
             next-indent 0
             nabla-indent 0))
      ((eq 'tradfn-start indent-type)
-      (setq tradfn-indent (save-excursion (skip-chars-forward " ∇"))
-            next-indent   (- tradfn-indent indent)
-            nabla-indent  (dyalog-nabla-indent)))
+      (let ((nabla-at-bol (looking-at-p " *∇")))
+        (setq tradfn-indent (+ (save-excursion
+                                 (skip-chars-forward "^∇")
+                                 (skip-chars-forward " ∇"))
+                               (if nabla-at-bol
+                                   indent
+                                 0))
+              next-indent   (- tradfn-indent indent)
+              nabla-indent  (if nabla-at-bol
+                                indent
+                              previous-indent))))
      ((eq 'blank indent-type)
       (setq next-indent indent
             indent 0))
