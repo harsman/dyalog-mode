@@ -170,15 +170,13 @@ together with AltGr produce the corresponding apl character in APLCHARS."
    `(,dyalog-keyword-regex
      . (2 font-lock-keyword-face nil))
    `(,dyalog-middle-keyword-regex . (2 font-lock-keyword-face nil))
-   ;; Guards
-   '(":" . 'dyalog-apl-char)
    ;; Labels
    '("^\\s-*\\([A-Za-z_][A-Za-z0-9_]*:\\)" . (1 font-lock-keyword-face t))
    ;; Numerical constans
    `(,dyalog-number (1 font-lock-constant-face nil))
    ;; APL chars
-   (cons (concat "[" dyalog-ascii-chars "]") ''dyalog-apl-char)
-   (cons (concat "[" dyalog-keyword-chars "]") ''dyalog-apl-char)
+   (cons (concat "[" dyalog-ascii-chars dyalog-keyword-chars ":" "]")
+         ''dyalog-apl-char)
    ;; Localizations
    '(";\\([A-Za-z0-9_∆]+\\)" (1 font-lock-constant-face nil))
    ;; Illegal chars (and del/nabla)
