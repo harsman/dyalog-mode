@@ -44,7 +44,6 @@
 (defvar dyalog-mode-map
   (let ((map(make-keymap)))
     (define-key map (kbd"M-RET") 'comment-indent-new-line)
-    (define-key map (kbd"M-f") 'dyalog-ediff-forward-word)
     (define-key map (kbd"C-c C-c") 'dyalog-editor-fix)
     (define-key map (kbd"C-c C-q") 'dyalog-editor-fix-and-quit)
     (define-key map (kbd"C-c C-e") 'dyalog-editor-edit-symbol-at-point)
