@@ -233,12 +233,18 @@
           :EndSelect
         ∇
 
-        ∇ {r}←fix args;socket;raw;marker;src;header
+        ∇ {r}←fix args;socket;raw;marker;src;header;hasKeyword
           socket raw marker←args
           src←##.bytes2text recvbuf,raw[⍳marker-1]
-          header←##.tolower src[⍳512⌊⊃⍴src]
-          :If ∨/':class'⍷header
-          :OrIf ∨/':namespace'⍷header
+          header←↑##.splitlines ##.tolower src[⍳512⌊⊃⍴src]
+          hasKeyword←{
+              instring←{⍵∨≠\⍵}⍺=''''
+              incomment←(~instring)∧∨\⍺='⍝'
+              ∨/∨/(~incomment∨instring)∧⍵⍷⍺
+          }
+          
+          :If header hasKeyword ':class'
+          :OrIf header hasKeyword ':namespace'
               r←#.⎕FIX ##.splitlines src
           :Else
               r←#.⎕FX↑##.splitlines src
