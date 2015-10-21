@@ -1190,7 +1190,8 @@ anonymous, :name is \"\"."
 If point isn't inside a dfun, return nil."
   (progn ;; with-syntax-table can't be at defun top-level apparently...
     (with-syntax-table dyalog-dfun-syntax-table
-      (let* ((ppss (syntax-ppss))
+      (let* ((pos (point))
+             (ppss (syntax-ppss))
              (start-of-containing-parens (nth 1 ppss)))
         (when (and start-of-containing-parens
                    (not (eq (char-after start-of-containing-parens) ?{)))
@@ -1206,12 +1207,21 @@ If point isn't inside a dfun, return nil."
             (save-excursion
               (goto-char start-of-containing-parens)
               (if (not (dyalog-on-tradfn-header 'only-after-nabla))
-                  (list :start start-of-containing-parens
-                        :end   (condition-case nil
-                                   (progn
-                                     (forward-sexp)
-                                     (point))
-                                 (scan-error nil)))
+                  (let ((end (condition-case nil
+                                 (progn
+                                   (forward-sexp)
+                                   (point))
+                               (scan-error nil))))
+                    (unless (or (< pos start-of-containing-parens)
+                                (and end (<= end pos)))
+                      ;; Sometimes, when syntax-ppss is called during
+                      ;; jit-lock, it breaks and gives erronous results,
+                      ;; saying we are inside parens when we are not. We
+                      ;; detect this by checking if the the sexp we're
+                      ;; supposed to be in ends before, or begins after the
+                      ;; position we started parsing at.
+                      (list :start start-of-containing-parens
+                            :end end)))
                 nil))
           nil)))))
 
