@@ -887,17 +887,18 @@ updated plist of indentation information."
             next-indent 0))
      ((eq 'tradfn-end indent-type)
       (setq tradfn-indent nil
-            indent nabla-indent
+            indent (or nabla-indent indent)
             next-indent 0
-            nabla-indent 0))
+            nabla-indent nil))
      ((eq 'tradfn-start indent-type)
       (let ((nabla-at-bol (looking-at-p " *∇")))
-        (setq tradfn-indent (+ (save-excursion
-                                 (skip-chars-forward "^∇")
-                                 (skip-chars-forward " ∇"))
-                               (if nabla-at-bol
-                                   indent
-                                 0))
+        (setq tradfn-indent (if nabla-at-bol
+                                (+ (save-excursion
+                                     (skip-chars-forward "^∇")
+                                     (skip-chars-forward " ∇"))
+                                   indent)
+                              (save-excursion
+                                (skip-chars-forward " ")))
               next-indent   (- tradfn-indent indent)
               nabla-indent  (if nabla-at-bol
                                 indent
