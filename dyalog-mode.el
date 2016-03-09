@@ -1054,6 +1054,8 @@ Assumes that point is within a dynamic function definition."
 If TRADFN-ONLY is t, only consider traditional function definitions."
   ;; Point can be anywhere when this function is called
   (let ((done nil)
+        (tradfn-end nil)
+        (first-hit nil)
         (dfun-info (dyalog-in-dfun)))
     (if dfun-info
         (goto-char (plist-get dfun-info :start))
@@ -1065,20 +1067,32 @@ If TRADFN-ONLY is t, only consider traditional function definitions."
               (if (dyalog-on-tradfn-header 'only-after-nabla)
                   (progn
                     (skip-chars-backward "^∇")
-                    (ignore-errors (backward-char)))
+                    (ignore-errors (backward-char))
+                    (setq tradfn-end nil
+                          first-hit  nil))
                 (progn
                   (cond
                    ((looking-back "{")
-                    (backward-char)) ;; already at start, done
+                    (backward-char)
+                    (if (not first-hit)
+                        (setq first-hit (point)))
+                    (setq done nil))
                    ((looking-back "}")
-                    (backward-sexp))
+                    (backward-sexp)
+                    (if (not first-hit)
+                        (setq first-hit (point)))
+                    (setq done nil))
                    ((looking-back "∇")
                     (backward-char)
-                    (setq done nil))
-                   ((looking-at "∇") ;; at naked nabla we started at
-                    (forward-line -1)
-                    (end-of-line)
-                    (setq done nil))))))
+                    (if first-hit
+                        (progn
+                          (setq done t)
+                          (goto-char first-hit))
+                      (setq tradfn-end (point)
+                            done        nil)))
+                   ((bobp)
+                    (when first-hit
+                      (goto-char first-hit)))))))
           (ignore-errors (backward-char)))))))
 
 (defun dyalog-next-defun (&optional limit)
