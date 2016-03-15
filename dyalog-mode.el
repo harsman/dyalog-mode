@@ -1304,14 +1304,15 @@ position where the defun ends."
             (dyalog-end-of-defun)
             (setq end-of-defun (point))
             (if (or (< end-of-defun start-pos) (< start-pos start-of-defun))
-                (list "" nil nil 0 0)
+                (list "" nil nil 0 0 0)
               (progn
                 (setq locals
                       (split-string
                        (buffer-substring-no-properties localstart end-of-header)
                        "[; ]" 'omit-nulls))
-                (list tradfn-name args locals end-of-header end-of-defun))))
-        (list "" nil nil 0 0)))))
+                (list tradfn-name args locals end-of-header end-of-defun
+                      start-of-defun))))
+        (list "" nil nil 0 0 0)))))
 
 ;;; Font Lock
 
@@ -1326,7 +1327,7 @@ position where the defun ends."
         (list 'tradfn (progn
                         (ignore-errors (forward-char))
                         (let* ((info (dyalog-tradfn-info))
-                               (start (match-beginning 0))
+                               (start (nth 5 info))
                                (name (car info))
                                (args (nth 1 info))
                                (locals (nth 2 info))
