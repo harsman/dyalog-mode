@@ -1136,15 +1136,13 @@ If supplied, LIMIT limits the search."
 If supplied, ARG moves that many defuns back."
   (interactive "^p")
   (unless arg (setq arg 1))
-  (let ((found nil))
-    (if (< arg 0)
+  (if (< arg 0)
         (while (< arg 0)
-          (setq found (dyalog-next-defun))
+          (dyalog-next-defun)
           (cl-incf arg))
       (while (> arg 0)
-        (setq found (dyalog-previous-defun))
-        (cl-decf arg)))
-    found))
+        (dyalog-previous-defun)
+        (cl-decf arg))))
 
 (defun dyalog-end-of-defun (&optional bound)
   "Move forward to the end of a function definition.
