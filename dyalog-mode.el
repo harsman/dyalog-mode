@@ -1107,24 +1107,29 @@ If TRADFN-ONLY is t, only consider traditional function definitions."
   "Move to the beginning of the next defun.
 If supplied, LIMIT limits the search."
   (let ((lim (or limit (point-max)))
-        (done nil))
+        (done nil)
+        (found nil))
     (when (looking-at "[{∇]")
       (ignore-errors (forward-char)))
     (while (not done)
       (skip-chars-forward "^∇{" lim)
       (cond
-       ((= (point) lim)
-        (setq done t))
+       ((>= (point) lim)
+        (setq found nil
+              done  t))
        ((dyalog-in-comment-or-string)
         (ignore-errors (forward-char)))
        ((dyalog-on-tradfn-header 'only-after-nabla)
-        (setq done t))
+        (setq found t
+              done  t))
        (t
         (cond
          ((looking-at "{")
-          (setq done t)) ;; already at start, done
+          (setq found t
+                done  t))
          ((looking-at "∇")
-          (ignore-errors (forward-char)))))))))
+          (ignore-errors (forward-char)))))))
+    found))
 
 (defun dyalog-beginning-of-defun (&optional arg)
   "Move backward to the beginning of a function definition.
