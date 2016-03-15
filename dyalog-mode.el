@@ -1035,10 +1035,24 @@ type is unknown and 'function if it looks like a function definition."
 
 ;;; Defun recognition and navigation
 
-(defvar dyalog-imenu-generic-expression
-  `(("Functions"  ,dyalog-tradfn-header 1)
-    ("Namespaces" "^\\s-*:Namespace *\\([A-Za-z_]+[A-Za-z_0-9]*\\)" 1)
-    ("Classes"    "^\\s-*:Class *\\([A-Za-z_]+[A-Za-z_0-9]*\\)" 1)))
+(defun dyalog-imenu-create-index ()
+  (reverse (dyalog-functions-in-buffer)))
+
+(defun dyalog-functions-in-buffer ()
+  "Return an alist of names and positions for defuns in the current buffer."
+  (save-excursion
+    (let ((funs ())
+          (done nil))
+      (goto-char (point-min))
+      (while (not done)
+        (let* ((info (cadr (dyalog-defun-info)))
+               (name (plist-get info :name))
+               (start (plist-get info :start)))
+          (when (not (zerop (length name)))
+            (push (cons name (copy-marker start)) funs)
+            (goto-char (plist-get info :end)))
+          (setq done (not (dyalog-next-defun)))))
+      funs)))
 
 (defun dyalog-beginning-of-dfun ()
   "Move backward to the beginning of a dynamic function definition.
@@ -1843,8 +1857,8 @@ Optional argument LINE specifies which line to move point to."
   ;; Socket connection
   (set (make-local-variable 'dyalog-connection) nil)
   ;; Imenu and which-func-mode
-  (set (make-local-variable 'imenu-generic-expression)
-       dyalog-imenu-generic-expression)
+  (set (make-local-variable 'imenu-create-index-function)
+       #'dyalog-imenu-create-index)
   (add-hook 'which-func-functions 'dyalog-current-defun nil 'make-it-local)
   ;; Hooks
   (add-hook 'before-save-hook
