@@ -1056,9 +1056,13 @@ If TRADFN-ONLY is t, only consider traditional function definitions."
   (let ((done nil)
         (tradfn-end nil)
         (first-hit nil)
+        (found nil)
+        (start (point))
         (dfun-info (dyalog-in-dfun)))
     (if dfun-info
-        (goto-char (plist-get dfun-info :start))
+        (progn
+          (goto-char (plist-get dfun-info :start))
+          t)
       (while (not done)
         (skip-chars-backward (if tradfn-only "^∇" "^∇{}"))
         (if (or (bobp) (not (dyalog-in-comment-or-string)))
@@ -1069,7 +1073,8 @@ If TRADFN-ONLY is t, only consider traditional function definitions."
                     (skip-chars-backward "^∇")
                     (ignore-errors (backward-char))
                     (setq tradfn-end nil
-                          first-hit  nil))
+                          first-hit  nil
+                          found      t))
                 (progn
                   (cond
                    ((looking-back "{")
@@ -1086,14 +1091,17 @@ If TRADFN-ONLY is t, only consider traditional function definitions."
                     (backward-char)
                     (if first-hit
                         (progn
-                          (setq done t)
+                          (setq found t
+                                done  t)
                           (goto-char first-hit))
                       (setq tradfn-end (point)
                             done        nil)))
                    ((bobp)
                     (when first-hit
+                      (setq found t)
                       (goto-char first-hit)))))))
-          (ignore-errors (backward-char)))))))
+          (ignore-errors (backward-char))))
+        (and found (not (= (point) start))))))
 
 (defun dyalog-next-defun (&optional limit)
   "Move to the beginning of the next defun.
@@ -1123,13 +1131,15 @@ If supplied, LIMIT limits the search."
 If supplied, ARG moves that many defuns back."
   (interactive "^p")
   (unless arg (setq arg 1))
-  (if (< arg 0)
-      (while (< arg 0)
-        (dyalog-next-defun)
-        (cl-incf arg))
-    (while (> arg 0)
-      (dyalog-previous-defun)
-      (cl-decf arg))))
+  (let ((found nil))
+    (if (< arg 0)
+        (while (< arg 0)
+          (setq found (dyalog-next-defun))
+          (cl-incf arg))
+      (while (> arg 0)
+        (setq found (dyalog-previous-defun))
+        (cl-decf arg)))
+    found))
 
 (defun dyalog-end-of-defun (&optional bound)
   "Move forward to the end of a function definition.
