@@ -120,30 +120,32 @@ together with AltGr produce the corresponding apl character in APLCHARS."
   "\\(?:\\(?2:[A-Za-z_]+\\) *← *\\|{\\(?2:[a-zA-Z_]+\\)} *← *\\)?")
 
 (defconst dyalog-func-larg
-  "\\(?:\\(?3:[A-Za-z_]+\\) +\\|{\\(?3:[A-Za-z_]+\\)} *\\)")
+  "\\(?:\\(?3:[A-Za-z_]+\\)\\(?:\\_>\\| +\\)\\|{\\(?3:[A-Za-z_]+\\)} *\\)")
 
 (defconst dyalog-func-name (concat "\\(?1:" dyalog-name "\\)"))
 
-(defconst dyalog-func-rarg "\\(?: +\\(?4:[A-Za-z_]+\\)\\)")
+(defconst dyalog-op-def (concat "\\(?:" "( *"
+                                "\\(?6:" dyalog-name  "\\)" ; left operand
+                                " +"
+                                "\\(?7:" dyalog-name "\\)"  ; operator name
+                                "\\(?:" " +"
+                                "\\(?8:" dyalog-name "\\)"  ; right operand
+                                "\\)?" " *)" "\\)"))
+
+(defconst dyalog-func-def (concat "\\(?:" dyalog-func-name "\\|"
+                                 dyalog-op-def "\\)"))
+
+(defconst dyalog-func-rarg "\\(?:\\(?: +\\|\\_<\\)\\(?4:[A-Za-z_]+\\)\\)")
 
 (defconst dyalog-func-header-end "\\s-*\\(?5:;\\|$\\)")
 
-(defconst dyalog-func-niladic (concat "\\(?:" dyalog-func-name
-                                      dyalog-func-header-end "\\)"))
-
-(defconst dyalog-func-monadic (concat "\\(?:" dyalog-func-name
-                                      dyalog-func-rarg
-                                      dyalog-func-header-end "\\)"))
-
-(defconst dyalog-func-dyadic (concat "\\(?:" dyalog-func-larg
-                                     dyalog-func-name
-                                     dyalog-func-rarg
-                                     dyalog-func-header-end "\\)"))
-
 (defconst dyalog-tradfn-header (concat dyalog-func-start dyalog-func-retval
-                                       "\\(?:" dyalog-func-niladic "\\|"
-                                       dyalog-func-monadic "\\|"
-                                       dyalog-func-dyadic "\\)"))
+                                       "\\(?:"
+                                       "\\(?:" dyalog-func-larg dyalog-func-def
+                                       dyalog-func-rarg "\\)" "\\|"
+                                       "\\(?:" dyalog-func-def dyalog-func-rarg "?"
+                                       "\\)" "\\)"
+                                       dyalog-func-header-end))
 
 (defface dyalog-apl-char
   '((t (:inherit font-lock-keyword-face)))
@@ -1311,22 +1313,27 @@ position where the defun ends."
                  (larg (match-string-no-properties 3))
                  (rarg (match-string-no-properties 4))
                  (localstart (match-end 5))
+                 (left-operand  (match-string-no-properties 6))
+                 (tradop-name   (match-string-no-properties 7))
+                 (right-operand (match-string-no-properties 8))
+                 (name (or tradop-name tradfn-name))
                  (end-of-header (line-end-position))
                  (args (remq nil (list retval larg rarg)))
+                 (operands (remq nil (list left-operand right-operand)))
                  (locals nil)
                  (end-of-defun 0))
             (dyalog-end-of-defun)
             (setq end-of-defun (point))
             (if (or (< end-of-defun start-pos) (< start-pos start-of-defun))
-                (list "" nil nil 0 0 0)
+                (list "" nil nil 0 0 0 nil)
               (progn
                 (setq locals
                       (split-string
                        (buffer-substring-no-properties localstart end-of-header)
                        "[; ]" 'omit-nulls))
-                (list tradfn-name args locals end-of-header end-of-defun
-                      start-of-defun))))
-        (list "" nil nil 0 0 0)))))
+                (list name args locals end-of-header end-of-defun
+                      start-of-defun operands))))
+        (list "" nil nil 0 0 0 nil)))))
 
 ;;; Font Lock
 
@@ -1346,10 +1353,11 @@ position where the defun ends."
                                (args (nth 1 info))
                                (locals (nth 2 info))
                                (end-of-header (nth 3 info))
-                               (end (nth 4 info)))
+                               (end (nth 4 info))
+                               (operands (nth 6 info)))
                           (list :start start :name name :args args
                                 :locals locals :end-of-header end-of-header
-                                :end end))))))))
+                                :end end :operands operands))))))))
 
 (defun dyalog-fontify-dfun (dfun-info start end)
   "Fontify the dynamic function defined by DFUN-INFO.
@@ -1384,7 +1392,8 @@ START and END delimit the region to fontify."
     (when (and fname (not (equal fname "")))
       (let* ((args (plist-get info :args))
              (localizations (plist-get info :locals))
-             (locals (append args localizations))
+             (operands (plist-get info :operands))
+             (locals (append args operands localizations))
              (end-of-header (plist-get info :end-of-header))
              (end-of-defun (plist-get info :end))
              (limit (min end-of-defun end))
