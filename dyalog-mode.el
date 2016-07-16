@@ -465,7 +465,7 @@ the next logical line starts at."
       (list :label label :keyword keyword :dfunstack dfunstack
             :indent-type indent-type :next-line (point)))))
 
-(defun dyalog-indent-stop-block-end (match blockstack indent-status funcount)
+(defun dyalog-indent-stop-block-end (match blockstack indent-status _funcount)
   "Return whether we have found root for a block end, and amount of to indent.
 MATCH is the keyword that matches the block end (e.g. :For
 matches :EndFor), BLOCKSTACK is a stack of currently open blocks,
@@ -481,7 +481,7 @@ number of currently open tradfn definitions."
          (not (string-match ":\\(End\\)?\\(Namespace\\|Class\\)" match)))
     (list t (skip-chars-forward " ∇")))))
 
-(defun dyalog-indent-stop-tradfn (blockstack indent-status funcount)
+(defun dyalog-indent-stop-tradfn (blockstack indent-status _funcount)
   "Return whether we have found root for a tradfn, and chars to indent.
 BLOCKSTACK is a stack of currently open blocks, INDENT-STATUS is
 the indentation status of the current line (the return value from
@@ -1698,7 +1698,7 @@ edit buffer."
       (setq buffer-undo-list nil)
       (select-frame-set-input-focus (window-frame (selected-window))))))
 
-(defun dyalog-open-edit-array (process name kind src)
+(defun dyalog-open-edit-array (process name _kind src)
   "Open a buffer to edit array.
 PROCESS is the socket connection associated with the buffer, NAME
 is the name of the array, KIND is the type of array and is
