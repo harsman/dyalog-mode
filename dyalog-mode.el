@@ -1035,38 +1035,6 @@ type is unknown and 'function if it looks like a function definition."
     (mark-whole-buffer)
     (indent-region (region-beginning) (region-end))))
 
-;;; Tokenization and parsing
-(defun dyalog-forward-token (in-dfun)
-  "Move point one token forward and return the token.
-IN-DFUN is t if point is inside a dynamic function definition."
-  ;; TODO: This doesn't parse labels correctly
-  (forward-comment (point-max))
-  (skip-chars-forward " \t\r\n")
-  (let ((start (point)))
-    (buffer-substring-no-properties
-     start
-     (cond
-      ((looking-at "[A-Za-z∆_]")
-       (+ start (skip-chars-forward "A-Za-z∆_0-9")))
-      ((looking-at "'")
-       (progn
-         (forward-sexp)
-         (point)))
-      ((looking-at "⎕")
-       (+ start (skip-chars-forward "⎕A-Za-z")))
-      ((looking-at "[0-9¯]")
-       (+ start (skip-chars-forward "0-9.¯Ee")))
-      ((looking-at ":")
-       (if in-dfun
-           (progn
-             (forward-char)
-             (1+ start))
-         (+ start (skip-chars-forward ":A-Za-z"))))
-      (t
-       (progn
-         (ignore-errors (forward-char))
-         (point)))))))
-
 ;;; Defun recognition and navigation
 
 (defun dyalog-imenu-create-index ()
