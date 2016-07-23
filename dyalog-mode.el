@@ -116,8 +116,20 @@ together with AltGr produce the corresponding apl character in APLCHARS."
 
 (defconst dyalog-func-start "\\(?:\\`\\|∇[\r\n]*\\)\\s-*")
 
+(defun dyalog-name-list (id)
+  "Return a regex with group ID matching a dyalog name list.
+Name lists are (optionally) used for naming the elements of the
+return value or right argument of a traditional defined function." 
+  (concat "( *\\(?" id ":" dyalog-name "\\(?: +" dyalog-name "\\)+\\)"
+          "*)"))
+
 (defconst dyalog-func-retval
-  "\\(?:\\(?2:[A-Za-z_]+\\) *← *\\|{\\(?2:[a-zA-Z_]+\\)} *← *\\)?")
+  (concat "\\(?:"
+          "\\(?:" "\\(?2:" dyalog-name "\\)" "\\|"
+          "\\(?:" (dyalog-name-list "2") "\\)" "\\|"
+          "\\(?:" "{\\(?2:" dyalog-name "\\)}\\)" "\\|"
+          "\\(?:" "{ *" (dyalog-name-list "2") " *}\\)"
+          "\\) *← *\\)?"))
 
 (defconst dyalog-func-larg
   "\\(?:\\(?3:[A-Za-z_]+\\)\\(?:\\_>\\| +\\)\\|{\\(?3:[A-Za-z_]+\\)} *\\)")
@@ -135,7 +147,9 @@ together with AltGr produce the corresponding apl character in APLCHARS."
 (defconst dyalog-func-def (concat "\\(?:" dyalog-func-name "\\|"
                                  dyalog-op-def "\\)"))
 
-(defconst dyalog-func-rarg "\\(?:\\(?: +\\|\\_<\\)\\(?4:[A-Za-z_]+\\)\\)")
+(defvar dyalog-func-rarg (concat "\\(?:\\(?:\\(?: +\\|\\_<\\)\\(?4:"
+                                 dyalog-name "\\)\\)\\|"
+                                   "\\(?: *" (dyalog-name-list "4") "\\)\\)"))
 
 (defconst dyalog-func-header-end "\\s-*\\(?5:;\\|$\\)")
 
@@ -1309,16 +1323,18 @@ position where the defun ends."
       (if (re-search-forward dyalog-tradfn-header nil t)
           (let* ((start-of-defun (match-beginning 0))
                  (tradfn-name (match-string-no-properties 1))
-                 (retval (match-string-no-properties 2))
+                 (retval (save-match-data
+                           (split-string (or (match-string-no-properties 2) ""))))
                  (larg (match-string-no-properties 3))
-                 (rarg (match-string-no-properties 4))
+                 (rarg (save-match-data
+                         (split-string (or (match-string-no-properties 4) ""))))
                  (localstart (match-end 5))
                  (left-operand  (match-string-no-properties 6))
                  (tradop-name   (match-string-no-properties 7))
                  (right-operand (match-string-no-properties 8))
                  (name (or tradop-name tradfn-name))
                  (end-of-header (line-end-position))
-                 (args (remq nil (list retval larg rarg)))
+                 (args (list retval (when larg (list larg)) rarg))
                  (operands (remq nil (list left-operand right-operand)))
                  (locals nil)
                  (end-of-defun 0))
@@ -1359,6 +1375,13 @@ position where the defun ends."
                                 :locals locals :end-of-header end-of-header
                                 :end end :operands operands))))))))
 
+(defun dyalog-local-names (defun-info)
+  "Return a list of local names given return value from `dyalog-defun-info'."
+  (let ((args (apply 'append (plist-get defun-info :args)))
+        (operands (plist-get defun-info :operands))
+        (localizations (plist-get defun-info :locals)))
+    (append args operands localizations)))
+
 (defun dyalog-fontify-dfun (dfun-info start end)
   "Fontify the dynamic function defined by DFUN-INFO.
 START and END delimit the region to fontify."
@@ -1390,10 +1413,9 @@ START and END delimit the region to fontify."
 START and END delimit the region to fontify."
   (let ((fname (plist-get info :name)))
     (when (and fname (not (equal fname "")))
-      (let* ((args (plist-get info :args))
-             (localizations (plist-get info :locals))
+      (let* ((localizations (plist-get info :locals))
              (operands (plist-get info :operands))
-             (locals (append args operands localizations))
+             (locals (dyalog-local-names info))
              (end-of-header (plist-get info :end-of-header))
              (end-of-defun (plist-get info :end))
              (limit (min end-of-defun end))
