@@ -173,9 +173,7 @@ Arrays are always read-only and cannot be edited.
 In versions of Dyalog before 14.0, if you invoke Emacs to edit the current
 function suspended in the debugger from inside the debugger and fix that
 function, the debuggers display of the function's source code isn't updated.
-
-Traditional operators are currently not supported, they can be edited, but can
-cause errors in indentation and the defun navigation commands won't work.
+This is a Dyalog bug and cannot be fixed in Dyalog mode.
 
 If you invoke Emacs to edit the name under the cursor in the Dyalog editor,
 any line number specified is ignored, e.g. even if you edit FUNC[3] Emacs
