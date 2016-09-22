@@ -95,7 +95,7 @@ together with AltGr produce the corresponding apl character in APLCHARS."
   "APL symbols also present in ASCII.")
 
 (defvar dyalog-keyword-chars
-  "×≤≥≠∨∧÷∊⍴↑↓⍳○←→⌈⌊∘⍎⍕⊂⊃∩∪⊥⊤⍨⍒⍋⌽⍉⊖⍟⍱⍲⍬⌹≡≢⍪⌿⍀⍺⍵⎕⍞⋄⍷⌷⍣⊣⊢⌶")
+  "×≤≥≠∨∧÷∊⍴↑↓⍳○←→⌈⌊∘⍎⍕⊂⊃∩∪⊥⊤⍨⍒⍋⌽⍉⊖⍟⍱⍲⍬⌹≡≢⍪⌿⍀⍺⍵⎕⍞⋄⍷⍸⌷⍣⊣⊢⌶")
 
 (defvar dyalog-name  "[A-Za-z∆_]+[A-Za-z∆_0-9]*")
 
