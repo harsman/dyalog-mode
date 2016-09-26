@@ -1188,10 +1188,10 @@ Assumes that point is within a dynamic function definition."
 
 (defun dyalog-previous-defun (&optional tradfn-only)
   "Move backward to the start of a function definition.
-If TRADFN-ONLY is t, only consider traditional function definitions."
+If TRADFN-ONLY is t, only consider traditional function definitions.
+Return t if a function definition was found, otherwise return nil."
   ;; Point can be anywhere when this function is called
   (let ((done nil)
-        (tradfn-end nil)
         (first-hit nil)
         (found nil)
         (start (point))
@@ -1209,8 +1209,7 @@ If TRADFN-ONLY is t, only consider traditional function definitions."
                   (progn
                     (skip-chars-backward "^∇")
                     (ignore-errors (backward-char))
-                    (setq tradfn-end nil
-                          first-hit  nil
+                    (setq first-hit  nil
                           found      t))
                 (progn
                   (cond
@@ -1231,8 +1230,7 @@ If TRADFN-ONLY is t, only consider traditional function definitions."
                           (setq found t
                                 done  t)
                           (goto-char first-hit))
-                      (setq tradfn-end (point)
-                            done        nil)))
+                      (setq done nil)))
                    ((bobp)
                     (when first-hit
                       (setq found t)
@@ -1520,9 +1518,7 @@ START and END delimit the region to fontify."
 START and END delimit the region to fontify."
   (let ((fname (plist-get info :name)))
     (when (and fname (not (equal fname "")))
-      (let* ((localizations (plist-get info :locals))
-             (operands (plist-get info :operands))
-             (locals (dyalog-local-names info))
+      (let* ((locals (dyalog-local-names info))
              (end-of-header (plist-get info :end-of-header))
              (end-of-defun (plist-get info :end))
              (limit (min end-of-defun end))
