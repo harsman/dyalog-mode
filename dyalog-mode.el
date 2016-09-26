@@ -1058,17 +1058,124 @@ type is unknown and 'function if it looks like a function definition."
   "Return an alist of names and positions for defuns in the current buffer."
   (save-excursion
     (let ((funs ())
-          (done nil))
+          (done nil)
+          (space-scan nil))
       (goto-char (point-min))
       (while (not done)
+        (setq space-scan (dyalog-update-space-scan space-scan (point)))
         (let* ((info (cadr (dyalog-defun-info)))
                (name (plist-get info :name))
-               (start (plist-get info :start)))
+               (start (plist-get info :start))
+               (current-space (dyalog-current-space space-scan))
+               (space-name (mapconcat 'identity current-space "."))
+               (full-name (if current-space
+                              (concat space-name "." name)
+                            name)))
           (when (not (zerop (length name)))
-            (push (cons name (copy-marker start)) funs)
+            (push (cons full-name (copy-marker start)) funs)
             (goto-char (plist-get info :end)))
           (setq done (not (dyalog-next-defun)))))
       funs)))
+
+(defun dyalog-update-space-scan (space-scan pos)
+  "Update SPACE-SCAN incrementally, given that point is at POS"
+  (save-excursion
+    (let* ((space-stack (plist-get space-scan :stack))
+           (max-reached (plist-get space-scan :max-reached))
+           (trimmed-stack (dyalog-trim-passed-spaces space-stack pos))
+           (top (car trimmed-stack))
+           (start (plist-get top :start))
+           (end   (plist-get top :end)))
+      (if (and (not end) (or (not start) (> pos start))
+               (or (not max-reached) (< max-reached (point-max))))
+          (progn
+            (goto-char (or max-reached pos))
+            (dyalog-add-spaces-to-stack trimmed-stack pos))
+        (list :stack trimmed-stack :max-reached max-reached)))))
+
+(defun dyalog-trim-passed-spaces (space-stack pos)
+  "Remove any spaces in SPACE-STACK that were closed before position POS."
+  (let ((done nil))
+    (while (not done)
+      (let* ((top (car space-stack))
+             (end (plist-get top :end)))
+        (if (and end (> pos end))
+            (setq space-stack (cdr space-stack))
+          (setq done t))))
+    space-stack))
+
+(defun dyalog-add-spaces-to-stack (space-stack pos)
+  "Add any spaces found between MAX-REACHED and POS to SPACE-STACK."
+  (let ((reached nil)
+        (done nil)
+        (space-scan nil))
+    (while (not done)
+      (setq space-scan  (dyalog-next-space-or-class space-stack)
+            space-stack (plist-get space-scan :stack)
+            reached (plist-get space-scan :max-reached)
+            done (> reached pos)))
+    space-scan))
+
+(defun dyalog-next-space-or-class (&optional space-stack)
+  "Move forward to the start or end of the next namepace or class def."
+  (let ((done nil)
+        (ret nil))
+    (dyalog-skip-comment-or-string)
+    (while (not done)
+      (if (re-search-forward (concat ":\\(End\\(Namespace\\|Class\\)\\)\\|"
+                                     "\\(\\(Namespace\\|Class\\) +"
+                                     "\\(" dyalog-name "\\)\\)") nil 'no-errors)
+          (setq done (not (dyalog-in-comment-or-string)))
+        (setq done t)))
+    (let* ((space-name (match-string-no-properties 5))
+           (endword    (match-string-no-properties 1))
+           (startword  (match-string-no-properties 4))
+           (pos        (match-end 0))
+           (start-type (when startword
+                         (dyalog-type-char-to-symbol (aref startword 0))))
+           (end-type   (when endword
+                         (dyalog-type-char-to-symbol (aref endword 3)))))
+      (setq ret
+            (if space-name
+                (let ((hit
+                       (list :name space-name :start pos :type start-type)))
+                  (push hit space-stack)
+                  (list :stack space-stack :max-reached pos))
+              (if space-stack
+                (let* ((top (car space-stack))
+                       (type (plist-get top :type)))
+                  (if (equal type end-type)
+                      (progn
+                        (plist-put top :end pos)
+                        (list :stack (cons top (cdr space-stack))
+                              :max-reached pos))
+                    (list :stack space-stack :max-reached pos)))
+                (list :stack space-stack :max-reached (point))))))
+    ret))
+
+(defun dyalog-type-char-to-symbol (type-char)
+  (cond
+   ((= type-char ?N)
+    'namespace)
+   ((= type-char ?C)
+    'class)))
+
+(defun dyalog-current-space (space-scan)
+  (let ((pos (point))
+        (stack (plist-get space-scan :stack))
+        (space nil))
+    (while stack
+      (let* ((top (car stack))
+             (name  (plist-get top :name))
+             (start (plist-get top :start))
+             (end   (plist-get top :end)))
+        (if (and end (> pos end))
+            (setq stack ())
+          (when (and (> pos start) (or (not end) (< pos end)))
+              (push name space))
+          (setq stack (cdr stack)))))
+    space))
+
 
 (defun dyalog-beginning-of-dfun ()
   "Move backward to the beginning of a dynamic function definition.
