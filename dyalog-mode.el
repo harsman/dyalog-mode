@@ -1063,7 +1063,7 @@ type is unknown and 'function if it looks like a function definition."
       (goto-char (point-min))
       (while (not done)
         (setq space-scan (dyalog-update-space-scan space-scan (point)))
-        (let* ((info (cadr (dyalog-defun-info)))
+        (let* ((info (cadr (dyalog-defun-info (/= (point) (point-min)))))
                (name (plist-get info :name))
                (start (plist-get info :start))
                (current-space (dyalog-current-space space-scan))
@@ -1303,6 +1303,30 @@ If it is supplied, BOUND limits the search."
                 (ignore-errors (backward-char 1))
               (ignore-errors (forward-char 1)))))))))
 
+(defun dyalog-end-of-tradfn (&optional bound)
+  "Move forward to the end of the function definition starting at point.
+If it is supplied, BOUND limits the search."
+  (let ((end (or bound (point-max)))
+        (done nil))
+    (ignore-errors (forward-char))  ; skip past nabla
+    (while (not done)
+      (if (not (re-search-forward "{\\|\\(^ *∇\\)" end t))
+          (progn
+            (goto-char end)
+            (setq done t))
+        (goto-char (match-beginning 0))
+        (skip-chars-forward " ")
+        (cond
+         ((dyalog-in-comment-or-string)
+          (ignore-errors (forward-char)))
+         ((looking-at-p "{")
+          (forward-sexp))
+         ((looking-at-p "∇")
+          (setq done t))
+         (t
+          (ignore-errors (forward-char))))
+        (setq done (or done (>= (point) end)))))))
+
 (defun dyalog-skip-comment-or-string (&optional context)
   "If point is in a comment or string, move backward out of it.
 CONTEXT is the result of `syntax-ppss' at point, or nil."
@@ -1319,14 +1343,17 @@ isn't inside a dynamic function, return nil"
   (plist-get (dyalog-dfun-info) :name))
 
   
-(defun dyalog-dfun-info ()
-  "Return the name, start and end position of the dfun at point, if any.
+(defun dyalog-dfun-info (&optional point-is-at-dfun-start)
+  "Return the name, start and end position of the dfun point is in.
+If POINT-IS-AT-START-OF-DEFUN is t, point must be at the nabla or
+brace starting the defun, and no backwards search for the
+function definition start is made, which improves performance.
 The return value is a plist with :name, :start and :end
-properties.  If point isn't inside a dfun, return nil.  If the dfun
-is open (i.e. has no closing brace, :end is nil.  If the dfun is
+properties. If point isn't inside a dfun, return nil. If the dfun
+is open (i.e. has no closing brace, :end is nil. If the dfun is
 anonymous, :name is \"\"."
   (save-excursion
-    (let ((in-dfun (dyalog-in-dfun))
+    (let ((in-dfun (dyalog-in-dfun point-is-at-dfun-start))
           (dfun-name nil))
       (if in-dfun
           (progn
@@ -1349,45 +1376,50 @@ anonymous, :name is \"\"."
             in-dfun)
           nil))))
 
-(defun dyalog-in-dfun ()
+(defun dyalog-in-dfun (&optional point-is-at-dfun-start)
   "If point is inside a dfun, return a plist with it's start and end position.
 If point isn't inside a dfun, return nil."
   (progn ;; with-syntax-table can't be at defun top-level apparently...
     (with-syntax-table dyalog-dfun-syntax-table
-      (let* ((pos (point))
-             (ppss (syntax-ppss))
-             (start-of-containing-parens (nth 1 ppss)))
-        (when (and start-of-containing-parens
-                   (not (eq (char-after start-of-containing-parens) ?{)))
-          ;; When syntax-pps is called during jit-lock, it sometimes ignores
-          ;; the syntax-table, and treats regular parens as syntactical
-          ;; parens. Calling (syntax-ppss-flush-cache) doesn't seem to help,
-          ;; so instead fall back on scan-lists, which seems to work. 
-          (setq start-of-containing-parens
-                (condition-case nil
-                    (goto-char (scan-lists (point) -1 1))
-                  (scan-error nil))))
-        (if start-of-containing-parens
-            (save-excursion
-              (goto-char start-of-containing-parens)
-              (if (not (dyalog-on-tradfn-header 'only-after-nabla))
-                  (let ((end (condition-case nil
-                                 (progn
-                                   (forward-sexp)
-                                   (point))
-                               (scan-error nil))))
-                    (unless (or (< pos start-of-containing-parens)
-                                (and end (<= end pos)))
-                      ;; Sometimes, when syntax-ppss is called during
-                      ;; jit-lock, it breaks and gives erronous results,
-                      ;; saying we are inside parens when we are not. We
-                      ;; detect this by checking if the the sexp we're
-                      ;; supposed to be in ends before, or begins after the
-                      ;; position we started parsing at.
-                      (list :start start-of-containing-parens
-                            :end end)))
-                nil))
-          nil)))))
+      (if (and point-is-at-dfun-start (looking-at-p "{"))
+          (list :start (point)
+                :end (save-excursion
+                       (forward-sexp)
+                       (point)))
+        (let* ((pos (point))
+               (ppss (syntax-ppss))
+               (start-of-containing-parens (nth 1 ppss)))
+          (when (and start-of-containing-parens
+                     (not (eq (char-after start-of-containing-parens) ?{)))
+            ;; When syntax-pps is called during jit-lock, it sometimes ignores
+            ;; the syntax-table, and treats regular parens as syntactical
+            ;; parens. Calling (syntax-ppss-flush-cache) doesn't seem to help,
+            ;; so instead fall back on scan-lists, which seems to work. 
+            (setq start-of-containing-parens
+                  (condition-case nil
+                      (goto-char (scan-lists (point) -1 1))
+                    (scan-error nil))))
+          (if start-of-containing-parens
+              (save-excursion
+                (goto-char start-of-containing-parens)
+                (if (not (dyalog-on-tradfn-header 'only-after-nabla))
+                    (let ((end (condition-case nil
+                                   (progn
+                                     (forward-sexp)
+                                     (point))
+                                 (scan-error nil))))
+                      (unless (or (< pos start-of-containing-parens)
+                                  (and end (<= end pos)))
+                        ;; Sometimes, when syntax-ppss is called during
+                        ;; jit-lock, it breaks and gives erronous results,
+                        ;; saying we are inside parens when we are not. We
+                        ;; detect this by checking if the the sexp we're
+                        ;; supposed to be in ends before, or begins after the
+                        ;; position we started parsing at.
+                        (list :start start-of-containing-parens
+                              :end end)))
+                  nil))
+            nil))))))
 
 (defun dyalog-current-defun ()
   "Return the name of the defun point is in."
@@ -1413,18 +1445,22 @@ the nabla in the tradfn header."
                  (<= start (line-end-position))))
         nil))))
 
-(defun dyalog-tradfn-info ()
+(defun dyalog-tradfn-info (&optional point-is-at-start-of-defun)
   "Return a list of information on the tradfn defun point is in.
-This name is only valid if point isn't inside a dfn.  The list
+This name is only valid if point isn't inside a dfn. The list
 contains the name of the function a list containing the names of
 the arguments, a list containing localized names, the character
 position where the function header ends and the character
-position where the defun ends."
+position where the defun ends. If POINT-IS-AT-START-OF-DEFUN is
+t, point must be at the nabla starting the tradfn definition, and
+no search for the function definition start is made, which
+improves performance."
   (save-excursion
     (let ((start-pos (point)))
-      (dyalog-previous-defun 'tradfn-only)
-      (when (not (looking-at "∇"))
-        (forward-line -1))         ; Nabla is on its own line
+      (unless point-is-at-start-of-defun
+        (dyalog-previous-defun 'tradfn-only)
+        (when (not (looking-at "∇"))
+          (forward-line -1)))         ; Nabla is on its own line
       (if (re-search-forward dyalog-tradfn-header nil t)
           (let* ((start-of-defun (match-beginning 0))
                  (tradfn-name (match-string-no-properties 1))
@@ -1443,7 +1479,7 @@ position where the defun ends."
                  (operands (remq nil (list left-operand right-operand)))
                  (locals nil)
                  (end-of-defun 0))
-            (dyalog-end-of-defun)
+            (dyalog-end-of-tradfn)
             (setq end-of-defun (point))
             (if (or (< end-of-defun start-pos) (< start-pos start-of-defun))
                 (list "" nil nil 0 0 0 nil)
@@ -1458,27 +1494,36 @@ position where the defun ends."
 
 ;;; Font Lock
 
-(defun dyalog-defun-info ()
-  "Return information on the defun at point."
+(defun dyalog-defun-info (&optional point-is-at-start-of-defun)
+  "Return information on the defun at point. If
+POINT-IS-AT-START-OF-DEFUN is t, point must be at the nabla or
+brace starting the defun, and no backwards search for the
+function definition start is made, which improves performance."
   (save-excursion
-    (when (looking-at-p "{")
-      (forward-char))
-    (let ((dfun-info (dyalog-dfun-info)))
-      (if dfun-info
-          (list 'dfun dfun-info)
-        (list 'tradfn (progn
-                        (ignore-errors (forward-char))
-                        (let* ((info (dyalog-tradfn-info))
-                               (start (nth 5 info))
-                               (name (car info))
-                               (args (nth 1 info))
-                               (locals (nth 2 info))
-                               (end-of-header (nth 3 info))
-                               (end (nth 4 info))
-                               (operands (nth 6 info)))
-                          (list :start start :name name :args args
-                                :locals locals :end-of-header end-of-header
-                                :end end :operands operands))))))))
+    (if (and point-is-at-start-of-defun
+             (not (looking-at-p "[{∇]")))
+        (list 'tradfn (list "" nil nil 0 0 0 nil))
+      (when (and (not point-is-at-start-of-defun) (looking-at-p "{"))
+        (forward-char))
+      (let ((dfun-info (dyalog-dfun-info point-is-at-start-of-defun)))
+        (if dfun-info
+            (list 'dfun dfun-info)
+          (list 'tradfn
+                (progn
+                  (unless point-is-at-start-of-defun
+                    (ignore-errors (forward-char)))
+                  (let* ((info
+                          (dyalog-tradfn-info point-is-at-start-of-defun))
+                         (start (nth 5 info))
+                         (name (car info))
+                         (args (nth 1 info))
+                         (locals (nth 2 info))
+                         (end-of-header (nth 3 info))
+                         (end (nth 4 info))
+                         (operands (nth 6 info)))
+                    (list :start start :name name :args args
+                          :locals locals :end-of-header end-of-header
+                          :end end :operands operands)))))))))
 
 (defun dyalog-local-names (defun-info)
   "Return a list of local names given return value from `dyalog-defun-info'."
