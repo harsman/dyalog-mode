@@ -1600,7 +1600,7 @@ START and END delimit the region to fontify."
         (goto-char fontify-start)
         (while (< (point) limit)
           (dyalog-next-defun limit)
-          (let* ((all-info (dyalog-defun-info))
+          (let* ((all-info (dyalog-defun-info t))
                  (type     (car all-info))
                  (info     (cadr all-info)))
             (when (eq 'dfun type)
@@ -1625,18 +1625,22 @@ START and END signify the region to fontify."
            (case-fold-search nil)
            (all-info nil)
            (type nil)
-           (info nil))
+           (info nil)
+           (at-start-of-defun nil))
       (goto-char beg-line)
       (while (< (point) end)
-        (setq all-info (dyalog-defun-info)
+        (setq all-info (dyalog-defun-info at-start-of-defun)
               type     (car all-info)
               info     (cadr all-info))
         (if (eq type 'dfun)
-            (dyalog-fontify-dfun info (point) end)
+            (progn
+              (dyalog-fontify-dfun info (point) end)
+              (setq at-start-of-defun nil))
           (if (equal "" (plist-get info :name))
-              ;; We are between tradfn definitions, skip to next function
-              (dyalog-next-defun)
-            (dyalog-fontify-tradfn info (point) end)))))))
+                ;; We are between tradfn definitions, skip to next function
+                (setq at-start-of-defun (dyalog-next-defun))
+            (dyalog-fontify-tradfn info (point) end)
+            (setq at-start-of-defun nil)))))))
 
 ;;; Syntax
 
