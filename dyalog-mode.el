@@ -86,7 +86,7 @@ together with AltGr produce the corresponding apl character in APLCHARS."
           "\\(?2::[A-Za-z]+\\)\\)\\|\\(⋄\\s-*\\(?2::[A-Za-z]+\\)\\)"))
 
 (defconst dyalog-middle-keyword-regex
-  "\\s-+\\(\\(:\\(In\\|InEach\\)\\)\\)\\s-+")
+  "\\(?: \\|\\_>\\)\\(:\\(In\\|InEach\\)\\)\\_>")
 
 (defconst dyalog-comment-regex
   "^\\s-*⍝")
