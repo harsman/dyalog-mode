@@ -291,7 +291,12 @@ return value or right argument of a traditional defined function."
     (dolist (e '(":access"))
       (puthash e (list "" nil) h))
     (puthash ":endrepeat" (list ":repeat" 'block-end) h)
+    (puthash ":end" (list nil 'block-end) h)
     h))
+
+(defconst dyalog-any-delimiter
+  ":*"
+  "A bogus keyword used to indicate a match with any keyword.")
 
 (defgroup dyalog nil
   "Major mode `dyalog-mode' for editing Dyalog APL code."
@@ -488,14 +493,16 @@ matches :EndFor), BLOCKSTACK is a stack of currently open blocks,
 INDENT-STATUS is the indentation status of the current line (the
 return value from `dyalog-indent-status', and FUNCOUNT is the
 number of currently open tradfn definitions."
-  (cond
-   ((and (not blockstack)
-         (looking-at-p (dyalog-specific-keyword-regex match)))
-    (list t (dyalog-relative-indent 0)))
-   ((and (memq (plist-get indent-status :indent-type)
-               '(tradfn-start tradfn-end))
-         (not (string-match ":\\(End\\)?\\(Namespace\\|Class\\)" match)))
-    (list t (skip-chars-forward " ∇")))))
+  (let ((indent-type (plist-get indent-status :indent-type)))
+    (cond
+     ((and (not blockstack)
+           (if match
+               (looking-at-p (dyalog-specific-keyword-regex match))
+             (memq indent-type '(block-start block-pause))))
+      (list t (dyalog-relative-indent 0)))
+     ((and (memq indent-type '(tradfn-start tradfn-end))
+           (not (string-match ":\\(End\\)?\\(Namespace\\|Class\\)" match)))
+      (list t (skip-chars-forward " ∇"))))))
 
 (defun dyalog-indent-stop-tradfn (blockstack indent-status _funcount)
   "Return whether we have found root for a tradfn, and chars to indent.
@@ -602,12 +609,13 @@ AT-ROOT-FUNCTION returns t when we have reached the corresponding :For."
                   (nth 1 root))
                  ((eq 'block-end indent-type)
                   (progn
-                    (push (dyalog-matching-delimiter keyword)
+                    (push (or (dyalog-matching-delimiter keyword)
+                              dyalog-any-delimiter)
                           blockstack)
                     nil))
                  ((eq 'block-start indent-type)
                   (progn
-                    (when (eq t
+                    (when (or (equal dyalog-any-delimiter (car blockstack))
                               (compare-strings keyword  nil nil
                                                (car blockstack) nil nil
                                                'ignore-case))
