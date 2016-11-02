@@ -1085,10 +1085,13 @@ type is unknown and 'function if it looks like a function definition."
                (full-name (if current-space
                               (concat space-name "." name)
                             name)))
-          (when (not (zerop (length name)))
-            (push (cons full-name (copy-marker start)) funs)
-            (goto-char (plist-get info :end)))
-          (setq done (not (dyalog-next-defun)))))
+          (if (not (zerop (length name)))
+              (progn
+                (push (cons full-name (copy-marker start)) funs)
+                (goto-char (plist-get info :end))
+                (setq done (unless (looking-at-p dyalog-tradfn-header)
+                             (not (dyalog-next-defun)))))
+            (setq done (not (dyalog-next-defun))))))
       funs)))
 
 (defun dyalog-update-space-scan (space-scan pos)
