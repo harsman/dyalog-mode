@@ -1133,38 +1133,40 @@ type is unknown and 'function if it looks like a function definition."
 (defun dyalog-next-space-or-class (&optional space-stack)
   "Move forward to the start or end of the next namepace or class def."
   (let ((done nil)
-        (ret nil))
+        (ret )
+        (hit nil))
     (dyalog-skip-comment-or-string)
     (while (not done)
-      (if (re-search-forward (concat ":\\(End\\(Namespace\\|Class\\)\\)\\|"
-                                     "\\(\\(Namespace\\|Class\\) +"
-                                     "\\(" dyalog-name "\\)\\)") nil 'no-errors)
+      (if (setq hit (re-search-forward
+                     (concat ":\\(End\\(Namespace\\|Class\\)\\)\\|"
+                             "\\(\\(Namespace\\|Class\\) +"
+                             "\\(" dyalog-name "\\)\\)") nil 'no-errors))
           (setq done (not (dyalog-in-comment-or-string)))
         (setq done t)))
-    (let* ((space-name (match-string-no-properties 5))
-           (endword    (match-string-no-properties 1))
-           (startword  (match-string-no-properties 4))
-           (pos        (match-end 0))
-           (start-type (when startword
-                         (dyalog-type-char-to-symbol (aref startword 0))))
-           (end-type   (when endword
-                         (dyalog-type-char-to-symbol (aref endword 3)))))
-      (setq ret
-            (if space-name
-                (let ((hit
-                       (list :name space-name :start pos :type start-type)))
-                  (push hit space-stack)
-                  (list :stack space-stack :max-reached pos))
-              (if space-stack
-                (let* ((top (car space-stack))
-                       (type (plist-get top :type)))
-                  (if (equal type end-type)
-                      (progn
-                        (plist-put top :end pos)
-                        (list :stack (cons top (cdr space-stack))
-                              :max-reached pos))
-                    (list :stack space-stack :max-reached pos)))
-                (list :stack space-stack :max-reached (point))))))
+      (let* ((space-name (match-string-no-properties 5))
+             (endword    (match-string-no-properties 1))
+             (startword  (match-string-no-properties 4))
+             (pos        (match-end 0))
+             (start-type (when startword
+                           (dyalog-type-char-to-symbol (aref startword 0))))
+             (end-type   (when endword
+                           (dyalog-type-char-to-symbol (aref endword 3)))))
+        (setq ret
+              (if (and space-name hit)
+                  (let ((hit
+                         (list :name space-name :start pos :type start-type)))
+                    (push hit space-stack)
+                    (list :stack space-stack :max-reached pos))
+                (if space-stack
+                    (let* ((top (car space-stack))
+                           (type (plist-get top :type)))
+                      (if (equal type end-type)
+                          (progn
+                            (plist-put top :end pos)
+                            (list :stack (cons top (cdr space-stack))
+                                  :max-reached pos))
+                        (list :stack space-stack :max-reached pos)))
+                  (list :stack space-stack :max-reached (point))))))
     ret))
 
 (defun dyalog-type-char-to-symbol (type-char)
