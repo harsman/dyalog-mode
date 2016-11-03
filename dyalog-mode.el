@@ -1146,15 +1146,16 @@ type is unknown and 'function if it looks like a function definition."
                              "\\(" dyalog-name "\\)\\)") nil 'no-errors))
           (setq done (not (dyalog-in-comment-or-string)))
         (setq done t)))
-      (let* ((space-name (match-string-no-properties 5))
-             (endword    (match-string-no-properties 1))
-             (startword  (match-string-no-properties 4))
-             (pos        (match-end 0))
-             (start-type (when startword
-                           (dyalog-type-char-to-symbol (aref startword 0))))
-             (end-type   (when endword
+    (setq ret
+          (if hit
+              (let* ((space-name (match-string-no-properties 5))
+                     (endword    (match-string-no-properties 1))
+                     (startword  (match-string-no-properties 4))
+                     (pos        (match-end 0))
+                     (start-type (when startword
+                                   (dyalog-type-char-to-symbol (aref startword 0))))
+                     (end-type   (when endword
                            (dyalog-type-char-to-symbol (aref endword 3)))))
-        (setq ret
               (if (and space-name hit)
                   (let ((hit
                          (list :name space-name :start pos :type start-type)))
@@ -1169,7 +1170,8 @@ type is unknown and 'function if it looks like a function definition."
                             (list :stack (cons top (cdr space-stack))
                                   :max-reached pos))
                         (list :stack space-stack :max-reached pos)))
-                  (list :stack space-stack :max-reached (point))))))
+                  (list :stack space-stack :max-reached (point)))))
+            (list :stack space-stack :max-reached (point))))
     ret))
 
 (defun dyalog-type-char-to-symbol (type-char)
