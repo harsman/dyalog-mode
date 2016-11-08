@@ -3,7 +3,7 @@
 ;; Copyright (C) 2008, 2009, 2010, 2011 Joakim Hårsman
 
 ;; Author: Joakim Hårsman <joakim.harsman@gmail.com>
-;; Version: 0.5
+;; Version: 0.7
 ;; Package-Requires: ((cl-lib "0.2"))
 ;; Keywords: languages
 ;; URL: https://bitbucket.org/harsman/dyalog-mode/
