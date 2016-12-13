@@ -1125,9 +1125,11 @@ type is unknown and 'function if it looks like a function definition."
   "Add any spaces found between MAX-REACHED and POS to SPACE-STACK."
   (let ((reached nil)
         (done nil)
-        (space-scan nil))
+        (space-scan nil)
+        (trimmed-stack nil))
     (while (not done)
-      (setq space-scan  (dyalog-next-space-or-class space-stack)
+      (setq trimmed-stack (dyalog-trim-passed-spaces space-stack pos)
+            space-scan  (dyalog-next-space-or-class trimmed-stack)
             space-stack (plist-get space-scan :stack)
             reached (plist-get space-scan :max-reached)
             done (> reached pos)))
