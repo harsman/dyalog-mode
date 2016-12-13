@@ -1391,7 +1391,7 @@ anonymous, :name is \"\"."
                   (condition-case nil
                       (progn
                         (forward-sexp)
-                        (if (looking-at " *[^\r\n ⋄]")
+                        (if (looking-at-p " *[^\r\n ⋄⍝]")
                             ""
                           dfun-name))
                     (scan-error dfun-name)))
