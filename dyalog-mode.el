@@ -1080,7 +1080,7 @@ type is unknown and 'function if it looks like a function definition."
         (let* ((info (cadr (dyalog-defun-info (/= (point) (point-min)))))
                (name (plist-get info :name))
                (start (plist-get info :start))
-               (current-space (dyalog-current-space space-scan))
+               (current-space (dyalog-current-space space-scan (point)))
                (space-name (mapconcat 'identity current-space "."))
                (full-name (if current-space
                               (concat space-name "." name)
@@ -1093,6 +1093,14 @@ type is unknown and 'function if it looks like a function definition."
                              (not (dyalog-next-defun)))))
             (setq done (not (dyalog-next-defun))))))
       funs)))
+
+(defun dyalog-space-stack-at-pos (pos)
+  "Return the stack of namespaces and/or classes for position POS."
+  (let ((space-scan 
+         (save-excursion
+           (goto-char (point-min))
+           (dyalog-add-spaces-to-stack nil pos))))
+      (dyalog-current-space space-scan pos)))
 
 (defun dyalog-update-space-scan (space-scan pos)
   "Update SPACE-SCAN incrementally, given that point is at POS"
@@ -1183,9 +1191,8 @@ type is unknown and 'function if it looks like a function definition."
    ((= type-char ?C)
     'class)))
 
-(defun dyalog-current-space (space-scan)
-  (let ((pos (point))
-        (stack (plist-get space-scan :stack))
+(defun dyalog-current-space (space-scan pos)
+  (let ((stack (plist-get space-scan :stack))
         (space nil))
     (while stack
       (let* ((top (car stack))
