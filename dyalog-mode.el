@@ -1635,10 +1635,9 @@ START and END delimit the region to fontify."
         (goto-char fontify-start)
         (while (< (point) limit)
           (dyalog-next-defun limit)
-          (let* ((all-info (dyalog-defun-info t))
-                 (type     (car all-info))
-                 (info     (cadr all-info)))
-            (when (eq 'dfun type)
+          (when (eq (char-after) ?{)  ; we are at a dfun
+            (let* ((all-info (dyalog-defun-info t))
+                   (info     (cadr all-info)))
               (dyalog-fontify-dfun info start limit))))
         (goto-char limit)))))
 
