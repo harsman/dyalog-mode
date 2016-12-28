@@ -1404,7 +1404,7 @@ anonymous, :name is \"\"."
                     (scan-error dfun-name)))
             (plist-put in-dfun :name dfun-name)
             in-dfun)
-          nil))))
+        nil))))
 
 (defun dyalog-in-dfun (&optional point-is-at-dfun-start)
   "If point is inside a dfun, return a plist with it's start and end position.
