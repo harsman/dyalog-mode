@@ -197,6 +197,10 @@ return value or right argument of a traditional defined function."
    '(";\\([A-Za-z0-9_∆]+\\)" (1 font-lock-constant-face nil))
    ;; Illegal chars (and del/nabla)
    '("[∇$@\"%]+" . font-lock-warning-face)
+   ;; Local names. Note that the face specified here doesn't matter since
+   ;; dyalog-fontify-locals-matcher always returns nil and sets the face on
+   ;; its own.
+   `(dyalog-fontify-locals-matcher (1 font-lock-keyword-face nil))
    `(,dyalog-access-type (1 font-lock-keyword-face))
    `(,dyalog-field-def (1 font-lock-keyword-face t t)
                        (4 font-lock-variable-name-face)
@@ -1597,7 +1601,10 @@ START and END delimit the region to fontify."
           (unless (or in-string in-comment)
             (put-text-property symbol-start symbol-end
                                'face
-                               face))))
+                               face)
+            (put-text-property symbol-start symbol-end
+                               'fontified
+                               t))))
       (goto-char (min dfunend end)))))
 
 (defun dyalog-fontify-tradfn (info start end)
@@ -1629,12 +1636,19 @@ START and END delimit the region to fontify."
               (put-text-property symbol-start symbol-end
                                  'face
                                  face)
+              (put-text-property symbol-start symbol-end
+                                 'fontified
+                                 t)
               (while (and (equal ?. (char-after symbol-end))
                           (looking-at (concat "\\." dyalog-name)))
                 (put-text-property (match-beginning 0)
                                    (match-end 0)
                                    'face
                                    face)
+                (put-text-property (match-beginning 0)
+                                   (match-end 0)
+                                   'fontified
+                                   t)
                 (goto-char (match-end 0))
                 (setq symbol-end (point))))))
         ;; Now we need to fontify any names inside dfns defined inside this
@@ -1647,6 +1661,15 @@ START and END delimit the region to fontify."
                    (info     (cadr all-info)))
               (dyalog-fontify-dfun info start limit))))
         (goto-char limit)))))
+
+(defun dyalog-fontify-locals-matcher (limit)
+  "Font-lock mathcer to fontify local names.
+LIMIT limits the extents of the search for local names to
+fontify. Note that this function always returns nil and leaves
+point at limit, since it sets font-lock faces on its own and
+doesn't need the general font-lock machinery to set faces."
+  (dyalog-fontify-locals (point) limit)
+  nil)
 
 (defun dyalog-fontify-locals (start end)
   "Fontify local names in tradfns.
@@ -2048,7 +2071,6 @@ Optional argument LINE specifies which line to move point to."
   (set (make-local-variable 'comment-use-syntax) t)
   (set (make-local-variable 'comment-auto-fill-only-comments) t)
   (set (make-local-variable 'font-lock-defaults) '(dyalog-font-lock-keywords))
-  (jit-lock-register #'dyalog-fontify-locals)
   ;; Dyalog always indents with spaces
   (set (make-local-variable 'indent-tabs-mode) nil)
   (set (make-local-variable 'indent-line-function) 'dyalog-indent-line)
