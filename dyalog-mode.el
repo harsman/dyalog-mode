@@ -1340,19 +1340,21 @@ If it is supplied, BOUND limits the search."
         (done nil))
     (ignore-errors (forward-char))  ; skip past nabla
     (while (not done)
-      (if (not (re-search-forward "{\\|\\(^ *∇\\)" end t))
+      (if (not (skip-chars-forward "^{∇" end))
           (progn
             (goto-char end)
             (setq done t))
-        (goto-char (match-beginning 0))
-        (skip-chars-forward " ")
         (cond
          ((dyalog-in-comment-or-string)
           (ignore-errors (forward-char)))
-         ((looking-at-p "{")
+         ((eq (char-after) ?{)
           (forward-sexp))
-         ((looking-at-p "∇")
-          (setq done t))
+         ((eq (char-after) ?∇)
+          (save-excursion
+            (goto-char (line-beginning-position))
+            (if (looking-at-p "^ *∇")
+                (setq done t)
+              (forward-char))))
          (t
           (ignore-errors (forward-char))))
         (setq done (or done (>= (point) end)))))))
