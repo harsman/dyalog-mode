@@ -1406,50 +1406,55 @@ anonymous, :name is \"\"."
             in-dfun)
         nil))))
 
+(defun dyalog-position-of-open-brace ()
+  "If point is inside open braces, return the position of the opening brace."
+  (let ((done nil)
+        (pos nil))
+    (save-excursion
+      (while (not done)
+        (let* ((state (syntax-ppss))
+               (start-of-containing-parens (nth 1 state)))
+          (if start-of-containing-parens
+              (if (eq (char-after start-of-containing-parens) ?{)
+                  (setq pos start-of-containing-parens
+                        done t)
+                (setq done (= (point) (point-min)))
+                (goto-char start-of-containing-parens))
+            (setq done t))))
+      pos)))
+            
 (defun dyalog-in-dfun (&optional point-is-at-dfun-start)
   "If point is inside a dfun, return a plist with it's start and end position.
 If point isn't inside a dfun, return nil."
   (progn ;; with-syntax-table can't be at defun top-level apparently...
-    (with-syntax-table dyalog-dfun-syntax-table
-      (if (and point-is-at-dfun-start (looking-at-p "{"))
-          (list :start (point)
-                :end (save-excursion
-                       (forward-sexp)
-                       (point)))
-        (let* ((pos (point))
-               (ppss (syntax-ppss))
-               (start-of-containing-parens (nth 1 ppss)))
-          (when (and start-of-containing-parens
-                     (not (eq (char-after start-of-containing-parens) ?{)))
-            ;; When syntax-pps is called during jit-lock, it sometimes ignores
-            ;; the syntax-table, and treats regular parens as syntactical
-            ;; parens. Calling (syntax-ppss-flush-cache) doesn't seem to help,
-            ;; so instead fall back on scan-lists, which seems to work. 
-            (setq start-of-containing-parens
-                  (condition-case nil
-                      (goto-char (scan-lists (point) -1 1))
-                    (scan-error nil))))
-          (if start-of-containing-parens
-              (save-excursion
-                (goto-char start-of-containing-parens)
-                (if (not (dyalog-on-tradfn-header 'only-after-nabla))
-                    (let ((end (condition-case nil
-                                   (progn
-                                     (forward-sexp)
-                                     (point))
-                                 (scan-error nil))))
-                      (unless (or (< pos start-of-containing-parens)
-                                  (and end (<= end pos)))
-                        ;; Sometimes, when syntax-ppss is called during
-                        ;; jit-lock, it breaks and gives erronous results,
-                        ;; saying we are inside parens when we are not. We
-                        ;; detect this by checking if the the sexp we're
-                        ;; supposed to be in ends before, or begins after the
-                        ;; position we started parsing at.
-                        (list :start start-of-containing-parens
-                              :end end)))
-                  nil))
-            nil))))))
+    (if (and point-is-at-dfun-start (looking-at-p "{"))
+        (list :start (point)
+              :end (save-excursion
+                     (forward-sexp)
+                     (point)))
+      (let* ((pos (point))
+             (start-of-containing-parens (dyalog-position-of-open-brace)))
+        (if start-of-containing-parens
+            (save-excursion
+              (goto-char start-of-containing-parens)
+              (if (not (dyalog-on-tradfn-header 'only-after-nabla))
+                  (let ((end (condition-case nil
+                                 (progn
+                                   (forward-sexp)
+                                   (point))
+                               (scan-error nil))))
+                    (unless (or (< pos start-of-containing-parens)
+                                (and end (<= end pos)))
+                      ;; Sometimes, when syntax-ppss is called during
+                      ;; jit-lock, it breaks and gives erronous results,
+                      ;; saying we are inside parens when we are not. We
+                      ;; detect this by checking if the the sexp we're
+                      ;; supposed to be in ends before, or begins after the
+                      ;; position we started parsing at.
+                      (list :start start-of-containing-parens
+                            :end end)))
+                nil))
+          nil)))))
 
 (defun dyalog-current-defun ()
   "Return the name of the defun point is in."
