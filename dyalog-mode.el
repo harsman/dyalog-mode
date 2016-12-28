@@ -1754,8 +1754,8 @@ the keyword (or nil) and t if it is preceded by a label."
       (when pt
         (goto-char pt))
       (save-match-data
-        (let (state (syntax-ppss))
-          (or (nth 3 state) (nth 4 state))))))
+        (let ((state (syntax-ppss)))
+          (not (not (or (nth 3 state) (nth 4 state))))))))
   
 (defun dyalog-current-symbol ()
   "Return the full symbol at point, including namespace qualifications."
