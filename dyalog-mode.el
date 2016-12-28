@@ -1469,10 +1469,12 @@ If ONLY-AFTER-NABLA is t, only return t when point is after
 the nabla in the tradfn header."
   (save-excursion
     (let ((start (point))
-          (min (line-beginning-position 0)))
-      (forward-line)
-      (end-of-line)
-      (if (re-search-backward dyalog-tradfn-header min t)
+          (min (line-beginning-position))
+          (max (progn
+                 (forward-line)
+                 (line-end-position))))
+      (goto-char min)
+      (if (re-search-forward dyalog-tradfn-header max t)
           (progn
             (goto-char (match-end 0))
             (and (>= start (if only-after-nabla
@@ -1493,12 +1495,15 @@ t, point must be at the nabla starting the tradfn definition, and
 no search for the function definition start is made, which
 improves performance."
   (save-excursion
-    (let ((start-pos (point)))
-      (unless point-is-at-start-of-defun
-        (dyalog-previous-defun 'tradfn-only)
-        (when (not (looking-at "∇"))
-          (forward-line -1)))         ; Nabla is on its own line
-      (if (re-search-forward dyalog-tradfn-header nil t)
+    (let ((start-pos (point))
+          (on-tradfn-header
+           (if point-is-at-start-of-defun
+               (looking-at dyalog-tradfn-header)
+             (dyalog-previous-defun 'tradfn-only)
+             (when (not (looking-at "∇"))
+               (forward-line -1))         ; Nabla is on its own line
+             (re-search-forward dyalog-tradfn-header nil t))))   
+      (if on-tradfn-header
           (let* ((start-of-defun (match-beginning 0))
                  (tradfn-name (match-string-no-properties 1))
                  (retval (save-match-data
@@ -1680,9 +1685,8 @@ START and END delimit the region to analyze."
             (< (point) end))
       (goto-char (match-beginning 0))
       (let* ((endpos (match-end 0))
-             (state (syntax-ppss))
-             (context (syntax-ppss-context state)))
-        (when (eq 'string context)
+             (in-string (nth 3 (syntax-ppss))))
+        (when in-string
           (put-text-property (point) (+ 2 (point))
                              'syntax-table
                              (string-to-syntax ".")))
@@ -1724,15 +1728,11 @@ the keyword (or nil) and t if it is preceded by a label."
 (defun dyalog-in-comment-or-string (&optional pt)
   "Return t if PT (defaults to point) is inside a string literal or a comment."
   (save-excursion
-    (progn
       (when pt
         (goto-char pt))
-      (let ((match (match-data))
-            (res (not (not
-                       (memq (syntax-ppss-context (syntax-ppss))
-                             '(string comment))))))
-        (set-match-data match)
-        res))))
+      (save-match-data
+        (let (state (syntax-ppss))
+          (or (nth 3 state) (nth 4 state))))))
   
 (defun dyalog-current-symbol ()
   "Return the full symbol at point, including namespace qualifications."
