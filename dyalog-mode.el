@@ -1241,19 +1241,19 @@ Return t if a function definition was found, otherwise return nil."
                     (ignore-errors (backward-char))
                     (setq first-hit  nil
                           found      t))
-                (progn
+                (let ((before (char-before)))
                   (cond
-                   ((looking-back "{")
+                   ((eq before ?{)
                     (backward-char)
                     (if (not first-hit)
                         (setq first-hit (point)))
                     (setq done nil))
-                   ((looking-back "}")
+                   ((eq before ?})
                     (backward-sexp)
                     (if (not first-hit)
                         (setq first-hit (point)))
                     (setq done nil))
-                   ((looking-back "∇")
+                   ((eq before ?∇)
                     (backward-char)
                     (if first-hit
                         (progn
