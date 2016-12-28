@@ -1643,16 +1643,6 @@ START and END delimit the region to fontify."
               (dyalog-fontify-dfun info start limit))))
         (goto-char limit)))))
 
-
-;; TODO: We need a separate function for getting info on the defun at point,
-;; which is something we can use to get an initial state, and moving forward
-;; to the next defun and getting info on that. That way we avoid redundant
-;; work.
-;;
-;; TODO: syntax-ppss consumes most of the cpu and does most of the
-;; allocations. Try just skipping matches that have already been fontified
-;; instead, that way we could cheaply skip matches inside comments, strings
-;; and keywords.
 (defun dyalog-fontify-locals (start end)
   "Fontify local names in tradfns.
 START and END signify the region to fontify."
