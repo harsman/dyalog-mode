@@ -1631,15 +1631,11 @@ START and END delimit the region to fontify."
         (while (re-search-forward rx limit t)
           (let* ((symbol-start (match-beginning 0))
                  (symbol-end (match-end 0))
-                 (state (syntax-ppss))
-                 (context (syntax-ppss-context state))
-                 (in-string (eq 'string context))
-                 (in-comment (eq 'comment context))
                  (sysvar (eq ?⎕ (char-after symbol-start)))
                  (face (if sysvar
                            'dyalog-local-system-name
                          'dyalog-local-name)))
-            (unless (or in-string in-comment)
+            (unless (dyalog-in-comment-or-string)
               (put-text-property symbol-start symbol-end
                                  'face
                                  face)
@@ -1761,7 +1757,7 @@ the keyword (or nil) and t if it is preceded by a label."
       (when pt
         (goto-char pt))
       (save-match-data
-        (let ((state (syntax-ppss)))
+        (let ((state (parse-partial-sexp (line-beginning-position) (point))))
           (not (not (or (nth 3 state) (nth 4 state))))))))
   
 (defun dyalog-current-symbol ()
