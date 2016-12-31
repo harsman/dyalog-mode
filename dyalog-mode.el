@@ -1324,7 +1324,9 @@ If it is supplied, BOUND limits the search."
          (and (looking-at "{")
               (not (dyalog-on-tradfn-header 'only-after-nabla)))))
     (if dfun-mode
-        (forward-sexp)
+        (condition-case nil
+            (forward-sexp)
+          (scan-error (goto-char end)))
       (ignore-errors (forward-char)) ; skip past nabla
       (while (not done)
         (if (not (re-search-forward "^ *∇" end t))
@@ -1352,7 +1354,9 @@ If it is supplied, BOUND limits the search."
          ((dyalog-in-comment-or-string)
           (ignore-errors (forward-char)))
          ((eq (char-after) ?{)
-          (forward-sexp))
+          (condition-case nil
+              (forward-sexp)
+            (scan-error (goto-char end))))
          ((eq (char-after) ?∇)
           (save-excursion
             (goto-char (line-beginning-position))
@@ -1436,8 +1440,11 @@ If point isn't inside a dfun, return nil."
     (if (and point-is-at-dfun-start (looking-at-p "{"))
         (list :start (point)
               :end (save-excursion
-                     (forward-sexp)
-                     (point)))
+                     (condition-case nil
+                         (progn
+                           (forward-sexp)
+                           (point))
+                       (scan-error nil))))
       (let* ((pos (point))
              (start-of-containing-parens (dyalog-position-of-open-brace)))
         (if start-of-containing-parens
@@ -1605,7 +1612,7 @@ START and END delimit the region to fontify."
             (put-text-property symbol-start symbol-end
                                'fontified
                                t))))
-      (goto-char (min dfunend end)))))
+      (goto-char (min (or dfunend end) end)))))
 
 (defun dyalog-fontify-tradfn (info start end)
   "Fontify the traditional function defined by INFO.
