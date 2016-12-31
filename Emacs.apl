@@ -21,6 +21,11 @@
         ⍝ automatically done with boxed values, similar to the DISPLAY
         ⍝ function.
         boxing←0
+        ⍝ afterFix contains the name of a function to call after fixing a
+        ⍝ function, namespace or class. It receives the result of the fix,
+        ⍝ i.e. either the name that was fixed or the line number of an error
+        ⍝ that prevented fixing.
+        afterFix←''
 
         ∇ init
           ⎕CY'display'
@@ -248,6 +253,9 @@
               r←#.⎕FIX ##.splitlines src
           :Else
               r←#.⎕FX↑##.splitlines src
+          :EndIf
+          :If 3=⎕NC'#.',afterFix
+              (#.⍎'#.',afterFix)r
           :EndIf
           send socket('fxresult ',(,⍕r),eom)
         ∇
