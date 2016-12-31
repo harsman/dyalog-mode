@@ -1607,7 +1607,7 @@ START and END delimit the region to fontify."
                        'dyalog-local-name)))
           (unless (or in-string in-comment)
             (put-text-property symbol-start symbol-end
-                               'font-lock-face
+                               'face
                                face)
             (put-text-property symbol-start symbol-end
                                'fontified
@@ -1641,7 +1641,7 @@ START and END delimit the region to fontify."
                          'dyalog-local-name)))
             (unless (or in-string in-comment)
               (put-text-property symbol-start symbol-end
-                                 'font-lock-face
+                                 'face
                                  face)
               (put-text-property symbol-start symbol-end
                                  'fontified
@@ -1650,7 +1650,7 @@ START and END delimit the region to fontify."
                           (looking-at (concat "\\." dyalog-name)))
                 (put-text-property (match-beginning 0)
                                    (match-end 0)
-                                   'font-lock-face
+                                   'face
                                    face)
                 (put-text-property (match-beginning 0)
                                    (match-end 0)
