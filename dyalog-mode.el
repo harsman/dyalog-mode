@@ -1527,7 +1527,9 @@ improves performance."
                  (tradop-name   (match-string-no-properties 7))
                  (right-operand (match-string-no-properties 8))
                  (name (or tradop-name tradfn-name))
-                 (end-of-header (line-end-position))
+                 (end-of-header (save-excursion
+                                  (goto-char (match-end 0))
+                                             (line-end-position)))
                  (args (list retval (when larg (list larg)) rarg))
                  (operands (remq nil (list left-operand right-operand)))
                  (locals nil)
