@@ -119,7 +119,7 @@ together with AltGr produce the corresponding apl character in APLCHARS."
 (defun dyalog-name-list (id)
   "Return a regex with group ID matching a dyalog name list.
 Name lists are (optionally) used for naming the elements of the
-return value or right argument of a traditional defined function." 
+return value or right argument of a traditional defined function."
   (concat "( *\\(?" id ":" dyalog-name "\\(?: +" dyalog-name "\\)+\\)"
           "*)"))
 
@@ -1100,7 +1100,7 @@ type is unknown and 'function if it looks like a function definition."
 
 (defun dyalog-space-stack-at-pos (pos)
   "Return the stack of namespaces and/or classes for position POS."
-  (let ((space-scan 
+  (let ((space-scan
          (save-excursion
            (goto-char (point-min))
            (dyalog-add-spaces-to-stack nil pos))))
@@ -1382,7 +1382,7 @@ isn't inside a dynamic function, return nil"
   (interactive)
   (plist-get (dyalog-dfun-info) :name))
 
-  
+
 (defun dyalog-dfun-info (&optional point-is-at-dfun-start)
   "Return the name, start and end position of the dfun point is in.
 If POINT-IS-AT-START-OF-DEFUN is t, point must be at the nabla or
@@ -1432,7 +1432,7 @@ anonymous, :name is \"\"."
                 (goto-char start-of-containing-parens))
             (setq done t))))
       pos)))
-            
+
 (defun dyalog-in-dfun (&optional point-is-at-dfun-start)
   "If point is inside a dfun, return a plist with it's start and end position.
 If point isn't inside a dfun, return nil."
@@ -1513,7 +1513,7 @@ improves performance."
              (dyalog-previous-defun 'tradfn-only)
              (when (not (looking-at "∇"))
                (forward-line -1))         ; Nabla is on its own line
-             (re-search-forward dyalog-tradfn-header nil t))))   
+             (re-search-forward dyalog-tradfn-header nil t))))
       (if on-tradfn-header
           (let* ((start-of-defun (match-beginning 0))
                  (tradfn-name (match-string-no-properties 1))
@@ -1759,7 +1759,7 @@ the keyword (or nil) and t if it is preceded by a label."
       (save-match-data
         (let ((state (parse-partial-sexp (line-beginning-position) (point))))
           (not (not (or (nth 3 state) (nth 4 state))))))))
-  
+
 (defun dyalog-current-symbol ()
   "Return the full symbol at point, including namespace qualifications."
   (let* ((regex "\\(\\s_\\|\\sw\\|\\.\\)"))
