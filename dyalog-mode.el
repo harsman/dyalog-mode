@@ -281,7 +281,7 @@ return value or right argument of a traditional defined function."
                  (":hold" . ":endhold")(":with" . ":endwith")
                  (":namespace" . ":endnamespace")(":class" . ":endclass")
                  (":select" . ":endselect")(":interface" . ":endinterface")
-                 (":property" . ":endproperty")))
+                 (":property" . ":endproperty")(":section" . ":endsection")))
       (puthash (car e) (list (cdr e) 'block-start) h)
       (puthash (cdr e) (list (car e) 'block-end) h))
     (dolist (e '((":andif". ":if")(":orif".":if")(":elseif".":if")))
@@ -511,7 +511,7 @@ number of currently open tradfn definitions."
              (memq indent-type '(block-start block-pause))))
       (list t (dyalog-relative-indent 0)))
      ((and (memq indent-type '(tradfn-start tradfn-end))
-           (not (string-match ":\\(End\\)?\\(Namespace\\|Class\\)" match)))
+           (not (string-match ":\\(End\\)?\\(Namespace\\|Class\\|Section\\)" match)))
       (list t (skip-chars-forward " ∇"))))))
 
 (defun dyalog-indent-stop-tradfn (blockstack indent-status _funcount)
