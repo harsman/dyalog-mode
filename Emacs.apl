@@ -579,7 +579,7 @@
           ⍝ The chcp works around a Dyalog bug that incorrectly decodes
           ⍝ strings from ⎕CMD if they aren't in Windows 1252. E.g. the default
           ⍝ encoding for cmd on Swedish windows is CP850.
-          r←⊃⎕CMD'chcp 1252 && cd'
+          r←⊃⌽⎕CMD'chcp 1252 && cd'
       :EndIf
     ∇
 
