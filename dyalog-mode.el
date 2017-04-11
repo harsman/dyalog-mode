@@ -48,6 +48,7 @@
     (define-key map (kbd"C-c C-q") 'dyalog-editor-fix-and-quit)
     (define-key map (kbd"C-c C-e") 'dyalog-editor-edit-symbol-at-point)
     (define-key map (kbd"C-c C-l") 'dyalog-toggle-local)
+    (define-key map (kbd"C-C C-h") 'dyalog-help-for-symbol-at-point)
     map)
   "Keymap for Dyalog APL mode.")
 
@@ -2052,6 +2053,260 @@ Optional argument LINE specifies which line to move point to."
             (move-end-of-line nil)
             (insert (concat ";" name))
             (message "Made %s local in function %s" name fname)))))))
+
+;;; Online help
+(defconst dyalog-symbol-help-names
+  (let ((h (make-hash-table :test 'equal)))
+    (dolist (e '(("&" . "Ampersand")
+                 ("]" ."Brackets")
+                 ("⊖" . "Circle_Bar")
+                 ("○" . "Circle")
+                 ("⌽" . "Circle_Stile")
+                 ("⍪" . "Comma_Bar")
+                 ("," . "Comma")
+                 ("⊥" . "Decode_Symbol")
+                 ("¨" . "Dieresis")
+                 ("⍣" . "DieresisStar")
+                 ("⍨" . "Dieresis_Tilde")
+                 ("÷" . "Divide_Sign")
+                 ("⌹" . "Domino")
+                 ("." . "Dot")
+                 ("↓" . "Down_Arrow")
+                 ("⌊" . "Downstile")
+                 ("⊤" . "Encode_Symbol")
+                 ("∊" . "Epsilon")
+                 ("⍷" . "Epsilon_Underbar")
+                 ("=" . "Equal_Sign")
+                 ("≡" . "Equal_Underbar")
+                 ("≢" . "Equal_Underbar_Slash")
+                 ("!" . "Exclamation_Mark")
+                 ("⍎" . "Execute_Symbol")
+                 ("⍒" . "Grade_Down")
+                 ("⍋" . "Grade_Up")
+                 ("≥" . "Greater_Than_Or_Equal_To_Sign")
+                 (">" . "Greater_Than_Sign")
+                 ("⌶" . "IBeam")
+                 ("⌷" . "Index_Symbol")
+                 ("⍳" . "Iota")
+                 ("⍸" . "Iota_Underbar")
+                 ("⍤" . "Jot_Diaresis")
+                 ("∘" . "Jot")
+                 ("⊂" . "Left_Shoe")
+                 ("⊆" . "Left_Shoe_Underbar")
+                 ("⊣" . "Left_Tack")
+                 ("≤" . "Less_Than_Or_Equal_To_Sign")
+                 ("<" . "Less_Than_Sign")
+                 ("⍟" . "Log")
+                 ("∧" . "Logical_And")
+                 ("∨" . "Logical_Or")
+                 ("-" . "Minus_Sign")
+                 ("⍲" . "Nand_Symbol")
+                 ("⍱" . "Nor_Symbol")
+                 ("≠" . "Not_Equal_To")
+                 ("+" . "Plus_Sign")
+                 ("⌸" . "Quad_Equal")
+                 ("?" . "Question_Mark")
+                 ("⍴" . "Rho")
+                 ("→" . "Right_Arrow")
+                 ("⊃" . "Right_Shoe")
+                 ("⊢" . "Right_Tack")
+                 ("∩" . "Set_Intersection")
+                 ("∪" . "Set_Union")
+                 ("⌿" . "Slash_Bar")
+                 ("/" . "Slash")
+                 ("⍀" . "Slope_Bar")
+                 ("\\" . "Slope")
+                 ("*" . "Star")
+                 ("|" . "Stile")
+                 ("⍕" . "Thorn_Symbol")
+                 ("~" . "Tilde")
+                 ("×" . "Times_Sign")
+                 ("⍉" . "Transpose")
+                 ("↑" . "Up_Arrow")
+                 ("⌈" . "Upstile")
+                 ("⍠" . "Variant")
+                 ("⍬" . "Zilde_Symbol")))
+      (puthash (car e) (cdr e) h))
+    (dolist (e '("" "#" "⍺" "⍵" "∇" "'" "⋄" "⍝" ":" ";" "¯"))
+               (puthash e "Special Symbols" h))
+    h))
+
+(defconst dyalog-help-objects
+  '("ActiveXContainer" "ActiveXControl" "Animation" "Bitmap" "BrowseBox"
+    "Button" "ButtonEdit" "Calendar" "Circle" "Clipboard" "ColorButton"
+    "Combo" "ComboEx" "CoolBand" "CoolBar" "Cursor" "DateTimePicker" "Edit"
+    "Ellipse" "FileBox" "Font" "Form" "Grid" "Group" "Icon" "Image"
+    "ImageList" "Label" "List" "ListView" "Locator" "MDIClient" "Marker"
+    "Menu" "MenuBar" "MenuItem" "Metafile" "MsgBox" "NetClient"
+    "NetControl" "NetType" "OCXClass" "OLEClient" "OLEServer" "Poly"
+    "Printer" "ProgressBar" "PropertyPage" "PropertySheet" "Rect"
+    "RichEdit" "Root" "SM" "Scroll" "Separator" "Spinner" "Splitter"
+    "Static" "StatusBar" "StatusField" "SubForm" "SysTrayItem" "TCPSocket"
+    "TabBar" "TabBtn" "TabButton" "TabControl" "Text" "Timer" "TipField"
+    "ToolBar" "ToolButton" "ToolControl" "TrackBar" "TreeView" "UpDown"))
+
+(defconst dyalog-help-properties
+  '("APLVersion" "Accelerator" "AcceptFiles" "Active" "Align" "AlignChar"
+    "AlphaBlend" "AlwaysShowBorder" "AlwaysShowSelection" "ArcMode" "Array"
+    "Attach" "AutoArrange" "AutoBrowse" "AutoConf" "AutoExpand" "AutoPlay"
+    "BCol" "BandBorders" "BaseClass" "Bits" "Border" "BrowseFor" "BtnPix"
+    "Btns" "ButtonsAcceptFocus" "CBits" "CMap" "CalendarCols" "Cancel"
+    "Caption" "CaseSensitive" "CellFonts" "CellHeights" "CellSelect"
+    "CellSet" "CellTypes" "CellWidths" "Changed" "CharFormat" "CharSet"
+    "CheckBoxes" "Checked" "ChildEdge" "ChildList" "CircleToday" "ClassID"
+    "ClassName" "ClipCells" "ColLineTypes" "ColSortImages" "ColTitle3D"
+    "ColTitleAlign" "ColTitleBCol" "ColTitleDepth" "ColTitleFCol" "ColTitles"
+    "Collate" "ColorMode" "ColumnWidth" "Container" "Coord" "Copies" "Cue"
+    "CurCell" "CurrentColor" "CurrentState" "CursorObj" "CustomColors"
+    "CustomFormat" "Data" "DateTime" "DblClickToggle" "Decimals" "Default"
+    "DefaultColors" "Depth" "DevCaps" "Directory" "Divider" "DockChildren"
+    "DockShowCaption" "Dockable" "Docked" "DragItems" "Dragable" "DrawMode"
+    "Duplex" "EdgeStyle" "EditImage" "EditImageIndent" "EditLabels" "Elevated"
+    "Encoding" "End" "EnterReadOnlyCells" "EvaluationDays" "Event" "EventList"
+    "ExportedFns" "ExportedVars" "FCol" "FStyle" "FieldType" "File" "FileMode"
+    "FillCol" "Filters" "FirstDay" "Fixed" "FixedOrder" "FlatSeparators"
+    "FontList" "FontObj" "FormatString" "Formats" "FullRowSelect" "GridBCol"
+    "GridFCol" "GridLineFCol" "GridLineWidth" "GridLines" "GripperMode"
+    "HAlign" "HScroll" "Handle" "HasApply" "HasButtons" "HasCheckBox"
+    "HasEdit" "HasHelp" "HasLines" "HasTicks" "HasToday" "Header" "HeaderImageIndex"
+    "HeaderImageList" "HelpButton" "HelpFile" "HighlightHeaders" "Hint"
+    "HintObj" "HotSpot" "HotTrack" "IconObj" "ImageCount" "ImageIndex"
+    "ImageListObj" "Indents" "Index" "Input" "InputMode" "InputModeKey"
+    "InputProperties" "InstanceMode" "Interval" "Italic" "ItemGroupMetrics"
+    "ItemGroups" "Items" "Justify" "KeepBits" "KeepOnClose" "LStyle" "LWidth"
+    "LastError" "LateBind" "LicenseKey" "Limits" "LocalAddr" "LocalAddrName"
+    "LocalPort" "LocalPortName" "Locale" "MDIActive" "MDIActiveObject" "MDIMenu"
+    "MapCols" "Mask" "MaskCol" "Masked" "MaxButton" "MaxDate" "MaxLength" "MaxSelCount"
+    "MetafileObj" "MethodList" "MinButton" "MinDate" "MonthDelta" "Moveable"
+    "MultiColumn" "MultiLine" "MultiSelect" "NewLine" "Note" "OKButton"
+    "OLEControls" "OLEServers" "OnTop" "Orientation" "OtherButton" "OverflowChar"
+    "PName" "PageActive" "PageActiveObject" "PageSize" "PageWidth" "PaperSize"
+    "PaperSizes" "PaperSource" "PaperSources" "ParaFormat" "Password"
+    "PathWordBreak" "Picture" "Points" "Popup" "Posn" "PrintList" "PrintRange"
+    "ProgressStyle" "PropList" "QueueEvents" "RTFText" "Radius" "RadiusMode"
+    "Range" "ReadOnly" "RealSize" "Redraw" "RemoteAddr" "RemoteAddrName"
+    "RemotePort" "RemotePortName" "ReportBCol" "ReportImageIndex" "ReportInfo"
+    "ResizeColTitles" "ResizeCols" "ResizeRowTitles" "ResizeRows" "Resolution"
+    "Resolutions" "Rotate" "RowHiddenDepth" "RowLineTypes" "RowTitleAlign"
+    "RowTitleBCol" "RowTitleDepth" "RowTitleFCol" "RowTitles" "RowTreeDepth"
+    "RowTreeImages" "RowTreeStyle" "Rows" "RunMode" "SIPMode" "SIPResize"
+    "ScrollOpposite" "SelDate" "SelImageIndex" "SelItems" "SelRange" "SelText"
+    "SelectionBorderWidth" "SelectionColor" "SelectionColorAlpha"
+    "ServerVersion" "ShowCaptions" "ShowCueWhenFocused" "ShowDropDown" "ShowInput"
+    "ShowSession" "ShowThumb" "SingleClickExpand" "Size" "Sizeable"
+    "SocketNumber" "SocketType" "SortItems" "SplitObj1" "SplitObj2" "Start"
+    "StartIn" "State" "Step" "Style" "SysMenu" "TabFocus" "TabIndex"
+    "TabJustify" "TabObj" "TabSize" "Target" "TargetState" "Text" "TextSize"
+    "Thumb" "ThumbRect" "TickAlign" "TickSpacing" "Tip" "TipObj" "TitleHeight"
+    "TitleWidth" "Today" "ToolboxBitmap" "TrackRect" "Translate" "Transparent"
+    "Type" "TypeLibFile" "TypeLibID" "TypeList" "Underline" "UndocksToRoot"
+    "VAlign" "VScroll" "ValidIfEmpty" "Value" "Values" "VariableHeight" "View"
+    "Visible" "WantsReturn" "WeekNumbers" "Weight" "WordFormat" "Wrap" "XRange"
+    "YRange" "Yield"))
+
+(defconst dyalog-help-method-or-event
+  '("Abort" "ActivateApp" "AddChildren" "AddCol" "AddComment" "AddItems"
+    "AddRow" "AmbientChanged" "AnimClose" "AnimOpen" "AnimPlay" "AnimStarted"
+    "AnimStop" "AnimStopped" "Animate" "BadValue" "BalloonHide" "BalloonShow"
+    "BalloonTimeout" "BalloonUserClick" "BeginEditLabel" "Browse"
+    "CalendarDblClick" "CalendarDown" "CalendarMove" "CalendarUp" "CancelToClose"
+    "CellChange" "CellChanged" "CellDblClick" "CellDown" "CellError"
+    "CellFromPoint" "CellMove" "CellOver" "CellUp" "Change" "ChooseFont"
+    "ClickComment" "ClipChange" "Close" "CloseUp" "ColChange" "ColSorted"
+    "ColorChange" "ColumnClick" "Configure" "ContextMenu" "Create" "DDE"
+    "DateTimeChange" "DateToIDN" "DelCol" "DelComment" "DelRow" "DeleteChildren"
+    "DeleteItems" "DeleteTypeLib" "Detach" "DisplayChange" "DockAccept"
+    "DockCancel" "DockEnd" "DockMove" "DockRequest" "DockStart" "DragDrop"
+    "DropDown" "DropFiles" "DropObjects" "DuplicateColumn" "DuplicateRow"
+    "DyalogCustomMessage1" "EndEditLabel" "EndSplit" "ExitApp" "ExitWindows"
+    "Expanding" "Expose" "FileBoxCancel" "FileBoxOK" "FileRead" "FileWrite"
+    "Flush" "FontCancel" "FontOK" "FrameContextMenu" "GesturePan"
+    "GesturePressAndTap" "GestureRotate" "GestureTwoFingerTap" "GestureZoom"
+    "GetBuildID" "GetCellRect" "GetCommandLine" "GetCommandLineArgs"
+    "GetComment" "GetDayStates" "GetEnvironment" "GetEventInfo" "GetFocus"
+    "GetFocusObj" "GetItemHandle" "GetItemPosition" "GetItemState"
+    "GetMethodInfo" "GetMinSize" "GetParentItem" "GetPropertyInfo"
+    "GetServiceState" "GetTextSize" "GetTipText" "GetTypeInfo" "GetVisibleRange"
+    "GotFocus" "GreetBitmap" "GridCopy" "GridCopyError" "GridCut" "GridDelete"
+    "GridDropSel" "GridKeyPress" "GridPaste" "GridPasteError" "GridSelect"
+    "HScroll" "HThumbDrag" "Help" "HideComment" "IDNToDate" "Idle" "IndexChanged"
+    "ItemDblClick" "ItemDown" "ItemUp" "KeyError" "KeyPress" "ListTypeLibs"
+    "Locator" "LockColumns" "LockRows" "LostFocus" "MDIActivate" "MDIArrange"
+    "MDICascade" "MDIDeactivate" "MDITile" "MakeGIF" "MakePNG" "MouseDblClick"
+    "MouseDown" "MouseEnter" "MouseLeave" "MouseMove" "MouseUp" "MouseWheel"
+    "MsgBtn1" "MsgBtn2" "MsgBtn3" "NameFromHandle" "NewPage" "OLEAddEventSink"
+    "OLEDeleteEventSink" "OLEListEventSinks" "OLEQueryInterface" "OLERegister"
+    "OLEUnregister" "PageActivate" "PageApply" "PageBack" "PageCancel"
+    "PageChanged" "PageDeactivate" "PageFinish" "PageHelp" "PageNext" "PreCreate"
+    "Print" "ProgressStep" "Protected" "RTFPrint" "RTFPrintSetup" "Retracting"
+    "RowChange" "RowSetVisibleDepth" "Scroll" "SelDateChange" "Select"
+    "ServiceNotification" "SessionPrint" "SetCellSet" "SetCellType" "SetColSize"
+    "SetEventInfo" "SetFinishText" "SetFnInfo" "SetItemImage" "SetItemPosition"
+    "SetItemState" "SetMethodInfo" "SetPropertyInfo" "SetRowSize"
+    "SetServiceState" "SetSpinnerText" "SetVarInfo" "SetWizard" "Setup"
+    "ShowBalloonTip" "ShowComment" "ShowHelp" "ShowItem" "ShowProperties"
+    "ShowSIP" "Spin" "Splitting" "StartSplit" "StateChange" "SysColorChange"
+    "TCPAccept" "TCPClose" "TCPConnect" "TCPError" "TCPGetHostID" "TCPGotAddr"
+    "TCPGotPort" "TCPReady" "TCPRecv" "TCPSend" "TCPSendPicture" "ThumbDrag"
+    "Timer" "Undo" "VScroll" "VThumbDrag" "Wait" "WinIniChange" "WorkspaceLoaded"))
+
+(defconst dyalog-help-root
+  "http://help.dyalog.com/15.0/Content/")
+
+(defconst dyalog-help-suffix
+  ".htm")
+
+(defconst dyalog-help-url-map
+  (let ((h (make-hash-table :test 'equal)))
+    (maphash (lambda (k v)
+               (puthash k (concat dyalog-help-root
+                                  "Language/Symbols/"
+                                  v dyalog-help-suffix) h))
+             dyalog-symbol-help-names)
+    (dolist (e dyalog-help-objects)
+      (puthash (downcase e) (concat dyalog-help-root
+                         "GUI/Objects/"
+                         e dyalog-help-suffix) h))
+    (dolist (e dyalog-help-properties)
+      (puthash (downcase e) (concat dyalog-help-root
+                         "GUI/Properties/"
+                         e dyalog-help-suffix) h))
+    (dolist (e dyalog-help-method-or-event)
+      (puthash (downcase e) (concat dyalog-help-root
+                                    "GUI/MethodOrEvents/"
+                                    e dyalog-help-suffix) h))
+    h))
+
+(defun dyalog-help-symbol-at-point ()
+  "Return the symbol relevant for online help at point."
+  (let* ((sym (symbol-at-point))
+         (sym-name (when sym (symbol-name sym)))
+         (p (when (looking-at-p "\\s.\\|\\s(\\|\\s)")
+              (char-to-string (char-after))))
+         (keyword (car (dyalog-current-keyword))))
+         (or keyword sym-name p "")))
+
+(defun dyalog-help-for-symbol-at-point ()
+  "Open the web page with documentation on the symbol at point.
+This function uses `browse-url` to open the documentation web
+page, so you can set `browse-url-function` to customize what
+browser is used for Dyalog documentation."
+  (interactive)
+  (let* ((sym (dyalog-help-symbol-at-point))
+         (default-url (gethash (downcase sym) dyalog-help-url-map))
+         (url (or default-url
+                  (cond ((equal (aref sym 0) ?⎕)
+                         (concat dyalog-help-root
+                                 "Language/System Functions/"
+                                 (downcase (substring sym 1))
+                                 dyalog-help-suffix))
+                        ((equal (aref sym 0) ?:)
+                         (concat dyalog-help-root
+                                 "Language/Control Structures/"
+                                 (downcase (substring sym 1))
+                                 dyalog-help-suffix))))))
+    (when url
+      (browse-url url t))))
 
 (eval-after-load "which-func"
   '(add-to-list 'which-func-modes 'dyalog-mode))
