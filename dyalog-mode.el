@@ -4,7 +4,7 @@
 
 ;; Author: Joakim Hårsman <joakim.harsman@gmail.com>
 ;; Version: 0.7
-;; Package-Requires: ((cl-lib "0.2"))
+;; Package-Requires: ((cl-lib "0.2")(emacs "24"))
 ;; Keywords: languages
 ;; URL: https://bitbucket.org/harsman/dyalog-mode/
 
@@ -550,8 +550,8 @@ only needs to be supplied if it differs from the default."
 
 (defun dyalog-indent-search-stop-generic (blockstack indent-status funcount)
   "Return if we have found an indentation root, and no chars to indent.
-BLOCKSTACK is a stack of currently open blocks, INDENT-TYPE is
-the indentation type of the current keyword (if any), and
+BLOCKSTACK is a stack of currently open blocks, INDENT-STATUS is
+the indentation status of the current keyword (if any), and
 FUNCOUNT is the number of currently open tradfn definitions."
   (let ((indent-type  (plist-get indent-status :indent-type))
         (label-at-bol (plist-get indent-status :label-at-bol)))
@@ -985,8 +985,9 @@ Assumes point is at the start of a line with a tradfn header."
 
 (defun dyalog-guess-buffer-type ()
   "Guess whether the current buffer is a function or namespace/class.
-Return 'space-or-class if it looks like a namespace or class, 'unkown if the buffer
-type is unknown and 'function if it looks like a function definition."
+Return 'space-or-class if it looks like a namespace or class,
+'unkown if the buffer type is unknown and 'function if it looks
+like a function definition."
   (save-excursion
     (goto-char (point-min))
     (cond
@@ -1065,12 +1066,12 @@ type is unknown and 'function if it looks like a function definition."
 (defun dyalog-indent-buffer ()
   "Indent the current buffer."
   (save-excursion
-    (mark-whole-buffer)
-    (indent-region (region-beginning) (region-end))))
+    (indent-region (point-min) (point-max))))
 
 ;;; Defun recognition and navigation
 
 (defun dyalog-imenu-create-index ()
+  "Return an alist suitable for use as an imenu index for the current buffer."
   (reverse (dyalog-functions-in-buffer)))
 
 (defun dyalog-functions-in-buffer ()
@@ -1108,7 +1109,7 @@ type is unknown and 'function if it looks like a function definition."
       (dyalog-current-space space-scan pos)))
 
 (defun dyalog-update-space-scan (space-scan pos)
-  "Update SPACE-SCAN incrementally, given that point is at POS"
+  "Update SPACE-SCAN incrementally, given that point is at POS."
   (save-excursion
     (let* ((space-stack (plist-get space-scan :stack))
            (max-reached (plist-get space-scan :max-reached))
@@ -1135,7 +1136,7 @@ type is unknown and 'function if it looks like a function definition."
     space-stack))
 
 (defun dyalog-add-spaces-to-stack (space-stack pos)
-  "Add any spaces found between MAX-REACHED and POS to SPACE-STACK."
+  "Add any spaces found between max reached in SPACE-STACK and POS to SPACE-STACK."
   (let ((reached nil)
         (done nil)
         (space-scan nil)
@@ -1149,7 +1150,8 @@ type is unknown and 'function if it looks like a function definition."
     space-scan))
 
 (defun dyalog-next-space-or-class (&optional space-stack)
-  "Move forward to the start or end of the next namepace or class def."
+  "Move forward to the start or end of the next namepace or class def.
+Optional argument SPACE-STACK can be used to store state between invocations."
   (let ((done nil)
         (ret )
         (hit nil))
@@ -1190,6 +1192,7 @@ type is unknown and 'function if it looks like a function definition."
     ret))
 
 (defun dyalog-type-char-to-symbol (type-char)
+  "Given a TYPE-CHAR defininf a type, return the corresponding symbol."
   (cond
    ((= type-char ?N)
     'namespace)
@@ -1197,6 +1200,8 @@ type is unknown and 'function if it looks like a function definition."
     'class)))
 
 (defun dyalog-current-space (space-scan pos)
+  "Given a SPACE-SCAN and position POS, return the current namespace POS is in.
+SPACE-SCAN is created by calling `dyalog-update-space-scan`."
   (let ((stack (plist-get space-scan :stack))
         (space nil))
     (while stack
@@ -1386,7 +1391,7 @@ isn't inside a dynamic function, return nil"
 
 (defun dyalog-dfun-info (&optional point-is-at-dfun-start)
   "Return the name, start and end position of the dfun point is in.
-If POINT-IS-AT-START-OF-DEFUN is t, point must be at the nabla or
+If POINT-IS-AT-DFUN-START is t, point must be at the nabla or
 brace starting the defun, and no backwards search for the
 function definition start is made, which improves performance.
 The return value is a plist with :name, :start and :end
@@ -1436,7 +1441,10 @@ anonymous, :name is \"\"."
 
 (defun dyalog-in-dfun (&optional point-is-at-dfun-start)
   "If point is inside a dfun, return a plist with it's start and end position.
-If point isn't inside a dfun, return nil."
+If point isn't inside a dfun, return nil. If optional argument
+POINT-IS-AT-DFUN-START is t, point must be at the opening brace
+of a dfun. Supplying POINT-IS-AT-DFUN-START improves
+performance."
   (progn ;; with-syntax-table can't be at defun top-level apparently...
     (if (and point-is-at-dfun-start (looking-at-p "{"))
         (list :start (point)
@@ -1551,9 +1559,9 @@ improves performance."
 ;;; Font Lock
 
 (defun dyalog-defun-info (&optional point-is-at-start-of-defun)
-  "Return information on the defun at point. If
-POINT-IS-AT-START-OF-DEFUN is t, point must be at the nabla or
-brace starting the defun, and no backwards search for the
+  "Return information on the defun at point.
+If POINT-IS-AT-START-OF-DEFUN is t, point must be at the nabla
+or brace starting the defun, and no backwards search for the
 function definition start is made, which improves performance."
   (save-excursion
     (if (and point-is-at-start-of-defun
@@ -1582,7 +1590,8 @@ function definition start is made, which improves performance."
                           :end end :operands operands)))))))))
 
 (defun dyalog-local-names (defun-info)
-  "Return a list of local names given return value from `dyalog-defun-info'."
+  "Return a list of local names given DEFUN-INFO.
+DEFUN-INFO is the return value from `dyalog-defun-info'."
   (let ((args (apply 'append (plist-get defun-info :args)))
         (operands (plist-get defun-info :operands))
         (localizations (plist-get defun-info :locals)))
@@ -1778,13 +1787,13 @@ the keyword (or nil) and t if it is preceded by a label."
           (point))))))
 
 (defun dyalog-symbol-parts (symbol-name)
-  "Return a list of all the parts of a symbol name.
+  "Return a list of all the parts of SYMBOL-NAME.
 For example, for \"ns1.ns2.name\", return '(\"ns1\" \"ns2\" \"name\").
 If there are no parts, just return the name as given."
   (split-string symbol-name "\\." 'omit-nulls))
 
 (defun dyalog-symbol-root (symbol-name)
-  "Return the root namespace of the symbol name, or nil if there is none."
+  "Return the root namespace SYMBOL-NAME, or nil if there is none."
   (let ((parts (dyalog-symbol-parts symbol-name)))
     (when (< 1 (length parts))
       (car parts))))
@@ -1912,17 +1921,17 @@ edit buffer."
                     name)))
     (switch-to-buffer bufname)
     (setq buffer-undo-list t)
+    (widen)
     (let ((pos (point)))
       (save-excursion
-        (mark-whole-buffer)
-        (delete-region (point) (mark))
+        (delete-region (point-min) (point-max))
         (insert src))
       (when file-name
         (set-visited-file-name file-name t)
         (set-buffer-modified-p nil))
       (dyalog-mode)
       (setq dyalog-connection process)
-      (font-lock-fontify-buffer)
+      (font-lock-ensure)
       (if lineno
           (forward-line (- lineno 1))
         (goto-char (min pos (point-max))))
@@ -1937,13 +1946,13 @@ is the name of the array, KIND is the type of array and is
 formatted contents of the array"
   (switch-to-buffer name)
   (setq buffer-undo-list t)
+  (widen)
   (let ((pos (point))
         (lineno nil))
     (save-excursion
       (when buffer-read-only
         (setq buffer-read-only nil))
-      (mark-whole-buffer)
-      (delete-region (point) (mark))
+      (delete-region (point-min) (point-max))
       (insert src))
     (dyalog-array-mode)
     (setq dyalog-connection process)

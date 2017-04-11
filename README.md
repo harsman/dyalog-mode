@@ -14,8 +14,8 @@ localization of variables.
 
 Supported platforms
 -------------------
-Dyalog mode should work in Emacs 23, but for full functionality, you should
-use Emacs 24.2 or newer.
+Dyalog requires Emacs 24, but for full functionality, you should
+use Emacs 24.3 or newer.
 
 Dyalog mode itself works on all platforms supported by Emacs, but the
 integration with the Dyalog session requires functionality only present in the
