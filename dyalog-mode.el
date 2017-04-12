@@ -2293,7 +2293,18 @@ Optional argument LINE specifies which line to move point to."
          (p (when (looking-at-p "\\s.\\|\\s(\\|\\s)")
               (char-to-string (char-after))))
          (keyword (car (dyalog-current-keyword))))
-         (or keyword sym-name p "")))
+    (or keyword sym-name p "")))
+
+(defvar dyalog-help-for-symbol-function nil
+  "When non-nil, call this function to get an URL for help on a given symbol.
+It receives a single string argument, the name of the symbol to
+return an URL for, and should return an url with help for that
+symbol, or nil if no help is available.")
+
+(defun dyalog-custom-help-for-symbol (sym-name)
+  "Return the result of calling `dyalog-help-for-symbol-function with SYM-NAME."
+  (when dyalog-help-for-symbol-function
+    (funcall dyalog-help-for-symbol-function sym-name)))
 
 (defun dyalog-help-for-symbol-at-point ()
   "Open the web page with documentation on the symbol at point.
@@ -2303,7 +2314,8 @@ browser is used for Dyalog documentation."
   (interactive)
   (let* ((sym (dyalog-help-symbol-at-point))
          (default-url (gethash (downcase sym) dyalog-help-url-map))
-         (url (or default-url
+         (custom-url (dyalog-custom-help-for-symbol sym))
+         (url (or custom-url default-url
                   (cond ((equal (aref sym 0) ?⎕)
                          (concat dyalog-help-root
                                  "Language/System Functions/"
