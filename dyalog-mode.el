@@ -1146,7 +1146,7 @@ like a function definition."
             space-scan  (dyalog-next-space-or-class trimmed-stack)
             space-stack (plist-get space-scan :stack)
             reached (plist-get space-scan :max-reached)
-            done (> reached pos)))
+            done (or (> reached pos) (= reached (point-max)))))
     space-scan))
 
 (defun dyalog-next-space-or-class (&optional space-stack)
