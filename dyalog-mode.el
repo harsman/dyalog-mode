@@ -1000,14 +1000,14 @@ like a function definition."
       'unknown))))
 
 (defun dyalog-fix-whitespace-before-save ()
-  "Clean up whitespace in the current buffer before saving."
+  "Clean up whitespace and indent the current buffer before saving."
   (when (and (eq major-mode 'dyalog-mode) dyalog-fix-whitespace-before-save)
     (dyalog-fix-whitespace)))
 
 (defun dyalog-fix-whitespace ()
-  "Clean up white space in the current buffer like Dyalog does."
+  "Clean up white space and indent the current buffer.
+This attempts to match formatting done by Dyalog's auto format feature."
   (interactive)
-  (message "Cleaning up whitespace...")
   (let ((dyalog-indent-comments nil)
         (punctuation-char "\\s.\\|\\s(\\|\\s)"))
 
@@ -1028,14 +1028,18 @@ like a function definition."
                                 (point-max)
                                 t)
         (let ((start (match-beginning 0))
-              (ws-start (match-beginning 2)))
+              (ws-start (match-beginning 2))
+              (token-start (match-beginning 1))
+              (punctuation-start (match-beginning 3)))
           (unless (or (string-equal "⍝" (match-string 3))
                       (dyalog-in-comment-or-string ws-start)
-                      (string-match "[∇⋄⍬]" (match-string 3))
-                      (string-match "[∇⋄⍬]" (match-string 1))
+                      (string-match-p "[∇⋄⍬⍺⍵]" (match-string 3))
+                      (string-match-p "[∇⋄⍬⍺⍵]" (match-string 1))
+                      (and (string-match-p "[⎕A-Za-z_∆⍺⍵⍬0-9]\\`" (match-string 1))
+                           (string-match-p "\\`[⍺⍵⍬]") (match-string 3))
                       (and (string-equal ":" (substring (match-string 3) 0 1))
-                           (dyalog-in-keyword (match-beginning 3)))
-                      (dyalog-in-keyword (match-beginning 1)))
+                           (not (dyalog-position-is-in-dfun punctuation-start)))
+                      (dyalog-in-keyword token-start))
             (replace-match "\\1\\3")
             (goto-char start))))
       ;; Now remove spaces after punctuation unless they are followed by a
@@ -1053,12 +1057,12 @@ like a function definition."
               (match-3-start (match-beginning 3)))
           (unless (or (string-equal "⍝" match-1)
                       (dyalog-in-comment-or-string ws-start)
-                      (string-match "[∇⋄⍬]" match-1)
-                      (string-match "[∇⋄⍬]" match-3)
-                      (and (string-match "[⍺⍵]\\'" match-1)
-                           (string-match "\\`⎕" match-3))
+                      (string-match-p "[∇⋄]" match-1)
+                      (string-match-p "[∇⋄]" match-3)
+                      (and (string-match-p "[⍺⍵⍬]\\'" match-1)
+                           (string-match-p "\\`[⎕A-Za-z_∆⍺⍵⍬0-9¯]" match-3))
                       (and (string-equal ":" (substring match-3 0 1))
-                           (dyalog-in-keyword match-3-start)))
+                           (not (dyalog-position-is-in-dfun match-3-start))))
             (replace-match "\\1\\3")
             (goto-char start))))
       (dyalog-indent-buffer))))
@@ -1477,6 +1481,12 @@ performance."
                             :end end)))
                 nil))
           nil)))))
+
+(defun dyalog-position-is-in-dfun (pos)
+  "Return true if position POS is inside a dfun."
+  (save-excursion
+    (goto-char pos)
+    (dyalog-in-dfun)))
 
 (defun dyalog-current-defun ()
   "Return the name of the defun point is in."
