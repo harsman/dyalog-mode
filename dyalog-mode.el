@@ -282,7 +282,7 @@ return value or right argument of a traditional defined function."
                  (":hold" . ":endhold")(":with" . ":endwith")
                  (":namespace" . ":endnamespace")(":class" . ":endclass")
                  (":select" . ":endselect")(":interface" . ":endinterface")
-                 (":property" . ":endproperty")(":section" . ":endsection")))
+                 (":property" . ":endproperty")))
       (puthash (car e) (list (cdr e) 'block-start) h)
       (puthash (cdr e) (list (car e) 'block-end) h))
     (dolist (e '((":andif". ":if")(":orif".":if")(":elseif".":if")))
@@ -297,6 +297,8 @@ return value or right argument of a traditional defined function."
       (puthash e (list "" nil) h))
     (puthash ":endrepeat" (list ":repeat" 'block-end) h)
     (puthash ":end" (list nil 'block-end) h)
+    (puthash ":section" (list ":endsection" nil) h)
+    (puthash ":endsection" (list ":section" nil) h)
     h))
 
 (defconst dyalog-any-delimiter
