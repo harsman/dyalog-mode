@@ -1808,6 +1808,137 @@ If there are no parts, just return the name as given."
     (when (< 1 (length parts))
       (car parts))))
 
+
+;;; Go to definition
+
+(defvar dyalog-goto-definition-functions
+  '(dyalog-goto-definition-local
+    dyalog-goto-definition-single-file
+    dyalog-goto-definition-var)
+  "A list of functions to call to go to the definition of a symbol.
+Each function receives the name of the symbol and the current
+space as arguments and should go to the definition and return t
+if it knows where the symbol is defined.")
+
+(defvar dyalog-symbol-to-filename-function
+  'dyalog-default-symbol-to-filename
+  "A function to call to translate a symbol name to a filename.")
+
+(defun dyalog-default-symbol-to-filename (name)
+    "Translate an APL symbol to a filename."
+    (concat default-directory name ".apl"))
+
+(defun dyalog-symbol-to-filename (name)
+  (funcall dyalog-symbol-to-filename-function name))
+
+(defun dyalog-goto-definition ()
+  "Visit the definition of the symbol at point."
+  (interactive)
+  (let ((name (dyalog-current-symbol))
+        (current-space (dyalog-space-stack-at-pos (point))))
+    (unless (or (not name)
+                (dyalog-in-keyword))
+      (ring-insert find-tag-marker-ring (point-marker))
+      (let ((found nil))
+        (cl-loop for func in dyalog-goto-definition-functions
+                 do
+                 (setq found (funcall func name current-space))
+                 until found)
+        (if found
+            t
+          (pop-tag-mark)
+          (error "Cannot find definition for %s" name))))))
+
+(defun dyalog-search-symbol (symbol-name &optional bound)
+  "Search for a use of SYMBOL-NAME, ignore use inside comments and strings.
+Optional argument BOUND bounds the search."
+  (let ((regex (concat "\\_<"
+                       (regexp-quote symbol-name)
+                       "\\_>"))
+        (done nil)
+        (found nil))
+    (while (not done)
+      (if (re-search-forward regex bound t)
+          (setq done (not (dyalog-in-comment-or-string))
+                found done)
+        (setq done t)))
+    found))
+
+(defun dyalog-goto-definition-var (symbol-name &optional _current-space)
+  "Move to the first occurence of SYMBOL-NAME within the current defun."
+  (let* ((in-dfun (dyalog-in-dfun))
+         (tradfn-info (dyalog-tradfn-info))
+         (tradfn-args   (append (nth 1 tradfn-info) (nth 6 tradfn-info)))
+         (tradfn-locals (nth 2 tradfn-info))
+         (header-end    (nth 3 tradfn-info))
+         (tradfn-end    (nth 4 tradfn-info))
+         (start (point)))
+    (push-mark)
+    (if in-dfun
+        (let* ((dfun-start (plist-get in-dfun :start))
+               (dfun-max   (min (plist-get in-dfun :end) dfun-start)))
+          (goto-char dfun-start)
+          (unless (dyalog-search-symbol symbol-name dfun-max)
+            (pop-mark)
+            (goto-char start)
+            nil))
+      (cond
+       ((member (or (dyalog-symbol-root symbol-name) symbol-name)
+                tradfn-locals)
+        (dyalog-beginning-of-defun)
+        (goto-char header-end)
+        (unless (dyalog-search-symbol symbol-name tradfn-end)
+          (pop-mark)
+          (goto-char start)))
+       ((member symbol-name tradfn-args)
+        (dyalog-beginning-of-defun)
+        (unless (dyalog-search-symbol symbol-name header-end)
+          (pop-mark)
+          (goto-char start)))))
+    (not (eq (point) start))))
+
+(defun dyalog-goto-definition-local (symbol-name &optional current-space)
+  "If SYMBOL-NAME is defined as a function in the current buffer, move there.
+If CURRENT-SPACE is non-nil, it is the name space the reference
+SYMBOL-NAME is in and is used to create a qualified name for the
+symbol. A name a inside space b.c can reference either a local
+name a or b.c.a."
+  (when (not (fboundp 'imenu--make-index-alist))
+    (require 'imenu))
+  (let* ((alist (imenu--make-index-alist))
+         (qualified-name (when current-space
+                           (mapconcat 'identity (append current-space (list symbol-name))
+                                      ".")))
+         (definition (or (assoc symbol-name alist)
+                         (assoc qualified-name alist)))
+         (found (and alist definition)))
+    (when found
+      (imenu definition))
+    found))
+
+(defun dyalog-goto-definition-single-file (symbol-name &optional _current-space)
+  "If SYMBOL-NAME is a global function, visit the file it's defined in."
+  (let* ((name (car (last (dyalog-symbol-parts symbol-name))))
+          (filename (dyalog-symbol-to-filename name)))
+    (if (file-exists-p filename)
+        (progn
+          (dyalog-edit-name name)
+          t)
+      nil)))
+
+(defun dyalog-edit-name (symbol-name &optional line)
+  "Edit SYMBOL-NAME and optionally move point to LINE.
+If an active connection to Dyalog exists, use that to get the
+source, otherwise fetch it from disk."
+  (let ((conn (dyalog-editor-buffer-connected))
+        (filename (dyalog-symbol-to-filename symbol-name)))
+    (if conn
+        (dyalog-editor-edit symbol-name line)
+      (find-file filename)
+      (when line
+        (goto-char (point-min))
+        (forward-line (1- line))))))
+
 ;;; Socket connection
 (defvar dyalog-connection ()
   "The connection to a Dyalog process used for this buffer, if any.")
