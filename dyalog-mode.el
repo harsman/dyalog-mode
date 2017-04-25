@@ -1941,7 +1941,9 @@ edit buffer."
         (set-buffer-modified-p nil))
       (dyalog-mode)
       (setq dyalog-connection process)
-      (font-lock-ensure)
+      (if (fboundp 'font-lock-ensure)
+          (font-lock-ensure)
+        (font-lock-fontify-buffer))
       (if lineno
           (forward-line (- lineno 1))
         (goto-char (min pos (point-max))))
