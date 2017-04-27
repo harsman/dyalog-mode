@@ -1532,13 +1532,15 @@ the nabla in the tradfn header."
                  (line-end-position))))
       (goto-char min)
       (if (re-search-forward dyalog-tradfn-header max t)
-          (progn
-            (goto-char (match-end 0))
+          (let ((end-char (match-end 0))
+                (start-char (match-beginning 0)))
+            (goto-char end-char)
             (and (>= start (if only-after-nabla
-                               (match-beginning 0)
-                             (min (match-beginning 0)
+                               start-char
+                             (min start-char
                                   (line-beginning-position))))
-                 (<= start (line-end-position))))
+                 (<= start (line-end-position))
+                 (not (dyalog-in-comment-or-string start-char))))
         nil))))
 
 (defun dyalog-tradfn-info (&optional point-is-at-start-of-defun)
