@@ -293,7 +293,7 @@ return value or right argument of a traditional defined function."
       (puthash (car e) (list (cdr e) 'block-pause) h))
     (dolist (e '((":field" . ":\\(class\\|interface\\)")))
       (puthash (car e) (list (cdr e) nil) h))
-    (dolist (e '(":access"))
+    (dolist (e '(":access" ":using"))
       (puthash e (list "" nil) h))
     (puthash ":endrepeat" (list ":repeat" 'block-end) h)
     (puthash ":end" (list nil 'block-end) h)
@@ -547,7 +547,7 @@ only needs to be supplied if it differs from the default."
         #'dyalog-indent-search-stop-generic)
      ((memq indent-type '(block-end block-pause))
       (apply-partially 'dyalog-indent-stop-block-end match))
-     ((equal (downcase keyword) ":access")
+     ((member (downcase keyword) '(":access" ":using"))
       #'dyalog-indent-search-stop-access)
      (t
       #'dyalog-indent-search-stop-generic))))
@@ -965,7 +965,7 @@ updated plist of indentation information."
      ((eq 'blank indent-type)
       (setq next-indent indent
             indent 0))
-     ((equal ":access" (downcase (or delimiter "")))
+     ((member (downcase (or delimiter "")) '(":access" ":using"))
       (setq temp-indent indent
             indent      (or tradfn-indent (- indent tab-width))
             next-indent (- temp-indent indent)))
