@@ -547,8 +547,28 @@ only needs to be supplied if it differs from the default."
         #'dyalog-indent-search-stop-generic)
      ((memq indent-type '(block-end block-pause))
       (apply-partially 'dyalog-indent-stop-block-end match))
+     ((equal (downcase keyword) ":access")
+      #'dyalog-indent-search-stop-access)
      (t
       #'dyalog-indent-search-stop-generic))))
+
+(defun dyalog-indent-search-stop-access (blockstack indent-status funcount)
+  "Return if we have forund an indentation root and no chars to indent.
+:Access keywords are a special case since they are aligned
+either to a tradfn or at the same level as their parent :Property or :Class block."
+  (let ((indent-type  (plist-get indent-status :indent-type))
+        (delimiter    (plist-get indent-status :delimiter))
+        (label-at-bol (plist-get indent-status :label-at-bol)))
+    (cond
+     ((member (downcase (or delimiter "")) '(":class" ":property"))
+      (list t (current-indentation)))
+     ((and (eq indent-type 'tradfn-start)
+           (eq funcount 0))
+      (list t (skip-chars-forward " ∇")))
+     ((bobp)
+      (list t (dyalog-leading-indentation)))
+     (t
+      (list nil 0)))))
 
 (defun dyalog-indent-search-stop-generic (blockstack indent-status funcount)
   "Return if we have found an indentation root, and no chars to indent.
@@ -887,6 +907,7 @@ updated plist of indentation information."
          (previous-indent (plist-get indent-info :indent))
          (indent        (+ previous-indent
                            next-indent))
+         (temp-indent  0)
          (tradfn-indent (plist-get indent-info :tradfn-indent))
          (nabla-indent  (plist-get indent-info :nabla-indent))
          (ret (copy-sequence indent-info)))
@@ -944,6 +965,10 @@ updated plist of indentation information."
      ((eq 'blank indent-type)
       (setq next-indent indent
             indent 0))
+     ((equal ":access" (downcase (or delimiter "")))
+      (setq temp-indent indent
+            indent      (or tradfn-indent (- indent tab-width))
+            next-indent (- temp-indent indent)))
      ;; TODO: dfuns
      (t
       (setq next-indent 0)))
