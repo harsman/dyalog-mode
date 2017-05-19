@@ -1036,7 +1036,7 @@ like a function definition."
 This attempts to match formatting done by Dyalog's auto format feature."
   (interactive)
   (let ((dyalog-indent-comments nil)
-        (punctuation-char "\\s.\\|\\s(\\|\\s)"))
+        (punctuation-char "\\s.\\|\\s(\\|\\s)\\|'"))
 
     (save-excursion
       (delete-trailing-whitespace)
@@ -1064,6 +1064,8 @@ This attempts to match formatting done by Dyalog's auto format feature."
                       (string-match-p "[∇⋄⍬⍺⍵]" (match-string 1))
                       (and (string-match-p "[⎕A-Za-z_∆⍺⍵⍬0-9]" (match-string 1))
                            (string-match-p "\\`[⍺⍵⍬#]" (match-string 3)))
+                      (and (string-match-p "['¯0-9]" (match-string 1))
+                           (string-equal "'" (match-string 3)))
                       (and (string-equal ":" (substring (match-string 3) 0 1))
                            (not (dyalog-position-is-in-dfun punctuation-start)))
                       (dyalog-in-keyword token-start))
@@ -1088,6 +1090,8 @@ This attempts to match formatting done by Dyalog's auto format feature."
                       (string-match-p "[∇⋄]" match-3)
                       (and (string-match-p "[⍺⍵⍬#]\\'" match-1)
                            (string-match-p "\\`[⎕A-Za-z_∆⍺⍵⍬0-9¯]" match-3))
+                      (and (string-equal "'" match-1)
+                           (string-match-p "['¯0-9]" match-3))
                       (and (string-equal ":" (substring match-3 0 1))
                            (not (dyalog-position-is-in-dfun match-3-start))))
             (replace-match "\\1\\3")
