@@ -1387,7 +1387,7 @@ If it is supplied, BOUND limits the search."
         (done nil))
     (ignore-errors (forward-char))  ; skip past nabla
     (while (not done)
-      (if (not (skip-chars-forward "^{∇" end))
+      (if (= 0 (skip-chars-forward "^{∇" end))
           (progn
             (goto-char end)
             (setq done t))
