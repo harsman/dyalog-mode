@@ -1280,7 +1280,7 @@ Return t if a function definition was found, otherwise return nil."
         (if (or (bobp) (not (dyalog-in-comment-or-string)))
             (progn
               (setq done t)
-              (if (dyalog-on-tradfn-header 'only-after-nabla)
+              (if (and (dyalog-on-tradfn-header 'only-after-nabla) (not (dyalog-in-dfun)))
                   (progn
                     (skip-chars-backward "^∇")
                     (ignore-errors (backward-char))
@@ -1329,7 +1329,7 @@ If supplied, LIMIT limits the search."
               done  t))
        ((dyalog-in-comment-or-string)
         (ignore-errors (forward-char)))
-       ((dyalog-on-tradfn-header 'only-after-nabla)
+       ((and (dyalog-on-tradfn-header 'only-after-nabla) (not (dyalog-in-dfun)))
         (setq found t
               done  t))
        (t
