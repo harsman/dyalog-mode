@@ -1387,26 +1387,23 @@ If it is supplied, BOUND limits the search."
         (done nil))
     (ignore-errors (forward-char))  ; skip past nabla
     (while (not done)
-      (if (= 0 (skip-chars-forward "^{∇" end))
-          (progn
-            (goto-char end)
-            (setq done t))
-        (cond
-         ((dyalog-in-comment-or-string)
-          (ignore-errors (forward-char)))
-         ((eq (char-after) ?{)
-          (condition-case nil
-              (forward-sexp)
-            (scan-error (goto-char end))))
-         ((eq (char-after) ?∇)
-          (save-excursion
-            (goto-char (line-beginning-position))
-            (if (looking-at-p "^ *∇")
-                (setq done t)
-              (forward-char))))
-         (t
-          (ignore-errors (forward-char))))
-        (setq done (or done (>= (point) end)))))))
+      (skip-chars-forward "^{∇" end)
+      (cond
+       ((dyalog-in-comment-or-string)
+        (ignore-errors (forward-char)))
+       ((eq (char-after) ?{)
+        (condition-case nil
+            (forward-sexp)
+          (scan-error (goto-char end))))
+       ((eq (char-after) ?∇)
+        (if (save-excursion
+              (goto-char (line-beginning-position))
+              (looking-at-p "^ *∇"))
+            (setq done t)
+          (forward-char)))
+       (t
+        (ignore-errors (forward-char))))
+      (setq done (or done (>= (point) end))))))
 
 (defun dyalog-skip-comment-or-string (&optional context)
   "If point is in a comment or string, move backward out of it.
