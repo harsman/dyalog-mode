@@ -601,7 +601,7 @@ the delimiter that triggers the starting or ending of a
 block (e.g. \":If\" or \"∇\"."
   (let ((next-line (min (point-max) (1+ (line-end-position)))))
     (cond
-     ((dyalog-on-tradfn-header)
+     ((and (not dfunstack) (dyalog-on-tradfn-header))
       (list :indent-type 'tradfn-start :delimiter nil :label-at-bol nil
             :next-line next-line))
      ((looking-at dyalog-naked-nabla)
