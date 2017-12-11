@@ -92,11 +92,11 @@ together with AltGr produce the corresponding apl character in APLCHARS."
 (defconst dyalog-comment-regex
   "^\\s-*⍝")
 
-(defvar dyalog-ascii-chars "][<>+---=/¨~\\?*(){}&|.;"
+(defvar dyalog-ascii-chars "][<>+---=/¨~\\?*(){}&|.;@"
   "APL symbols also present in ASCII.")
 
 (defvar dyalog-keyword-chars
-  "×≤≥≠∨∧÷∊⍴↑↓⍳○←→⌈⌊∘⍎⍕⊂⊃⊆⊇∩∪⊥⊤⍨⍒⍋⌽⍉⊖⍟⍱⍲⍬⌹≡≢⍪⌿⍀⍺⍵⎕⍞⋄⍷⍸⌷⍣⊣⊢⌶")
+  "×≤≥≠∨∧÷∊⍴↑↓⍳○←→⌈⌊∘⍎⍕⊂⊃⊆⊇∩∪⊥⊤⍨⍒⍋⌽⍉⊖⍟⍱⍲⍬⌹≡≢⍪⌿⍀⍺⍵⎕⍞⋄⍷⍸⌷⍣⊣⊢⌶⌺")
 
 (defvar dyalog-name  "[A-Za-z∆_]+[A-Za-z∆_0-9]*")
 
@@ -197,7 +197,7 @@ return value or right argument of a traditional defined function."
    ;; Localizations
    '(";\\([A-Za-z0-9_∆]+\\)" (1 font-lock-constant-face nil))
    ;; Illegal chars (and del/nabla)
-   '("[∇$@\"%]+" . font-lock-warning-face)
+   '("[∇$\"%]+" . font-lock-warning-face)
    ;; Local names. Note that the face specified here doesn't matter since
    ;; dyalog-fontify-locals-matcher always returns nil and sets the face on
    ;; its own.
