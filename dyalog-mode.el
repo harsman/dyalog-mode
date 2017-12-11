@@ -100,8 +100,12 @@ together with AltGr produce the corresponding apl character in APLCHARS."
 
 (defvar dyalog-name  "[A-Za-z∆_]+[A-Za-z∆_0-9]*")
 
+(defconst dyalog-real-number-regex
+  "¯?\\([0-9]+\\.?[0-9]*\\|\\.[0-9]+\\)\\([Ee]¯?[0-9]+\\.?[0-9]*\\)?")
+
 (defvar dyalog-number
-  "[^A-Za-z_∆0-9]\\(¯?[0-9]+\\.?[0-9]*\\(E¯?[0-9]+\\.?[0-9]*\\)?\\)")
+  (concat "[^A-Za-z_∆0-9]\\(" dyalog-real-number-regex
+          "\\([Jj]" dyalog-real-number-regex "\\)?\\)"))
 
 (defconst dyalog-access-type
   "^\\s-*:Access +\\(WebMethod\\|\\(?:\\(Public\\|Private\\)\\)?\\(?: +\\(Instance\\( +Override\\|Overridable\\)\\|Shared\\)\\)?\\)")
@@ -189,7 +193,7 @@ return value or right argument of a traditional defined function."
    `(,dyalog-middle-keyword-regex . (2 font-lock-keyword-face nil))
    ;; Labels
    '("^\\s-*\\([A-Za-z_][A-Za-z0-9_]*:\\)" . (1 font-lock-keyword-face t))
-   ;; Numerical constans
+   ;; Numeric constans
    `(,dyalog-number (1 font-lock-constant-face nil))
    ;; APL chars
    (cons (concat "[" dyalog-ascii-chars dyalog-keyword-chars ":" "]")
