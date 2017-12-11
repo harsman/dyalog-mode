@@ -2244,6 +2244,7 @@ Optional argument LINE specifies which line to move point to."
 (defconst dyalog-symbol-help-names
   (let ((h (make-hash-table :test 'equal)))
     (dolist (e '(("&" . "Ampersand")
+                 ("@" . "At")
                  ("]" ."Brackets")
                  ("⊖" . "Circle Bar")
                  ("○" . "Circle")
@@ -2303,6 +2304,7 @@ Optional argument LINE specifies which line to move point to."
                  ("⍀" . "Slope Bar")
                  ("\\" . "Slope")
                  ("*" . "Star")
+                 ("⌺" . "Stencil")
                  ("|" . "Stile")
                  ("⍕" . "Thorn Symbol")
                  ("~" . "Tilde")
@@ -2437,7 +2439,7 @@ Optional argument LINE specifies which line to move point to."
     "Timer" "Undo" "VScroll" "VThumbDrag" "Wait" "WinIniChange" "WorkspaceLoaded"))
 
 (defconst dyalog-help-root
-  "http://help.dyalog.com/15.0/Content/")
+  "http://help.dyalog.com/16.0/Content/")
 
 (defconst dyalog-help-suffix
   ".htm")
