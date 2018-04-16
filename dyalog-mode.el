@@ -1957,7 +1957,7 @@ Optional argument BOUND bounds the search."
       (push-mark)
       (if in-dfun
           (let* ((dfun-start (plist-get in-dfun :start))
-                 (dfun-max   (min (plist-get in-dfun :end) dfun-start)))
+                 (dfun-max   (max (plist-get in-dfun :end) dfun-start)))
             (goto-char dfun-start)
             (unless (dyalog-search-symbol symbol-name dfun-max)
               (pop-mark)
