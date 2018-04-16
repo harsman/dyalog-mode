@@ -557,7 +557,7 @@ only needs to be supplied if it differs from the default."
       #'dyalog-indent-search-stop-generic))))
 
 (defun dyalog-indent-search-stop-access (blockstack indent-status funcount)
-  "Return if we have forund an indentation root and no chars to indent.
+  "Return if we have found an indentation root and no chars to indent.
 :Access keywords are a special case since they are aligned
 either to a tradfn or at the same level as their parent :Property or :Class block."
   (let ((indent-type  (plist-get indent-status :indent-type))
