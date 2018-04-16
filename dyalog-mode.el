@@ -1858,12 +1858,41 @@ if it knows where the symbol is defined.")
   'dyalog-default-symbol-to-filename
   "A function to call to translate a symbol name to a filename.")
 
+(defvar dyalog-goto-definition-prefer-other-window
+  nil
+  "Bind this to 'other-window if you want to show a definition in another window.")
+
 (defun dyalog-default-symbol-to-filename (name)
-    "Translate an APL symbol to a filename."
+    "Translate APL symbol NAME to a filename, by just appending \".apl\"."
     (concat default-directory name ".apl"))
 
 (defun dyalog-symbol-to-filename (name)
+  "Translate APL symbol NAME to a filename.
+If `dyalog-symbol-to-filename-function` is defined, call that,
+otherwise use `dyalog-default-symbol-to-filename`."
   (funcall dyalog-symbol-to-filename-function name))
+
+(defun dyalog-goto-file-line (symbol-name file line)
+  "Go to the definition of SYMBOL-NAME in FILE at LINE."
+  (let* ((the-file (or file (dyalog-symbol-to-filename symbol-name)))
+         (buffer (find-buffer-visiting the-file))
+         (window (when buffer (get-buffer-window buffer))))
+     (when window
+      (select-window window))
+     (dyalog-edit-name symbol-name file line dyalog-goto-definition-prefer-other-window)))
+
+(defun dyalog-goto-marker-definition (marker)
+  "Goto definition of name as defined in MARKER."
+  (let* ((buffer (marker-buffer marker))
+         (window (when buffer (get-buffer-window buffer))))
+    (cond
+     ((and window (not (eq (current-buffer) buffer)))
+      (select-window window))
+     (dyalog-goto-definition-prefer-other-window
+      (switch-to-buffer-other-window buffer))
+     (t
+      (switch-to-buffer buffer)))
+    (goto-char marker)))
 
 (defun dyalog-goto-definition ()
   "Visit the definition of the symbol at point."
@@ -1872,16 +1901,33 @@ if it knows where the symbol is defined.")
         (current-space (dyalog-space-stack-at-pos (point))))
     (unless (or (not name)
                 (dyalog-in-keyword))
-      (ring-insert find-tag-marker-ring (point-marker))
-      (let ((found nil))
+      (if (fboundp 'xref-push-marker-stack)
+          (xref-push-marker-stack)
+        (ring-insert find-tag-marker-ring (point-marker)))
+      (let ((found nil)
+            (hit nil))
         (cl-loop for func in dyalog-goto-definition-functions
                  do
-                 (setq found (funcall func name current-space))
+                 (setq hit (funcall func name current-space)
+                       found (not (not hit)))
+                 (when hit
+                   (if (markerp hit)
+                       (dyalog-goto-marker-definition hit)
+                     (let ((file (plist-get hit :file))
+                           (line (plist-get hit :line))
+                           (symbol-name (or (plist-get hit :symbol) name)))
+                       (dyalog-goto-file-line symbol-name file line))))
                  until found)
         (if found
             t
           (pop-tag-mark)
           (error "Cannot find definition for %s" name))))))
+
+(defun dyalog-goto-definition-other-window ()
+  "Visit the definition of the symbol at point, in another window."
+  (interactive)
+  (let ((dyalog-goto-definition-prefer-other-window 'other-window))
+    (dyalog-goto-definition)))
 
 (defun dyalog-search-symbol (symbol-name &optional bound)
   "Search for a use of SYMBOL-NAME, ignore use inside comments and strings.
@@ -1907,29 +1953,31 @@ Optional argument BOUND bounds the search."
          (header-end    (nth 3 tradfn-info))
          (tradfn-end    (nth 4 tradfn-info))
          (start (point)))
-    (push-mark)
-    (if in-dfun
-        (let* ((dfun-start (plist-get in-dfun :start))
-               (dfun-max   (min (plist-get in-dfun :end) dfun-start)))
-          (goto-char dfun-start)
-          (unless (dyalog-search-symbol symbol-name dfun-max)
+    (save-excursion
+      (push-mark)
+      (if in-dfun
+          (let* ((dfun-start (plist-get in-dfun :start))
+                 (dfun-max   (min (plist-get in-dfun :end) dfun-start)))
+            (goto-char dfun-start)
+            (unless (dyalog-search-symbol symbol-name dfun-max)
+              (pop-mark)
+              (goto-char start)
+              nil))
+        (cond
+         ((member (or (dyalog-symbol-root symbol-name) symbol-name)
+                  tradfn-locals)
+          (dyalog-beginning-of-defun)
+          (goto-char header-end)
+          (unless (dyalog-search-symbol symbol-name tradfn-end)
             (pop-mark)
-            (goto-char start)
-            nil))
-      (cond
-       ((member (or (dyalog-symbol-root symbol-name) symbol-name)
-                tradfn-locals)
-        (dyalog-beginning-of-defun)
-        (goto-char header-end)
-        (unless (dyalog-search-symbol symbol-name tradfn-end)
-          (pop-mark)
-          (goto-char start)))
-       ((member symbol-name tradfn-args)
-        (dyalog-beginning-of-defun)
-        (unless (dyalog-search-symbol symbol-name header-end)
-          (pop-mark)
-          (goto-char start)))))
-    (not (eq (point) start))))
+            (goto-char start)))
+         ((member symbol-name tradfn-args)
+          (dyalog-beginning-of-defun)
+          (unless (dyalog-search-symbol symbol-name header-end)
+            (pop-mark)
+            (goto-char start)))))
+      (when (not (eq (point) start))
+        (point-marker)))))
 
 (defun dyalog-goto-definition-local (symbol-name &optional current-space)
   "If SYMBOL-NAME is defined as a function in the current buffer, move there.
@@ -1947,28 +1995,36 @@ name a or b.c.a."
                          (assoc qualified-name alist)))
          (found (and alist definition)))
     (when found
-      (imenu definition))
-    found))
+      (cdr definition))))
 
 (defun dyalog-goto-definition-single-file (symbol-name &optional _current-space)
   "If SYMBOL-NAME is a global function, visit the file it's defined in."
   (let* ((name (car (last (dyalog-symbol-parts symbol-name))))
           (filename (dyalog-symbol-to-filename name)))
     (if (file-exists-p filename)
-        (progn
-          (dyalog-edit-name name)
-          t)
-      nil)))
+        (list :file filename))))
 
-(defun dyalog-edit-name (symbol-name &optional line)
-  "Edit SYMBOL-NAME and optionally move point to LINE.
-If an active connection to Dyalog exists, use that to get the
-source, otherwise fetch it from disk."
+(defvar dyalog-symbol-preferred-window
+  ()
+  "Stack of preferred window to show edit in.")
+
+(defun dyalog-edit-name (symbol-name &optional file line other-window)
+  "Edit SYMBOL-NAME (found in FILE) and optionally move point to LINE.
+If OTHER-WINDOW is 'other-window, try to show SYMBOL-NAME in
+another window than the current one. If OTHER-WINDOW is a window,
+show the symbol in that specific window.  If an active connection
+to Dyalog exists, use that to get the source, otherwise fetch it
+from disk."
   (let ((conn (dyalog-editor-buffer-connected))
-        (filename (dyalog-symbol-to-filename symbol-name)))
+        (filename (or file (dyalog-symbol-to-filename symbol-name))))
     (if conn
-        (dyalog-editor-edit symbol-name line)
-      (find-file filename)
+        (progn
+          (when other-window
+            (push other-window dyalog-symbol-preferred-window))
+          (dyalog-editor-edit symbol-name line))
+      (if other-window
+          (find-file-other-window filename)
+        (find-file filename))
       (when line
         (goto-char (point-min))
         (forward-line (1- line))))))
@@ -2080,7 +2136,7 @@ of the command and END is where it ends."
                (goto-char (match-end 0))))
            (delete-region start (1+ end))))
         (t
-         (error "Ivalid message received"))))
+         (error "Invalid message received"))))
 
 (defun dyalog-open-edit-buffer (process name src &optional lineno path)
   "Open a buffer to edit object from socket PROCESS named NAME with source SRC.
@@ -2093,8 +2149,20 @@ edit buffer."
                       nil))
          (bufname (if file-name
                       (file-name-nondirectory file-name)
-                    name)))
-    (switch-to-buffer bufname)
+                    name))
+         (buffer (if file-name
+                     (find-buffer-visiting file-name)
+                   (get-buffer bufname)))
+         (window (when buffer (get-buffer-window buffer)))
+         (preferred (when dyalog-symbol-preferred-window
+                      (pop dyalog-symbol-preferred-window))))
+    (cond
+     ((eq preferred 'other-window)
+      (pop-to-buffer (or buffer bufname)))
+     ((windowp (or window preferred))
+      (select-window (or window preferred)))
+     (t
+      (switch-to-buffer (or buffer bufname))))
     (setq buffer-undo-list t)
     (widen)
     (let ((pos (point)))
