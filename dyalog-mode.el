@@ -1881,7 +1881,7 @@ otherwise use `dyalog-default-symbol-to-filename`."
       (select-window window))
      (dyalog-edit-name symbol-name file line dyalog-goto-definition-prefer-other-window)))
 
-(defun dyalog-goto-marker-definition (marker)
+(defun dyalog-goto-marker-definition (marker &optional dont-reposition)
   "Goto definition of name as defined in MARKER."
   (let* ((buffer (marker-buffer marker))
          (window (when buffer (get-buffer-window buffer))))
@@ -1892,7 +1892,9 @@ otherwise use `dyalog-default-symbol-to-filename`."
       (switch-to-buffer-other-window buffer))
      (t
       (switch-to-buffer buffer)))
-    (goto-char marker)))
+    (goto-char marker)
+    (unless dont-reposition
+      (reposition-window))))
 
 (defun dyalog-goto-definition ()
   "Visit the definition of the symbol at point."
@@ -1915,8 +1917,12 @@ otherwise use `dyalog-default-symbol-to-filename`."
                        (dyalog-goto-marker-definition hit)
                      (let ((file (plist-get hit :file))
                            (line (plist-get hit :line))
-                           (symbol-name (or (plist-get hit :symbol) name)))
-                       (dyalog-goto-file-line symbol-name file line))))
+                           (symbol-name (or (plist-get hit :symbol) name))
+                           (marker (plist-get hit :marker))
+                           (dont-reposition (plist-get hit :dont-reposition)))
+                       (if marker
+                           (dyalog-goto-marker-definition marker dont-reposition)
+                         (dyalog-goto-file-line symbol-name file line)))))
                  until found)
         (if found
             t
@@ -1977,7 +1983,7 @@ Optional argument BOUND bounds the search."
             (pop-mark)
             (goto-char start)))))
       (when (not (eq (point) start))
-        (point-marker)))))
+        (list :marker (point-marker) :dont-reposition t)))))
 
 (defun dyalog-goto-definition-local (symbol-name &optional current-space)
   "If SYMBOL-NAME is defined as a function in the current buffer, move there.
@@ -2027,7 +2033,8 @@ from disk."
         (find-file filename))
       (when line
         (goto-char (point-min))
-        (forward-line (1- line))))))
+        (forward-line (1- line))
+        (reposition-window)))))
 
 ;;; Socket connection
 (defvar dyalog-connection ()
