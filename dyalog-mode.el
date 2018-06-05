@@ -1993,7 +1993,9 @@ symbol. A name a inside space b.c can reference either a local
 name a or b.c.a."
   (when (not (fboundp 'imenu--make-index-alist))
     (require 'imenu))
-  (let* ((alist (imenu--make-index-alist))
+  (let* ((alist (condition-case nil
+                    (imenu--make-index-alist)
+                  (imenu-unavailable nil)))
          (qualified-name (when current-space
                            (mapconcat 'identity (append current-space (list symbol-name))
                                       ".")))
