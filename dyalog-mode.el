@@ -654,7 +654,7 @@ AT-ROOT-FUNCTION returns t when we have reached the corresponding :For."
                   (progn
                     (when (or (equal dyalog-any-delimiter (car blockstack))
                               (compare-strings keyword  nil nil
-                                               (car blockstack) nil nil
+                                               (or (car blockstack) "") nil nil
                                                'ignore-case))
                       (pop blockstack))
                     nil))
