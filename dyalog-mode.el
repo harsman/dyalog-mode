@@ -633,8 +633,10 @@ AT-ROOT-FUNCTION returns t when we have reached the corresponding :For."
     (save-excursion
       (while (not indentation)
         ;; TODO: We should probably skip past d-funs
+        
         (dyalog-previous-logical-line)
-        (let* ((status (dyalog-indent-status nil))
+        (let* ((in-dfun (dyalog-in-dfun))
+               (status (dyalog-indent-status nil))
                (keyword (plist-get status :delimiter))
                (indent-type (plist-get status :indent-type))
                (root (apply at-root-function
@@ -642,6 +644,11 @@ AT-ROOT-FUNCTION returns t when we have reached the corresponding :For."
                (at-root (car root)))
           (setq indentation
                 (cond
+                 (in-dfun
+                  (goto-char (plist-get in-dfun :start))
+                  (dyalog-next-logical-line)
+                  (dyalog-previous-logical-line)
+                  nil)
                  (at-root
                   (nth 1 root))
                  ((eq 'block-end indent-type)
