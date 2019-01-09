@@ -2593,7 +2593,8 @@ browser is used for Dyalog documentation."
       (browse-url url t))))
 
 (eval-after-load "which-func"
-  '(add-to-list 'which-func-modes 'dyalog-mode))
+  '(when (listp which-func-modes)
+     (add-to-list 'which-func-modes 'dyalog-mode)))
 
 ;;;###autoload
 (define-derived-mode dyalog-mode prog-mode "Dyalog"
