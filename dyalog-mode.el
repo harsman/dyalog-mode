@@ -137,7 +137,11 @@ return value or right argument of a traditional defined function."
           "\\) *← *\\)?"))
 
 (defconst dyalog-func-larg
-  "\\(?:\\(?3:[A-Za-z_]+\\)\\(?:\\_>\\| +\\)\\|{\\(?3:[A-Za-z_]+\\)} *\\)")
+  (concat
+   "\\(?:"
+   "\\(?3:" dyalog-name "\\)\\(?:\\_>\\| +\\)" "\\|"
+   "{\\(?3:" dyalog-name "+\\)}"
+   "*\\)"))
 
 (defconst dyalog-func-name (concat "\\(?1:" dyalog-name "\\)"))
 
