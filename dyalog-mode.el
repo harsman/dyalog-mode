@@ -98,7 +98,7 @@ together with AltGr produce the corresponding apl character in APLCHARS."
 (defvar dyalog-keyword-chars
   "×≤≥≠∨∧÷∊⍴↑↓⍳○←→⌈⌊∘⍎⍕⊂⊃⊆⊇∩∪⊥⊤⍨⍒⍋⌽⍉⊖⍟⍱⍲⍬⌹≡≢⍪⌿⍀⍺⍵⎕⍞⋄⍷⍸⌷⍣⊣⊢⌶⌺")
 
-(defvar dyalog-name  "[A-Za-z∆_]+[A-Za-z∆_0-9]*")
+(defconst dyalog-name  "[A-Za-z∆_][A-Za-z∆_0-9]*")
 
 (defconst dyalog-real-number-regex
   "¯?\\([0-9]+\\.?[0-9]*\\|\\.[0-9]+\\)\\([Ee]¯?[0-9]+\\.?[0-9]*\\)?")
@@ -637,7 +637,7 @@ AT-ROOT-FUNCTION returns t when we have reached the corresponding :For."
     (save-excursion
       (while (not indentation)
         ;; TODO: We should probably skip past d-funs
-        
+
         (dyalog-previous-logical-line)
         (let* ((in-dfun (dyalog-in-dfun))
                (status (dyalog-indent-status nil))
