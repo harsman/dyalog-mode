@@ -128,7 +128,7 @@
           host port←socket ⎕WG'LocalAddr' 'LocalPort'
           lispconnect←'(dyalog-editor-connect \"',host,'\" ',(⍕port),')'
 
-          :If 0∊⍴r←⎕SH'emacsclient --no-wait -e "',lispconnect,'"'
+          :If 0∊⍴r←⎕SH'emacsclient --alternative-editor "" --no-wait -e "',lispconnect,'"'
               ⍝ Emacs server not running, start Emacs in background
               ⎕←'Emacs server not running, starting a new instance...'
               elisp←'(progn ',lispconnect,'(iconify-frame nil))'
@@ -247,9 +247,9 @@
               incomment←(~instring)∧∨\⍺='⍝'
               ∨/∨/(~incomment∨instring)∧⍵⍷⍺
           }
-          
-          :If header hasKeyword ':class'
-          :OrIf header hasKeyword ':namespace'
+
+          :If header hasKeyword':class'
+          :OrIf header hasKeyword':namespace'
               r←#.⎕FIX ##.splitlines src
           :Else
               r←#.⎕FX↑##.splitlines src
@@ -325,7 +325,7 @@
               path←#.⍎name,'.SALT_Data.SourceFile'
           :ElseIf 3 4∊⍨#.⎕NC name
               src←##.leftalign #.⎕CR name
-              tagline←⊃##.cm2v (src ##.startswith '⍝∇⍣')⌿src
+              tagline←⊃##.cm2v(src ##.startswith'⍝∇⍣')⌿src
               path←{(∧\⍵≠saltdelim)/⍵}(1+⍴'⍝∇⍣')↓tagline
           :Else
               path←''
