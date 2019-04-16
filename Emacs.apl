@@ -128,7 +128,7 @@
           host port←socket ⎕WG'LocalAddr' 'LocalPort'
           lispconnect←'(dyalog-editor-connect \"',host,'\" ',(⍕port),')'
 
-          :If 0∊⍴r←⎕SH'emacsclient --alternative-editor "" --no-wait -e "',lispconnect,'"'
+          :If 0∊⍴r←⎕SH'emacsclient --no-wait -e "',lispconnect,'"'
               ⍝ Emacs server not running, start Emacs in background
               ⎕←'Emacs server not running, starting a new instance...'
               elisp←'(progn ',lispconnect,'(iconify-frame nil))'
