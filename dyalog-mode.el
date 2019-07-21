@@ -1946,13 +1946,10 @@ otherwise use `dyalog-default-symbol-to-filename`."
   (let ((dyalog-goto-definition-prefer-other-window 'other-window))
     (dyalog-goto-definition)))
 
-(defun dyalog-search-symbol (symbol-name &optional bound)
-  "Search for a use of SYMBOL-NAME, ignore use inside comments and strings.
-Optional argument BOUND bounds the search."
-  (let ((regex (concat "\\_<"
-                       (regexp-quote symbol-name)
-                       "\\_>"))
-        (done nil)
+(defun dyalog-search-token (regex &optional bound)
+  "Search for REGEX, ignore use inside comments and strings.
+Optional argument BOUND bounds search."
+  (let ((done nil)
         (found nil))
     (while (not done)
       (if (re-search-forward regex bound t)
@@ -1960,6 +1957,14 @@ Optional argument BOUND bounds the search."
                 found done)
         (setq done t)))
     found))
+
+(defun dyalog-search-symbol (symbol-name &optional bound)
+  "Search for a use of SYMBOL-NAME, ignore use inside comments and strings.
+Optional argument BOUND bounds the search."
+  (let ((regex (concat "\\_<"
+                       (regexp-quote symbol-name)
+                       "\\_>")))
+    (dyalog-search-token regex bound)))
 
 (defun dyalog-goto-definition-var (symbol-name &optional _current-space)
   "Move to the first occurence of SYMBOL-NAME within the current defun."
@@ -1976,7 +1981,7 @@ Optional argument BOUND bounds the search."
           (let* ((dfun-start (plist-get in-dfun :start))
                  (dfun-max   (max (plist-get in-dfun :end) dfun-start)))
             (goto-char dfun-start)
-            (unless (dyalog-search-symbol symbol-name dfun-max)
+            (unless (dyalog-search-token (concat "\\_<" symbol-name "←") dfun-max)
               (pop-mark)
               (goto-char start)
               nil))
