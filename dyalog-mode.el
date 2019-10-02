@@ -80,7 +80,7 @@ together with AltGr produce the corresponding apl character in APLCHARS."
         (define-key keymap aplkey fun)))))
 
 (defconst dyalog-label-regex
-  "^ *\\([A-Za-z_]+[A-Za-z0-9_]*:\\)")
+  "^\\s-*\\([A-Za-z_][A-Za-z0-9_]*:\\)")
 
 (defconst dyalog-keyword-regex
   (concat "\\(\\(?:^\\s-*\\|\\(?5:" dyalog-label-regex " *\\)\\)"
@@ -185,6 +185,11 @@ return value or right argument of a traditional defined function."
   "Face used for localized system variables inside APL functions."
   :group 'dyalog)
 
+(defface dyalog-label-definition-face
+  '((t (:inherit font-lock-keyword-face)))
+  "Face used for label definitions inside APL functions"
+  :group 'dyalog)
+
 (defvar dyalog-font-lock-keywords
   (list
    ;; See emacs help for `font-lock-keywords' for a description of how the
@@ -196,7 +201,7 @@ return value or right argument of a traditional defined function."
      . (2 font-lock-keyword-face nil))
    `(,dyalog-middle-keyword-regex . (2 font-lock-keyword-face nil))
    ;; Labels
-   '("^\\s-*\\([A-Za-z_][A-Za-z0-9_]*:\\)" . (1 font-lock-keyword-face t))
+   `(,dyalog-label-regex . (1 'dyalog-label-definition-face t))
    ;; Numeric constans
    `(,dyalog-number (1 font-lock-constant-face nil))
    ;; APL chars
