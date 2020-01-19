@@ -60,7 +60,7 @@ If you have an older version of Emacs, please follow the
 ### Installing manually
 
 To install manually, clone the
-[mercurial repository](https://bitbucket.org/harsman/dyalog-mode) and add the
+[git repository](https://github.com/harsman/dyalog-mode.git) and add the
 following to your init file:
 
 ```lisp

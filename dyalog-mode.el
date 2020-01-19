@@ -6,7 +6,7 @@
 ;; Version: 0.7
 ;; Package-Requires: ((cl-lib "0.2")(emacs "24"))
 ;; Keywords: languages
-;; URL: https://bitbucket.org/harsman/dyalog-mode/
+;; URL: https://github.com/harsman/dyalog-mode.git
 
 ;; This file is not part of GNU Emacs.
 
