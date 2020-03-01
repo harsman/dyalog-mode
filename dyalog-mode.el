@@ -32,7 +32,7 @@
 ;; processes over a socket, allowing Emacs to be used as the editor for a
 ;; Dyalog session.
 ;;
-;; Get the latest version at http://bitbucket.org/harsman/dyalog-mode
+;; Get the latest version at https://github.com/harsman/dyalog-mode
 
 ;;; Code:
 
