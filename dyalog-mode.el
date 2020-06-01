@@ -4,7 +4,7 @@
 
 ;; Author: Joakim Hårsman <joakim.harsman@gmail.com>
 ;; Version: 0.7
-;; Package-Requires: ((cl-lib "0.2")(emacs "24"))
+;; Package-Requires: ((cl-lib "0.2")(emacs "24.1"))
 ;; Keywords: languages
 ;; URL: https://github.com/harsman/dyalog-mode.git
 
@@ -96,7 +96,7 @@ together with AltGr produce the corresponding apl character in APLCHARS."
   "APL symbols also present in ASCII.")
 
 (defvar dyalog-keyword-chars
-  "×≤≥≠∨∧÷∊⍴↑↓⍳○←→⌈⌊∘⍎⍕⊂⊃⊆⊇∩∪⊥⊤⍨⍒⍋⌽⍉⊖⍟⍱⍲⍬⌹≡≢⍪⌿⍀⍺⍵⎕⍞⋄⍷⍸⌷⍣⊣⊢⌶⌺")
+  "×≤≥≠∨∧÷∊⍴↑↓⍳○←→⌈⌊∘⍎⍕⊂⊃⊆⊇∩∪⊥⊤⍨⍒⍋⌽⍉⊖⍟⍱⍲⍬⌹≡≢⍪⌿⍀⍺⍵⎕⍞⋄⍷⍸⌷⍣⊣⊢⌶⌺⍥")
 
 (defconst dyalog-name  "[A-Za-z∆_][A-Za-z∆_0-9]*")
 
@@ -2537,7 +2537,7 @@ Optional argument LINE specifies which line to move point to."
     "Timer" "Undo" "VScroll" "VThumbDrag" "Wait" "WinIniChange" "WorkspaceLoaded"))
 
 (defconst dyalog-help-root
-  "http://help.dyalog.com/16.0/Content/")
+  "http://help.dyalog.com/17.1/Content/")
 
 (defconst dyalog-help-suffix
   ".htm")
