@@ -309,14 +309,33 @@
           ∘
         ∇
 
-        ∇ path←getpath name;saltpath
+        ∇ path←getpath name;saltpath;dyapath
           :If ~0∊⍴saltpath←getSALTpath name
               path←saltpath
-          :ElseIf 3≠⎕NC'#.',getPath
-              path←''
-          :Else
+          :ElseIf ~0∊⍴dyapath←getSourcePath name
+              path←dyapath
+          :ElseIf 3=⎕NC'#.',getPath
               path←(#.⍎'#.',getPath)name
+          :Else
+              path←''
           :EndIf
+        ∇
+
+        ∇ path←getSourcePath name;version;sourceMap;absName;b;relName;namePath
+          version←{⊃2⊃⎕VFI(∧\⍵≠'.')/⍵}2⊃'.'⎕WG'AplVersion'
+          :If version<16
+              path←''
+              :Return
+          :EndIf
+
+          absName←name,⍨('#.'≢2↑name)/'#.'
+          b←{⌽∧\⍵≠'.'}⌽absName
+          namePath←{(¯1×'.'=⊃⌽⍵)↓⍵}(~b)/absName
+          relName←((9=#.⎕NC absName)/'#.'),b/absName
+          sourceMap←↑5177⌶⍬
+          sourceMap[;1 2]←⍕¨sourceMap[;1 2]
+          b←(↓sourceMap[;1 2])∊⊂relName namePath
+          path←⊃b/sourceMap[;4]
         ∇
 
         ∇ path←getSALTpath name;src;tagline
