@@ -4,7 +4,7 @@
 
 ;; Author: Joakim Hårsman <joakim.harsman@gmail.com>
 ;; Version: 0.7
-;; Package-Requires: ((cl-lib "0.2")(emacs "24.1"))
+;; Package-Requires: ((cl-lib "0.2")(emacs "24.3"))
 ;; Keywords: languages
 ;; URL: https://github.com/harsman/dyalog-mode.git
 
@@ -39,6 +39,8 @@
 
 
 (require 'cl-lib)
+(require 'json)
+(require 'comint)
 
 ;; Set up mode specific keys below
 (defvar dyalog-mode-map
@@ -2066,6 +2068,9 @@ from disk."
 (defvar dyalog-connections ()
   "A list of all connections to Dyalog processes.")
 
+(defvar dyalog-ride-connections ()
+  "A list of all RIDE connections to Dyalog interpreters.")
+
 ;;;###autoload
 (defun dyalog-session-connect (&optional host port)
   "Connect to a Dyalog session.
@@ -2300,6 +2305,542 @@ Optional argument LINE specifies which line to move point to."
         (linespec (if line (format "[%d]" line) nil )))
     (setq dyalog-connection process)
     (process-send-string process (concat "src " name linespec "\e"))))
+
+;; RIDE connections
+
+(defvar dyalog-ride-process
+  nil
+  "Process used for communicating with Dyalog via RIDE")
+
+(defvar dyalog-ride-session
+  nil
+  "Buffer used for the session for the given RIDE connection")
+
+(defvar dyalog-window-id
+  nil
+  "Dyalog window id for the current buffer")
+
+(defvar dyalog-thread-id
+  nil
+  "Dyalog thread id for the current (debugger) buffer")
+
+(defvar dyalog-ride-selected-thread
+  nil
+  "The currently selected thread in the Dyalog session.
+A thread needs to be selected before you can issue debugger
+commands such as Continue, TraceForward etc.")
+
+(defun dyalog-ride-connect (host port session-buffer)
+  "Connect to a Dyalog process as an editor.
+HOST (defaults to localhost) and PORT (defaults to 8080) give
+adress to connect to."
+  (let* ((bufname (generate-new-buffer-name " *dyalog-ride-receive*"))
+         (process (make-network-process :name "dyalog-ride"
+                                        :buffer bufname
+                                        :family 'ipv4 :host host :service port
+                                        :sentinel 'dyalog-editor-sentinel
+                                        :filter 'dyalog-ride-receive
+                                        :coding 'no-conversion)))
+    (push process dyalog-ride-connections)
+    (with-current-buffer (process-buffer process)
+      (setq-local dyalog-ride-session session-buffer)
+      (set-buffer-multibyte nil))
+    ;;(message "Connected to RIDE using buffer %s" (buffer-name bufname))
+    (set-process-query-on-exit-flag process nil)
+    process))
+
+(defun dyalog-ride-session (&optional host port)
+  "Start a session with a Dyalog interpreter via PROCESS-ARG"
+  (interactive (list (read-string "Host (default localhost):"
+                                  "127.0.0.1")
+                     (read-number "Port (default 8080):" 8080)))
+  (let ((old-point nil)
+        (buf-name "*Dyalog-session*")
+        (process nil))
+    (unless (comint-check-proc buf-name)
+      (with-current-buffer (get-buffer-create buf-name)
+        (unless (zerop (buffer-size)) (setq old-point (point)))
+        (dyalog-session-mode)))
+    (setq process (dyalog-ride-connect host port buf-name))
+    (pop-to-buffer-same-window buf-name)
+    (setq-local dyalog-ride-process process
+                dyalog-ride-selected-thread nil)
+    (when old-point (push-mark old-point))))
+
+(defvar dyalog-prompt  
+  "      "
+  "Default prompt in a Dyalog session")
+
+(defvar dyalog-prompt-regexp
+  (concat "^" (regexp-quote dyalog-prompt))
+  "Regexp to match the prompt at the beginning of a line")
+
+(defvar dyalog-session-mode-map
+  (let ((map (make-sparse-keymap)))
+    (define-key map "\C-m" #'dyalog-ride-send-input)
+    (define-key map "\C-j" #'dyalog-ride-send-input)
+    (define-key map (kbd "<C-return>") #'dyalog-ride-session-trace)
+    (define-key map (kbd "C-c C-b") #'dyalog-ride-interrupt)
+    (define-key map "\177" 'backward-delete-char-untabify)
+    map)
+  "Default key map for a Dyalog RIDE session.")
+
+(defvar dyalog-debugger-mode-map
+  (let ((map (make-sparse-keymap)))
+    (define-key map "p" #'dyalog-debugger-backward)
+    (define-key map "n" #'dyalog-debugger-forward)
+    (define-key map "\C-m" #'dyalog-debugger-step-over)
+    (define-key map (kbd "SPC") #'dyalog-debugger-step-over)
+    (define-key map (kbd "<C-return>") #'dyalog-debugger-step-into)
+    (define-key map "c" #'dyalog-debugger-continue)
+    (define-key map "u" #'dyalog-debugger-cutback)
+    map)
+  "Default key map for the Dyalog debugger")
+
+(defvar dyalog-ride-input "")
+
+(defun dyalog-ride-input-sender (_proc input)
+  ;; Just sets the variable dyalog-ride-input, which is in the scope of
+  ;; `dyalog-ride-send-input's call.
+  (message "Comint sent input: %s" input)
+  (let* ((s (substring-no-properties input))
+         (base (if (string-match "\\(^ *\n\\)*\\(.*\\)$" s)
+                   (match-string 2 s)
+                 s)))
+    (setq-local dyalog-ride-input base)))
+
+(defun dyalog-ride-send-input ()
+  "Evaluate the Emacs Lisp expression after the prompt"
+  (interactive)
+  (comint-send-input)                 ; update history, markers etc.
+  (dyalog-ride-eval-input dyalog-ride-input nil)
+  (setq-local dyalog-ride-input ""))
+
+(defun dyalog-ride-eval-input (input trace)
+  (let* ((with-nl (if (not (string-match-p "\n$" input))
+                   (concat input "\n")
+                 input))
+         (with-prompt (if (string-match-p dyalog-prompt-regexp with-nl)
+                          with-nl
+                        (concat dyalog-prompt with-nl)))
+         (trace-arg (if trace
+                        1
+                      0))
+         (args `((text . ,with-prompt)
+                 (trace . ,trace-arg))))
+    (dyalog-ride-send-cmd dyalog-ride-process "Execute" args)))
+
+(defun dyalog-ride-session-trace ()
+  "Trace the expression after the prompt"
+  (interactive)
+  (comint-send-input)
+  (message "tracing expression")
+  (dyalog-ride-eval-input dyalog-ride-input t)
+  (setq-local dyalog-ride-input ""))
+  
+
+(define-derived-mode dyalog-debugger-mode dyalog-mode "Dyalog DBG"
+"Major mode for Dyalog debugger interaction.
+
+Keyboard commands are:
+\\{dyalog-debugger-mode-map\\}"
+:syntax-table dyalog-mode-syntax-table
+(setq buffer-read-only t))
+
+(define-derived-mode dyalog-session-mode comint-mode "Dyalog IDE"
+  "Major mode for the Dyalog RIDE session.
+Keyboard commands are:
+\\{dyalog-session-mode-map\\}"
+    :syntax-table dyalog-mode-syntax-table
+
+  (setq comint-prompt-regexp dyalog-prompt-regexp)
+  ;; (set (make-local-variable 'paragraph-separate) "\\'")
+  ;; (set (make-local-variable 'paragraph-start) comint-prompt-regexp)
+  (setq comint-input-sender 'dyalog-ride-input-sender)
+  (setq comint-process-echoes nil)
+  (set (make-local-variable 'comint-prompt-read-only) t)
+  ;; (setq-local comint-output-filter-functions
+  ;;             (list 'comint-postoutput-scroll-to-bottom))
+  (setq-local dyalog-ride-input "")
+  ;;(setq comint-get-old-input 'ielm-get-old-input)
+  ;;(set (make-local-variable 'comint-completion-addsuffix) '("/" . ""))
+
+  ;;(set (make-local-variable 'indent-line-function) #'ielm-indent-line)
+
+  ;; A dummy process to keep comint happy. It will never get any input.
+  ;; Stolen from ielm/inferior-emacs-lisp-mode
+  (unless (comint-check-proc (current-buffer))
+    (condition-case nil
+        (start-process "dyalog-ride-dummy" (current-buffer) "hexl")
+      (file-error (start-process "dyalog-ride-dummy" (current-buffer) "cat")))
+    (set-process-query-on-exit-flag (get-buffer-process (current-buffer)) nil)
+    (goto-char (point-max))
+
+    (set (make-local-variable 'comint-inhibit-carriage-motion) t)
+
+    (unless comint-use-prompt-regexp
+      (let ((inhibit-read-only t))
+        (add-text-properties
+         (point-min) (point-max)
+         '(rear-nonsticky t field output inhibit-line-move-field-capture t))))
+    (set-marker comint-last-input-start 
+                (process-mark (get-buffer-process (current-buffer))))
+    (set-process-filter (get-buffer-process (current-buffer)) 'comint-output-filter)))
+
+
+(defun dyalog-ride-u32 (s)
+  "Convert string S to unsigned 32-bit int in network byte order."
+  (let* ((bytes (reverse (vconcat s)))
+         (shift [0 8 16 24])
+         (res 0))
+    (dotimes (i (length bytes))
+      (let* ((char (aref bytes i))
+             (byte (if (> char 255)
+                       (- 4194303 char)
+                     char)))
+        (setq res (logior res (ash byte (aref shift i))))))
+    res))
+
+(defun dyalog-ride-string-from-u32 (n)
+  "Convert integer N to string of bytes in network byte order."
+  (let ((chars ())
+        (shift [0 8 16 24])
+        (mask 255))
+    (dotimes (i 4)
+      (push (logand (ash n (- (aref shift i))) mask) chars))
+    (mapconcat #'byte-to-string chars "")))
+
+(defun dyalog-ride-unpack ()
+  "Unpack RIDE message encoded in current buffer.
+Returns a string with the payload."
+  (let ((len (- (point-max) (point-min))))
+    (cond ((< len 8)
+           nil)
+          ((not (string-equal (buffer-substring-no-properties
+                               (+ (point-min) 4) (+ (point-min) 8))
+                              "RIDE"))
+           nil)
+          (t
+           (let* ((msg-len-string (buffer-substring-no-properties 
+                                   (point-min) (+ (point-min) 4)))
+                  (msg-len (dyalog-ride-u32 msg-len-string)))
+             (if (< len msg-len)
+                 nil
+               (let* ((bstring (buffer-substring-no-properties 
+                                (+ (point-min) 8)
+                                (+ (point-min) msg-len)))
+                      (read-bytes (length bstring)))
+                 (list (decode-coding-string bstring 'utf-8-unix bstring) 
+                       read-bytes))))))))
+
+(defun dyalog-ride-receive (process output)
+  "Receive data from a Dyalog editor connection.
+PROCESS is the socket receiving data and OUTPUT is the data received."
+  (with-current-buffer (process-buffer process)
+    (save-excursion
+      ;; Insert the text, advancing the process marker.
+      (message "Received %d bytes" (length output))
+      (goto-char (process-mark process))
+      (let ((coding-system-for-write 'no-conversion))
+        (insert output))
+      (set-marker (process-mark process) (point))
+      (let ((done nil)
+            (msg nil))
+        (while (not done)
+          (setq msg (dyalog-ride-unpack)
+                done (equal msg nil))
+          (when msg
+            (condition-case error-var
+                (dyalog-ride-exec-command process (car msg))
+              (error 
+               (message "Error %s when executing handler for %s" error-var (car msg))
+               ;; We need to set the current buffer again in case exec-command
+               ;; got an error while another buffer was current
+               (set-buffer (process-buffer process))))
+            (let* ((from (point-min))
+                   (num-bytes (cadr msg))
+                   (to (byte-to-position
+                        (+ from num-bytes 8))))
+              (delete-region from to)))))
+      (set-marker (process-mark process) (point-max))
+      (sit-for 0.001))))
+
+(defun dyalog-ride-exec-command (process command)
+  "Handle COMMAND received via RIDE process PROCESS."
+  (cond ((string-match-p "SupportedProtocols=" command)
+         (dyalog-ride-handle-handshake process command))
+        ((string-match-p "UsingProtocol=" command)
+         nil)
+        (t
+         (let* ((arr (json-read-from-string (decode-coding-string command 'utf-8)))
+                (cmd-name (aref arr 0))
+                (args (aref arr 1)))
+           (message "Received command %s" cmd-name)
+           (pcase cmd-name
+             ("SetPromptType" 
+              (dyalog-ride-set-prompt-cmd cmd-name args process))
+             ;; We just ignore EchoInput for now. This breaks quote quad input
+             ;; and some other stuff, but that is rarely used anyway.
+             ;; ("EchoInput"
+             ;;  (dyalog-ride-echo-input-cmd cmd-name args process))
+             ("ReplyGetLog"
+              (dyalog-ride-log-get-cmd cmd-name args process))
+             ("OpenWindow"
+              (dyalog-ride-open-window cmd-name args process))
+             ("UpdateWindow"
+              (dyalog-ride-update-window args process))
+             ("AppendSessionOutput"
+              (dyalog-ride-append-cmd cmd-name args process))
+             ("FocusThread"
+              (dyalog-ride-focus-thread-cmd args process))
+             ("SetHighlightLine"
+              (dyalog-ride-set-highlight-line args process))
+             ("CloseWindow"
+              (dyalog-ride-close-window-cmd args process)))))))
+
+(defun dyalog-ride-set-prompt-cmd (_cmd args _process)
+  (let ((type (cdr (assoc 'type args))))
+    (when (equal type 1)
+      (with-current-buffer dyalog-ride-session
+        (goto-char (point-max))
+        (let ((has-prompt
+               (save-excursion
+                 (forward-line 0)
+                 (looking-at-p dyalog-prompt-regexp)))
+              (prefix (if (looking-at-p "$")
+                          ""
+                        "\n")))
+          (when (not has-prompt)
+            (comint-output-filter (get-buffer-process (current-buffer))
+                                  (concat prefix dyalog-prompt))))))))
+
+(defun dyalog-ride-echo-input-cmd (_cmd args _process)
+  (let ((input (cdr (assoc 'input args))))
+    (with-current-buffer dyalog-ride-session
+      (comint-output-filter (get-buffer-process (current-buffer)) input))))
+
+(defun dyalog-ride-append-cmd (_cmd args _process)
+  (let ((output (cdr (assoc 'result args))))
+    (with-current-buffer dyalog-ride-session
+      (comint-output-filter (get-buffer-process (current-buffer)) output))))
+
+(defun dyalog-ride-focus-thread-cmd (args process)
+  (message "Received FocusThread with args %s" args)
+  (with-current-buffer dyalog-ride-session
+    (setq-local dyalog-ride-selected-thread (cdr (assoc 'tid args)))))j
+
+(defvar dyalog-ride-windows
+  #s(hash-table test equal)
+  "Mapping from RIDE window ids to Emacs buffers")
+
+(defun dyalog-ride-open-window (_cmd args process)
+  (message "OpenWindow: %s" args)
+  (if (equal 1 (cdr (assoc 'debugger args)))
+      (dyalog-ride-open-debugger args process))
+  (dyalog-ride-open-edit-window args process))
+
+(defun dyalog-ride-update-window (args process)
+  (let* ((window-id (cdr (assoc 'token args)))
+         (debugger-mode (equal 1 (cdr (assoc 'debugger args))))
+         (bufname (gethash window-id dyalog-ride-windows)))
+    (unless bufname
+      (error "Received UpdateWindow message for window %s, but no such window exists"))
+    (if debugger-mode
+        (dyalog-ride-open-debugger args process bufname)
+      (dyalog-ride-open-edit-window args process))))
+
+(defun dyalog-ride-open-edit-window (args process)
+  (let ((buf (pop-to-buffer (cdr (assoc 'name args))))
+        (text (cdr (assoc 'text args)))
+        (lineno (cdr (assoc 'offset args)))
+        (window-id (cdr (assoc 'token args))))
+    (with-current-buffer buf
+      (puthash window-id buf dyalog-ride-windows)
+      (setq buffer-undo-list t)
+      (widen)
+      (let ((pos (point)))
+        (save-excursion
+          (delete-region (point-min) (point-max))
+          (dotimes (i (length text))
+            (insert (aref text i))
+            (insert "\n")))
+        (dyalog-mode)
+        (setq-local dyalog-ride-process process
+                    dyalog-window-id window-id)
+        (if (fboundp 'font-lock-ensure)
+            (font-lock-ensure)
+          (font-lock-fontify-buffer))
+        (if lineno
+            (forward-line (- lineno 1))
+          (goto-char (min pos (point-max))))
+        (setq buffer-undo-list nil)
+        (set-buffer-modified-p nil)))))
+
+(defun dyalog-ride-open-debugger (args process &optional bufname)
+  (let ((buf (or bufname (get-buffer-create (cdr (assoc 'name args)))))
+        (text (cdr (assoc 'text args)))
+        (lineno (cdr (assoc 'offset args)))
+        (window-id (cdr (assoc 'token args)))
+        (thread-id (cdr (assoc 'tid args)))
+        (hl-row (cdr (assoc 'currentRow args))))
+    (message "Opening debug window for process %s" process)
+    (message "bufname: %s, buf: %s" bufname buf)
+    (with-current-buffer buf
+      (setq buffer-read-only nil)
+      (puthash window-id buf dyalog-ride-windows)
+      (setq buffer-undo-list t)
+      (widen)
+      (let ((pos (point)))
+        (save-excursion
+          (erase-buffer)
+          (dotimes (i (length text))
+            (insert (aref text i))
+            (insert "\n")))
+        (dyalog-debugger-highlight-line hl-row)
+        (if (fboundp 'font-lock-ensure)
+            (font-lock-ensure)
+          (font-lock-fontify-buffer))
+        (if (and lineno (not (= 0 lineno)))
+            (forward-line (- lineno 1))
+          (goto-char (min pos (point-max))))
+        (setq buffer-undo-list nil)
+        (set-buffer-modified-p nil))
+      (dyalog-debugger-mode)
+      (setq-local dyalog-ride-process process
+                  dyalog-window-id window-id
+                  dyalog-thread-id thread-id))
+    (when (not bufname)
+      (display-buffer buf '(display-buffer-at-bottom (window-height . 0.33))))))
+
+(defun dyalog-ride-close-window-cmd (args _process)
+  (let* ((window-id (cdr (assoc 'win args)))
+         (buf (gethash window-id dyalog-ride-windows))
+         (win (get-buffer-window buf)))
+    (when buf
+      (with-current-buffer buf
+        (when (and (eq major-mode 'dyalog-debugger-mode)
+                   win)
+          (delete-window win))
+          (kill-buffer buf)))))
+
+(defun dyalog-ride-set-highlight-line (args _process)
+  "Handle update highlited line command from Dyalog"
+  (let* ((window-id (cdr (assoc 'win args)))
+         (line (cdr (assoc 'line args)))
+         (buf (gethash window-id dyalog-ride-windows)))
+    (when buf
+      (with-current-buffer buf
+        (dyalog-debugger-highlight-line line)))))
+
+(defun dyalog-debugger-highlight-line (line)
+  "Indicate that LINE is the line about to be executed"
+  (let ((pos-marker (save-excursion
+                      (goto-char (point-min))
+                      (forward-line line)
+                      (point-marker))))
+    (setq overlay-arrow-position pos-marker)))
+
+(defun dyalog-ride-current-thread (process)
+  (let ((session-buf (with-current-buffer (process-buffer process)
+                       dyalog-ride-session)))
+    (with-current-buffer session-buf
+      dyalog-ride-selected-thread)))
+
+(defun dyalog-debugger-set-thread (thread-id)
+  "Select the thread with id THREAD-ID as the current thread.
+This needs to be done before executing any debugger commands on that thread."
+  (let ((args `((tid . ,thread-id))))
+    (dyalog-ride-send-cmd dyalog-ride-process "SetThread" args)))
+
+(defun dyalog-debugger-cmd (cmd)
+  "Send simple command CMD to RIDE debugger"
+  (let ((args `((win . ,dyalog-window-id)))
+        (selected-thread (dyalog-ride-current-thread dyalog-ride-process)))
+    (when (not (equal dyalog-thread-id selected-thread))
+      (dyalog-debugger-set-thread dyalog-thread-id))
+    (dyalog-ride-send-cmd dyalog-ride-process cmd args)))
+
+(defun dyalog-debugger-forward ()
+  "Move current line in debugger forward without executing the current line"
+  (interactive)
+  (dyalog-debugger-cmd "TraceForward"))
+
+(defun dyalog-debugger-backward ()
+  "Move current line in debugger backwards"
+  (interactive)
+  (dyalog-debugger-cmd "TraceBackward"))
+
+(defun dyalog-debugger-step-over ()
+  "Execute the current line and then stop"
+  (interactive)
+  (dyalog-debugger-cmd "RunCurrentLine"))
+
+(defun dyalog-debugger-step-into ()
+  "Step into the current line and then stop"
+  (interactive)
+  (dyalog-debugger-cmd "StepInto"))
+
+(defun dyalog-debugger-continue ()
+  "Resume execution and close the debugger"
+  (interactive)
+  (dyalog-debugger-cmd "Continue"))
+
+(defun dyalog-debugger-cutback ()
+  "Cut back the stack one level (exit the current function) and pause"
+  (interactive)
+  (dyalog-debugger-cmd "Cutback"))
+
+(defun dyalog-ride-log-get-cmd (_cmd args _process)
+  (let ((lines (cdr (assoc 'result args))))
+    (with-current-buffer dyalog-ride-session
+      (goto-char (point-max))
+      (dotimes (i (length lines))
+        (let ((line (concat (aref lines i) "\n")))
+          (comint-output-filter (get-buffer-process (current-buffer)) line))))))
+
+(defun dyalog-ride-interrupt ()
+  "Send a strong interrupt to the RIDE interpreter."
+  (interactive)
+  (message "Sending strong interrupt to Dyalog...")
+  (dyalog-ride-send-cmd dyalog-ride-process "StrongInterrupt" #s(hash-table)))
+
+(defun dyalog-ride-handle-handshake (process command)
+  "Respond to the RIDE handshake COMMAND."
+  (unless (string-match "SupportedProtocols=\\([0-9]+\\(?:,[0-9]+\\)*\\)"
+                        command)
+    (error "Invalid handshake received"))
+  (let ((supported (string-to-number (match-string 1 command))))
+    (when (not (= supported 2))
+      (error "Only RIDE protocol v2 is supported"))
+    (dyalog-ride-send-handshake process)))
+
+(defun dyalog-ride-send-handshake (process)
+  "Send a handshake message to the RIDE interpreter at PROCESS."
+    (dyalog-ride-send-cmd process "SupportedProtocols=2")
+    (dyalog-ride-send-cmd process "UsingProtocol=2")
+    (dyalog-ride-send-cmd process "Identify" `((identity . 1)))
+    ;;  I have no idea what the Connect message does, but Dyalog's
+    ;;  RIDE sends it so we do too.
+    (dyalog-ride-send-cmd process "Connect" `((remoteId . 2)))
+    ;; We want Emacs to handle wrapping, not Dyalog
+    (dyalog-ride-send-cmd process "SetPW" `((pw . 32767))))
+
+(defun dyalog-ride-send-cmd (process cmd &optional args)
+  "Send RIDE CMD to PROCESS.
+If ARGS is nil, just send a string, otherwise send a JSON array
+with CMD as the first element and ARGS as the second."
+  (let* ((payload (if args
+                      (json-encode (list cmd args))
+                    cmd))
+         (len (+ 8 (string-bytes payload)))
+         (u32 (dyalog-ride-string-from-u32 len))
+         (header (concat u32 "RIDE"))
+         (msg (concat header payload)))
+    (message "Sending cmd %s" payload)
+    (process-send-string process msg)))
+
+
+;;; Custom protocol for communicating with Dyalog
 
 (defun dyalog-editor-edit-symbol-at-point ()
   "Edit the source for the symbol at point."
