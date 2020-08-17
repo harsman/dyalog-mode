@@ -2627,7 +2627,7 @@ PROCESS is the socket receiving data and OUTPUT is the data received."
 (defun dyalog-ride-focus-thread-cmd (args process)
   (message "Received FocusThread with args %s" args)
   (with-current-buffer dyalog-ride-session
-    (setq-local dyalog-ride-selected-thread (cdr (assoc 'tid args)))))j
+    (setq-local dyalog-ride-selected-thread (cdr (assoc 'tid args)))))
 
 (defvar dyalog-ride-windows
   #s(hash-table test equal)
