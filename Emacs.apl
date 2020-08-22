@@ -335,7 +335,11 @@
           sourceMap←↑5177⌶⍬
           sourceMap[;1 2]←⍕¨sourceMap[;1 2]
           b←(↓sourceMap[;1 2])∊⊂relName namePath
-          path←⊃b/sourceMap[;4]
+          :If ∨/b
+              path←⊃b/sourceMap[;4]
+          :Else
+              path←''
+          :EndIf
         ∇
 
         ∇ path←getSALTpath name;src;tagline
