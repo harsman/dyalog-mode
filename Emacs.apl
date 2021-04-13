@@ -292,11 +292,13 @@
           :EndIf
         ∇
 
-        ∇ {r}←sendgreeting socket;version;wsid;cwd;body
+        ∇ {r}←sendgreeting socket;version;wsid;cwd;body;ride;tagged
           version←2⊃'.'⎕WG'AplVersion'
           wsid←⎕WSID
           cwd←##.getcurrentdir
-          body←nl ##.joinlines'version' 'wsid' 'dir'{⍺,': ',,⍕⍵}¨version wsid cwd
+          ride←2 ⎕NQ'.' 'GetEnvironment' 'RIDE_INIT'
+          tagged←'version' 'wsid' 'dir' 'ride'{⍺,': ',,⍕⍵}¨version wsid cwd ride
+          body←nl ##.joinlines tagged
           send socket('dyaloghello ',nl,body,nl,eom)
         ∇
 
