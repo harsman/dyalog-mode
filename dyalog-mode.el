@@ -601,7 +601,9 @@ FUNCOUNT is the number of currently open tradfn definitions."
                  (if label-at-bol 1 0))))
      ((and (eq indent-type 'tradfn-start)
            (eq funcount 0))
-      (list t (skip-chars-forward " ∇")))
+      (list t (skip-chars-forward " \t∇")))
+     ((eq indent-type 'tradfn-end)
+      (list t (skip-chars-forward " \t")))
      ((bobp)
       (list t (dyalog-leading-indentation)))
      (t
