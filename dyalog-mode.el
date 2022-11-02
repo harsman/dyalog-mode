@@ -2339,7 +2339,7 @@ adress to connect to."
   (let* ((bufname (generate-new-buffer-name " *dyalog-ride-receive*"))
          (process (make-network-process :name "dyalog-ride"
                                         :buffer bufname
-                                        :family 'ipv4 :host host :service port
+                                        :host host :service port
                                         :sentinel 'dyalog-editor-sentinel
                                         :filter 'dyalog-ride-receive
                                         :coding 'no-conversion)))
@@ -2354,7 +2354,7 @@ adress to connect to."
 (defun dyalog-ride-session (&optional host port)
   "Start a session with a Dyalog interpreter via PROCESS-ARG"
   (interactive (list (read-string "Host (default localhost):"
-                                  "127.0.0.1")
+                                  "localhost")
                      (read-number "Port (default 8080):" 8080)))
   (let ((old-point nil)
         (buf-name "*Dyalog-session*")
