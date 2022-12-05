@@ -3190,6 +3190,7 @@ browser is used for Dyalog documentation."
   (add-hook 'before-save-hook
             'dyalog-fix-whitespace-before-save nil 'make-it-local))
 
+;;;###autoload
 (define-derived-mode dyalog-array-mode fundamental-mode "DyalogArr"
   "Major mode for editing Dyalog APL arrays.
 
