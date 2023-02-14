@@ -94,7 +94,7 @@ together with AltGr produce the corresponding apl character in APLCHARS."
 (defconst dyalog-comment-regex
   "^\\s-*⍝")
 
-(defvar dyalog-ascii-chars "][<>+---=/¨~\\?*(){}&|.;@"
+(defvar dyalog-ascii-chars "][<>+---=/¨~\\?*(){}&|.;@!"
   "APL symbols also present in ASCII.")
 
 (defvar dyalog-keyword-chars
